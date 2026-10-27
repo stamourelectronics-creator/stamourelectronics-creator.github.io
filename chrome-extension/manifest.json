@@ -1,19 +1,14 @@
 {
   "manifest_version": 3,
   "name": "IsaiahAI Page Assistant",
-  "version": "1.0.0",
-  "description": "Ask IsaiahAI questions about the website in your current Chrome tab.",
-  "permissions": ["storage", "tabs"],
-  "host_permissions": ["<all_urls>"],
-  "background": {
-    "service_worker": "service_worker.js"
-  },
+  "version": "1.3.1",
+  "description": "Chat with IsaiahAI from the toolbar and ask questions about the active webpage or visible screen.",
+  "permissions": ["storage", "tabs", "scripting"],
+  "host_permissions": ["http://*/*", "https://*/*"],
+  "action": { "default_title": "Chat with IsaiahAI", "default_popup": "popup.html" },
+  "background": { "service_worker": "service_worker.js" },
   "content_scripts": [
-    {
-      "matches": ["http://*/*", "https://*/*"],
-      "js": ["content.js"],
-      "run_at": "document_idle"
-    }
+    { "matches": ["http://*/*", "https://*/*"], "js": ["content.js"], "run_at": "document_idle" }
   ],
   "options_page": "options.html"
 }
