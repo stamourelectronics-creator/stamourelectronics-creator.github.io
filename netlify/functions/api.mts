@@ -557,8 +557,16 @@ export default async function handler(request: Request) {
 
   try {
     if (path === '/health' && request.method === 'GET') {
-      const configured = Boolean(env('OPENROUTER_API_KEY') || env('ISAIAH_OPENROUTER_API_KEY'));
-      return json({ ok: true, service: 'IsaiahAI API', aiConfigured: configured });
+      const standardKey = env('OPENROUTER_API_KEY');
+      const legacyKey = env('ISAIAH_OPENROUTER_API_KEY');
+      const keyVariable = standardKey ? 'OPENROUTER_API_KEY' : legacyKey ? 'ISAIAH_OPENROUTER_API_KEY' : null;
+      return json({
+        ok: true,
+        service: 'IsaiahAI Netlify Function',
+        aiConfigured: Boolean(keyVariable),
+        keyVariable,
+        note: keyVariable ? 'OpenRouter key detected server-side; the key itself is never returned.' : 'No OpenRouter key is visible to this function runtime. Set OPENROUTER_API_KEY with Functions scope for the active deploy context, then redeploy.',
+      });
     }
     if (path === '/opensearch.xml' && request.method === 'GET') {
       const origin = url.origin.replace(/&/g, '&amp;').replace(/\"/g, '&quot;');
