@@ -2076,9 +2076,13 @@ app.post('/api/chat', async (req, res) => {
 
   // IsaiahAI 7.0 SUPER uses OpenRouter; leave the existing providers and routes unchanged for other models.
   if (activeAiModel === 'isaiahai_7_super' && (!req.body.chatMode || req.body.chatMode === 'general')) {
-    const openRouterApiKey = process.env.OPENROUTER_API_KEY?.trim();
+    // Support both the current and legacy Netlify variable names.
+    const openRouterApiKey = process.env.OPENROUTER_API_KEY?.trim()
+      || process.env.ISAIAH_OPENROUTER_API_KEY?.trim();
     if (!openRouterApiKey) {
-      return res.status(500).json({ error: 'OPENROUTER_API_KEY is not configured on the website server.' });
+      return res.status(500).json({
+        error: 'OpenRouter API key is not visible to the server. Configure OPENROUTER_API_KEY (or ISAIAH_OPENROUTER_API_KEY) for the serverless Functions runtime and redeploy.',
+      });
     }
 
     try {
