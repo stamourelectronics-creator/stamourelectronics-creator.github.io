@@ -2,7 +2,7 @@ import express from 'express';
 process.on("uncaughtException", err => console.error("Uncaught Exception:", err)); process.on("unhandledRejection", err => console.error("Unhandled Rejection:", err));
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
-import { GoogleGenAI, Type, Modality, ThinkingLevel } from '@google/genai';
+import { GoogleGenAI, Type, Modality } from '@google/genai';
 import dotenv from 'dotenv';
 import nodemailer from 'nodemailer';
 import { WebSocketServer } from 'ws';
@@ -2071,7 +2071,8 @@ You MUST return a structured JSON matching this schema:
 
 // 1. API Endpoint: Standard ChatGPT-style Chat
 app.post('/api/chat', async (req, res) => {
-  const { message, history, systemInstruction, images, searchWebEnabled, isDeepThink, model, selectedModel } = req.body;
+  const { message, history, systemInstruction, images, model, selectedModel } = req.body;
+  const searchWebEnabled = req.body.disableWebSearch !== true;
   const activeAiModel = model || selectedModel || 'isaiah_5_3';
 
   // IsaiahAI 7.0 SUPER uses OpenRouter; leave the existing providers and routes unchanged for other models.
@@ -2397,12 +2398,6 @@ Incorporate this fresh knowledge to describe it cleanly, answer in thorough para
       temperature: isCodingMode ? 0.2 : 0.7,
       maxOutputTokens: 8192,
     };
-
-    if (isDeepThink) {
-      config.thinkingConfig = {
-        thinkingLevel: ThinkingLevel.HIGH
-      };
-    }
 
     if (searchWebEnabled) {
       config.tools = [{ googleSearch: {} }];

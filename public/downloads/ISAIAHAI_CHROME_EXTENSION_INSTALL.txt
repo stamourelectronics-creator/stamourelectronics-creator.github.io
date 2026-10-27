@@ -1,13 +1,24 @@
-IsaiahAI Page Assistant — Chrome installation
+ISAIAHAI PAGE ASSISTANT — VERSION 1.3.0
 
-1. Download isaiahai-chrome-extension.zip and extract it to a folder (for example, Downloads/isaiahai-chrome-extension).
-2. In Chrome, open chrome://extensions.
-3. Turn on Developer mode in the top-right corner.
-4. Click Load unpacked.
-5. Select the extracted folder that contains manifest.json.
-6. Open a normal website. An “Ask IsaiahAI” button appears in the top-right corner of supported webpages.
-7. Click it, type a question, and press Ask IsaiahAI. The extension sends visible page text, links and a screenshot to the configured IsaiahAI website only when you submit a question.
+WHAT'S INCLUDED
+- Toolbar popup chat and a webpage assistant.
+- Reads the active tab's readable text and links when you ask a question.
+- Captures the visible page screenshot when supported, for questions about diagrams, worksheets, and error dialogs.
+- Tries the newer /api/site-assist route and can fall back to the older /api/chat route.
+- No OpenRouter API key is stored in the extension. Keep the key server-side in Netlify environment variables.
 
-If the default server URL does not match your current Netlify site, open chrome://extensions, find IsaiahAI Page Assistant, click Details > Extension options, and enter the base URL of your deployed IsaiahAI website. Keep OPENROUTER_API_KEY in Netlify server environment variables; do not put API keys in extension files.
+INSTALL
+1. Download and extract isaiahai-chrome-extension.zip.
+2. Open chrome://extensions in Chrome and enable Developer mode.
+3. Click Load unpacked and choose the folder containing manifest.json and popup.html.
+4. Pin IsaiahAI Page Assistant and click its icon to start chatting.
 
-Restrictions: Chrome blocks extensions from injecting into protected pages such as chrome:// settings pages and the Chrome Web Store. Login/password/form values are not intentionally collected. The extension needs permission to read page content on websites so it can answer page-specific questions.
+API TROUBLESHOOTING
+- Use Test connection in the popup.
+- If needed, open extension Settings and enter the exact HTTPS base URL for the deployed IsaiahAI site.
+- The extension supports /api/site-assist and older /api/chat; at least one must be implemented.
+- Set OPENROUTER_API_KEY (or the legacy ISAIAH_OPENROUTER_API_KEY) in the server's Netlify environment variables and redeploy.
+- Never put API keys in extension files or browser-visible assets.
+
+LIMITS
+Chrome internal pages and the Chrome Web Store block extension access. Screenshot capture happens only when you press Send.

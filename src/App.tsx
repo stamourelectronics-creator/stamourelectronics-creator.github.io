@@ -18,7 +18,7 @@ import { formatMathAndFractions, MATH_FRACTION_SYMBOLS, MATH_OPERATION_SYMBOLS }
 import { pickLocalFile, pickLocalDirectory, readFileText, writeFileText, extractCodeBlockFromResponse, LocalFileItem, isFileSystemAccessSupported } from './lib/localWorkspace';
 import MawAI from "./lib/MawAI";
 import { RotatingWebIcon } from './components/RotatingWebIcon';
-import { Sparkles, FileText, Send, Bot, CornerDownLeft, MessageSquare, Settings, Gamepad2, Info, ArrowUp, AlertCircle, HelpCircle, ExternalLink, Loader2, Wifi, Trash2, ShieldCheck, HelpCircle as HelpIcon, Mic, Paperclip, ChevronDown, Plus, Globe, Volume2, VolumeX, Menu, LogIn, LogOut, X, Layers, Copy, Check, Download, Edit3, Brain, Headphones, Ghost, Flame, ImageIcon, Camera, Mail, Share2, Zap, AudioLines, SlidersHorizontal, Crown, Code2, Rocket, HardDrive, CheckCircle2, GraduationCap, BookOpen } from 'lucide-react';
+import { Sparkles, FileText, Send, Bot, CornerDownLeft, MessageSquare, Settings, Gamepad2, Info, ArrowUp, AlertCircle, HelpCircle, ExternalLink, Loader2, Wifi, Trash2, ShieldCheck, HelpCircle as HelpIcon, Mic, Paperclip, ChevronDown, Plus, Globe, Volume2, VolumeX, Menu, LogIn, LogOut, X, Layers, Copy, Check, Download, Edit3, Brain, Headphones, Ghost, ImageIcon, Camera, Mail, Share2, Zap, AudioLines, SlidersHorizontal, Crown, Code2, Rocket, HardDrive, CheckCircle2, GraduationCap, BookOpen } from 'lucide-react';
 import { ChatSession, Message, UserSettings, SearchResultBox } from './types';
 import { 
   auth, googleProvider, GoogleAuthProvider, signInWithPopup, signInAnonymously, signOut, onAuthStateChanged,
@@ -122,8 +122,8 @@ export default function App() {
   
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [activeView, setActiveView] = useState<'chat' | 'games' | 'versions' | 'browser'>('browser');
-  const [searchWebEnabled, setSearchWebEnabled] = useState<boolean>(false);
-  const [isDeepThink, setIsDeepThink] = useState<boolean>(false);
+  // Web search is automatic for ordinary chat; no toggle is needed.
+  const searchWebEnabled = true;
   const [imageSize, setImageSize] = useState<'1K' | '2K' | '4K'>('1K');
   const [imageIsPro, setImageIsPro] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
@@ -1411,14 +1411,6 @@ export default function App() {
     const isWPrefix = rawPrompt.toLowerCase().startsWith('w!') || lowerPrompt.startsWith('wikipedia ') || lowerPrompt.startsWith('wiki ') || lowerPrompt === 'wikipedia' || lowerPrompt === 'wiki';
     const isDPrefix = rawPrompt.toLowerCase().startsWith('d!') || lowerPrompt.startsWith('duckduckgo ') || lowerPrompt.startsWith('duckduck go ') || lowerPrompt === 'duckduckgo' || lowerPrompt === 'duckduck go';
     
-    const isWebSearch = searchWebEnabled || isWPrefix || isDPrefix || lowerPrompt.startsWith('search the web') || lowerPrompt.includes('search the web');
-    setIsSearchingWebActive(isWebSearch);
-    if (isWebSearch) {
-      setActiveSearchQuery(rawPrompt);
-    } else {
-      setActiveSearchQuery('');
-    }
-    
     // Natural Image Generation Request detection
     const isNaturalImageQuery = lowerPrompt.startsWith('make me an image of') || 
                                 lowerPrompt.startsWith('generate an image of') || 
@@ -1465,6 +1457,12 @@ export default function App() {
     const isGamesQuery = lowerPrompt === 'games' || lowerPrompt === 'show games' || lowerPrompt === 'search games';
     const isGameGenQuery = lowerPrompt === 'game gen' || lowerPrompt.startsWith('game gen ') || lowerPrompt === 'game generation' || lowerPrompt.startsWith('game generation ');
     const isClearDrive = lowerPrompt === '!clear drive';
+
+    // Search automatically for normal prompts; special generators/local commands skip web lookup.
+    const isWebSearch = !isImagePrefix && !isNaturalImageQuery && !isDocsPrefix && !isSlidesPrefix &&
+      !isGamesQuery && !isGameGenQuery && !isClearDrive;
+    setIsSearchingWebActive(isWebSearch);
+    setActiveSearchQuery(isWebSearch ? rawPrompt : '');
 
     try {
       if (isGamesQuery) {
@@ -1908,7 +1906,6 @@ export default function App() {
               message: promptToSend,
               history: chatHistoryMap,
               searchWebEnabled,
-              isDeepThink,
               chatMode,
               model: selectedAiModel,
               selectedModel: selectedAiModel,
@@ -2021,7 +2018,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
           images: data.imageUrl ? [data.imageUrl] : undefined,
           thinking: data.thinking,
           sources: data.sources,
-          isSearch: searchWebEnabled && searchResults.length > 0,
+          isSearch: isWebSearch && searchResults.length > 0,
           searchType: 'google',
           summaryQuery: rawPrompt,
           searchResults: searchResults,
@@ -2904,23 +2901,6 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                               </div>
                             )}
 
-                            {/* Expandable/Elegant DeepThink / Cognitive Reasoning Block */}
-                            {msg.thinking && (
-                              <div className={`p-4 rounded-xl border mb-3 text-left ${
-                                isLight 
-                                  ? 'bg-purple-50/70 border-purple-250 text-purple-950 font-sans' 
-                                  : 'bg-purple-950/20 border-purple-900/40 text-purple-300 font-sans'
-                              }`}>
-                                <div className="flex items-center gap-2 font-semibold text-xs mb-1.5 uppercase tracking-wider text-purple-400 select-none">
-                                  <Brain className="w-3.5 h-3.5 text-purple-400 animate-pulse shrink-0" />
-                                  <span>IsaiahAI Cognitive Thinking Process:</span>
-                                </div>
-                                <div className="text-xs space-y-2 whitespace-pre-line leading-relaxed opacity-90 italic">
-                                  {msg.thinking}
-                                </div>
-                              </div>
-                            )}
-
                             {/* Google Search Grounding sources (Direct Google citation badges) */}
                             {msg.sources && msg.sources.length > 0 && (
                               <div className={`flex flex-col gap-1.5 mb-3 text-left ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>
@@ -3288,7 +3268,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
 
               {/* Loader placeholder block */}
               {isGenerating && (
-                (isSearchingWebActive || searchWebEnabled || (currentSearchPrompt && (
+                (isSearchingWebActive || (currentSearchPrompt && (
                   currentSearchPrompt.toLowerCase().includes('search') ||
                   currentSearchPrompt.toLowerCase().includes('index') ||
                   currentSearchPrompt.toLowerCase().includes('wikipedia') ||
@@ -3494,7 +3474,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                             type="button"
                             onClick={() => setMobileSlidersMenuOpen(!mobileSlidersMenuOpen)}
                             className={`p-1.5 rounded-full transition-colors cursor-pointer ${
-                              mobileSlidersMenuOpen || searchWebEnabled || isDeepThink
+                              mobileSlidersMenuOpen
                                 ? 'text-amber-400 bg-amber-500/10'
                                 : isLight ? 'text-zinc-600 hover:text-zinc-900' : 'text-zinc-400 hover:text-white'
                             }`}
@@ -3514,47 +3494,10 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                                   <span className="text-zinc-500">Settings</span>
                                 </div>
 
-                                {/* Web Search Toggle */}
-                                <button
-                                  type="button"
-                                  onClick={() => setSearchWebEnabled(!searchWebEnabled)}
-                                  className={`w-full text-left px-2.5 py-2 rounded-xl text-xs font-medium flex items-center justify-between transition-all cursor-pointer ${
-                                    searchWebEnabled 
-                                      ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' 
-                                      : isLight ? 'hover:bg-zinc-100 text-zinc-700' : 'text-zinc-300 hover:bg-zinc-900'
-                                  }`}
-                                >
-                                  <span className="flex items-center gap-2">
-                                    <Globe className="w-4 h-4 text-amber-500" />
-                                    <span>Live Web Search</span>
-                                  </span>
-                                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                                    searchWebEnabled ? 'bg-amber-500/30 text-amber-300' : 'bg-zinc-800 text-zinc-500'
-                                  }`}>
-                                    {searchWebEnabled ? 'ON' : 'OFF'}
-                                  </span>
-                                </button>
-
-                                {/* DeepThink Toggle */}
-                                <button
-                                  type="button"
-                                  onClick={() => setIsDeepThink(!isDeepThink)}
-                                  className={`w-full text-left px-2.5 py-2 rounded-xl text-xs font-medium flex items-center justify-between transition-all cursor-pointer mt-1 ${
-                                    isDeepThink 
-                                      ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30' 
-                                      : isLight ? 'hover:bg-zinc-100 text-zinc-700' : 'text-zinc-300 hover:bg-zinc-900'
-                                  }`}
-                                >
-                                  <span className="flex items-center gap-2">
-                                    <Brain className="w-4 h-4 text-purple-400" />
-                                    <span>Cognitive DeepThink</span>
-                                  </span>
-                                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                                    isDeepThink ? 'bg-purple-500/30 text-purple-200' : 'bg-zinc-800 text-zinc-500'
-                                  }`}>
-                                    {isDeepThink ? 'ON' : 'OFF'}
-                                  </span>
-                                </button>
+                                <div className={`w-full flex items-center gap-2 px-2.5 py-2 text-xs ${isLight ? 'text-zinc-600' : 'text-zinc-400'}`}>
+                                  <Globe className="w-4 h-4 text-amber-500" />
+                                  <span>Live web search runs automatically</span>
+                                </div>
 
                                 {/* Speech to text mic */}
                                 <button
@@ -4222,33 +4165,10 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                         ) : null}
 
                         {(chatMode === 'general' || chatMode === 'code' || chatMode === 'code_extended') && (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => setSearchWebEnabled(!searchWebEnabled)}
-                              className={`p-1.5 rounded-full border transition-all flex items-center justify-center cursor-pointer shrink-0 ${
-                                searchWebEnabled 
-                                  ? 'border-amber-500/30 bg-amber-500/10 text-amber-550'
-                                  : `border-zinc-750 ${isLight ? 'bg-zinc-100 text-zinc-400 hover:bg-zinc-200 hover:text-zinc-700' : 'bg-transparent text-zinc-550 hover:text-white hover:bg-zinc-805/50'}`
-                              }`}
-                              title={`Toggle Live Web Search indexing: ${searchWebEnabled ? 'ON' : 'OFF'}`}
-                            >
-                              <Globe className={`w-4 h-4 ${searchWebEnabled ? 'text-amber-500 animate-pulse' : ''}`} />
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => setIsDeepThink(!isDeepThink)}
-                              className={`p-1.5 rounded-full border transition-all flex items-center justify-center cursor-pointer shrink-0 ${
-                                isDeepThink 
-                                  ? 'border-purple-500/40 bg-purple-500/10 text-purple-400'
-                                  : `border-zinc-750 ${isLight ? 'bg-zinc-100 text-zinc-400 hover:bg-zinc-200 hover:text-zinc-700' : 'bg-transparent text-zinc-550 hover:text-white hover:bg-zinc-805/50'}`
-                              }`}
-                              title={`Toggle Cognitive DeepThink Mode: ${isDeepThink ? 'ON' : 'OFF'}`}
-                            >
-                              <Brain className={`w-4 h-4 ${isDeepThink ? 'text-purple-400 animate-pulse' : ''}`} />
-                            </button>
-                          </>
+                          <div className={`hidden xl:flex items-center gap-1.5 text-[10px] ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`} title="Live web search is automatic">
+                            <Globe className="w-3.5 h-3.5 text-amber-500" />
+                            <span>Auto web search</span>
+                          </div>
                         )}
                       </div>
                     )}
@@ -4258,7 +4178,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                     type="text"
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
-                    placeholder={isMobile ? (chatMode === 'school' ? "Ask a study problem..." : "Ask Isaiah AI") : chatMode === 'school' ? "Ask a study problem or topic (Math, Science, History, Coding) - I'll guide you step-by-step..." : chatMode === 'code_extended' ? "Request an extended code generation with web search and auto-fixes..." : chatMode === 'code' ? "Paste Python/JS code or request a Code PR review..." : chatMode === 'image' ? "Specify details - e.g., 'An astronaut cat on Jupiter'..." : "Ask anything, prefix with w! or d! for high-density searches..."}
+                    placeholder={isMobile ? (chatMode === 'school' ? "Ask a study problem..." : "Ask Isaiah AI") : chatMode === 'school' ? "Ask a study problem or topic (Math, Science, History, Coding) - I'll guide you step-by-step..." : chatMode === 'code_extended' ? "Request an extended code generation with web search and auto-fixes..." : chatMode === 'code' ? "Paste Python/JS code or request a Code PR review..." : chatMode === 'image' ? "Specify details - e.g., 'An astronaut cat on Jupiter'..." : "Ask anything — IsaiahAI automatically searches the web when useful..."}
                     className={`flex-1 bg-transparent px-2.5 py-2 text-sm ${isLight ? 'text-zinc-900 placeholder:text-zinc-450' : 'text-white placeholder:text-zinc-400'} focus:outline-none min-w-0 font-sans`}
                     disabled={isGenerating}
                   />
@@ -4549,55 +4469,10 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                 </div>
               </button>
 
-              {/* Option 4: Deep Think */}
-              <button
-                type="button"
-                onClick={() => {
-                  setIsDeepThink(!isDeepThink);
-                  setShowMobilePlusMenu(false);
-                }}
-                className={`w-full flex items-center gap-3.5 p-3 rounded-2xl text-left transition-all cursor-pointer ${
-                  isLight ? 'hover:bg-zinc-200/80' : 'hover:bg-zinc-800/80'
-                }`}
-              >
-                <div className="w-10 h-10 rounded-2xl bg-zinc-800/90 border border-zinc-700/50 flex items-center justify-center text-zinc-200 shrink-0">
-                  <Flame className={`w-5 h-5 ${isDeepThink ? 'text-orange-500 animate-pulse' : 'text-zinc-300'}`} />
-                </div>
-                <div className="flex-grow min-w-0">
-                  <div className="font-semibold text-sm leading-snug flex items-center gap-2">
-                    <span>Deep Think</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${isDeepThink ? 'bg-orange-500 text-black' : 'bg-zinc-800 text-zinc-400'}`}>
-                      {isDeepThink ? 'ON' : 'OFF'}
-                    </span>
-                  </div>
-                  <div className="text-xs text-zinc-400 font-normal">High reasoning cognitive intelligence</div>
-                </div>
-              </button>
-
-              {/* Option 5: Web Search */}
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchWebEnabled(!searchWebEnabled);
-                  setShowMobilePlusMenu(false);
-                }}
-                className={`w-full flex items-center gap-3.5 p-3 rounded-2xl text-left transition-all cursor-pointer ${
-                  isLight ? 'hover:bg-zinc-200/80' : 'hover:bg-zinc-800/80'
-                }`}
-              >
-                <div className="w-10 h-10 rounded-2xl bg-zinc-800/90 border border-zinc-700/50 flex items-center justify-center text-zinc-200 shrink-0">
-                  <Globe className={`w-5 h-5 ${searchWebEnabled ? 'text-sky-400 animate-pulse' : 'text-zinc-300'}`} />
-                </div>
-                <div className="flex-grow min-w-0">
-                  <div className="font-semibold text-sm leading-snug flex items-center gap-2">
-                    <span>Web Search</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${searchWebEnabled ? 'bg-sky-400 text-black' : 'bg-zinc-800 text-zinc-400'}`}>
-                      {searchWebEnabled ? 'ON' : 'OFF'}
-                    </span>
-                  </div>
-                  <div className="text-xs text-zinc-400 font-normal">Live DuckDuckGo internet indexing</div>
-                </div>
-              </button>
+              <div className={`mx-1 my-1 flex items-center gap-2 rounded-xl px-3 py-2 text-xs ${isLight ? 'bg-zinc-100 text-zinc-600' : 'bg-zinc-900/70 text-zinc-400'}`}>
+                <Globe className="w-4 h-4 text-amber-500" />
+                <span>Web search is automatic</span>
+              </div>
             </div>
           </div>
         </>

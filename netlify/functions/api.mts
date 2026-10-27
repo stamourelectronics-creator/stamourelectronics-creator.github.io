@@ -383,8 +383,7 @@ async function askGemini(body: AnyRecord, systemInstruction: string, webSearch: 
         temperature: body.chatMode === 'code' || body.chatMode === 'code_extended' ? 0.2 : 0.7,
         maxOutputTokens: 8192,
       };
-      if (body.isDeepThink) config.thinkingConfig = { thinkingLevel: 'HIGH' };
-      if (body.searchWebEnabled) config.tools = [{ googleSearch: {} }];
+      if (body.disableWebSearch !== true) config.tools = [{ googleSearch: {} }];
       const response = await Promise.race([
         ai.models.generateContent({ model, contents, config: config as any }),
         new Promise((_, reject) => setTimeout(() => reject(new Error('AI request timed out; trying another available model.')), 7000)),
@@ -417,7 +416,7 @@ async function handleChat(body: AnyRecord) {
   const systemInstruction = personaFor(body, activeModel);
   const query = String(body.message || '').trim();
   let webSearch: any = null;
-  if (body.searchWebEnabled && query) {
+  if (body.disableWebSearch !== true && query) {
     webSearch = await searchWeb(query, { minimum: 8 }).catch(() => null);
   }
   let system = systemInstruction + `
