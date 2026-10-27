@@ -1,0 +1,13 @@
+IsaiahAI Page Assistant — Chrome installation
+
+1. Download isaiahai-chrome-extension.zip and extract it to a folder (for example, Downloads/isaiahai-chrome-extension).
+2. In Chrome, open chrome://extensions.
+3. Turn on Developer mode in the top-right corner.
+4. Click Load unpacked.
+5. Select the extracted folder that contains manifest.json.
+6. Open a normal website. An “Ask IsaiahAI” button appears in the top-right corner of supported webpages.
+7. Click it, type a question, and press Ask IsaiahAI. The extension sends visible page text, links and a screenshot to the configured IsaiahAI website only when you submit a question.
+
+If the default server URL does not match your current Netlify site, open chrome://extensions, find IsaiahAI Page Assistant, click Details > Extension options, and enter the base URL of your deployed IsaiahAI website. Keep OPENROUTER_API_KEY in Netlify server environment variables; do not put API keys in extension files.
+
+Restrictions: Chrome blocks extensions from injecting into protected pages such as chrome:// settings pages and the Chrome Web Store. Login/password/form values are not intentionally collected. The extension needs permission to read page content on websites so it can answer page-specific questions.

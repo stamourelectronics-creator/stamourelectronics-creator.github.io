@@ -1,0 +1,12 @@
+--- src/App.tsx
++++ src/App.tsx
+@@ -1940,2 +1940,9 @@
+               {/* Center: Mobile Header Title */}
+               <div className="flex items-center justify-center font-bold text-sm tracking-tight text-zinc-900 dark:text-zinc-100">
+                 Isaiah AI
+               </div>
++              {/* Right Side: Circular Info Button (i), Share, or Action Pill */}
++              <div className="flex items-center gap-2">
++                <button
++                  type="button"
++                  onClick={handleShareActiveSession}

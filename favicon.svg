@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Card Linear Gradient (Matches the dark metallic bevel card) -->
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#252527" />
+      <stop offset="50%" stop-color="#141416" />
+      <stop offset="100%" stop-color="#0a0a0b" />
+    </linearGradient>
+
+    <!-- Bevel Rim Gradient for high-end look -->
+    <linearGradient id="bevelGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.18" />
+      <stop offset="40%" stop-color="#3d3d42" stop-opacity="0.5" />
+      <stop offset="60%" stop-color="#050506" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.08" />
+    </linearGradient>
+
+    <!-- Tube Body Glass Linear Gradients for the 3D rods -->
+    <linearGradient id="rodGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.4" />
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0.1" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.45" />
+    </linearGradient>
+
+    <!-- Spherical 3D Glass Shader Radial Gradient -->
+    <radialGradient id="glassSphereShader" cx="32%" cy="32%" r="68%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95" />
+      <stop offset="18%" stop-color="#ffffff" stop-opacity="0.75" />
+      <stop offset="42%" stop-color="#737375" stop-opacity="0.25" />
+      <stop offset="78%" stop-color="#131315" stop-opacity="0.1" />
+      <stop offset="95%" stop-color="#ffffff" stop-opacity="0.55" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.85" />
+    </radialGradient>
+
+    <!-- Core Shadow Filter for 3D depth of the glass elements -->
+    <filter id="shadowFilter" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="8" stdDeviation="6" flood-color="#000000" flood-opacity="0.55" />
+    </filter>
+
+    <!-- Rod Specific Inner Glow Shadow -->
+    <filter id="rodShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.4" />
+    </filter>
+  </defs>
+
+  <!-- Ground Shadow of Squircle -->
+  <rect x="18" y="18" width="476" height="476" rx="142" ry="142" fill="#000000" opacity="0.45" filter="blur(8px)" />
+
+  <!-- Outer Bevel Edge squircle -->
+  <rect x="15" y="15" width="482" height="482" rx="145" ry="145" fill="none" stroke="url(#bevelGrad)" stroke-width="2.5" />
+
+  <!-- Main Card Body squircle (The squircle mimics the rounded-square format of the attached design) -->
+  <rect x="16" y="16" width="480" height="480" rx="144" ry="144" fill="url(#cardGrad)" />
+
+  <!-- Outer Ring Highlight / Inner Bevel -->
+  <rect x="18" y="18" width="476" height="476" rx="142" ry="142" fill="none" stroke="#ffffff" stroke-opacity="0.05" stroke-width="1.5" />
+
+  <!-- Glass Core Elements (Lines, Connectors, Spheres) -->
+  <g filter="url(#shadowFilter)">
+    
+    <!-- 1. The Glass Connector Lines (16px and 4px layers create stunning glass thickness refraction) -->
+    <!-- Center to Left (48, 96) -> scaled/offset: (126, 246) -->
+    <line x1="256" y1="256" x2="126" y2="246" stroke="url(#rodGrad)" stroke-width="11" stroke-linecap="round" />
+    <line x1="256" y1="256" x2="126" y2="246" stroke="#ffffff" stroke-width="2.2" stroke-opacity="0.8" stroke-linecap="round" />
+
+    <!-- Center to Right (152, 101) -> (386, 258.5) -->
+    <line x1="256" y1="256" x2="386" y2="258.5" stroke="url(#rodGrad)" stroke-width="11" stroke-linecap="round" />
+    <line x1="256" y1="256" x2="386" y2="258.5" stroke="#ffffff" stroke-width="2.2" stroke-opacity="0.8" stroke-linecap="round" />
+
+    <!-- Center to Top-Left (71, 56) -> (183.5, 151) -->
+    <line x1="256" y1="256" x2="183.5" y2="151" stroke="url(#rodGrad)" stroke-width="11" stroke-linecap="round" />
+    <line x1="256" y1="256" x2="183.5" y2="151" stroke="#ffffff" stroke-width="2.2" stroke-opacity="0.8" stroke-linecap="round" />
+
+    <!-- Center to Top-Right (131, 52) -> (333.5, 136) -->
+    <line x1="256" y1="256" x2="333.5" y2="136" stroke="url(#rodGrad)" stroke-width="11" stroke-linecap="round" />
+    <line x1="256" y1="256" x2="333.5" y2="136" stroke="#ffffff" stroke-width="2.2" stroke-opacity="0.8" stroke-linecap="round" />
+
+    <!-- Center to Bottom-Left (58, 141) -> (151, 358.5) -->
+    <line x1="256" y1="256" x2="151" y2="358.5" stroke="url(#rodGrad)" stroke-width="11" stroke-linecap="round" />
+    <line x1="256" y1="256" x2="151" y2="358.5" stroke="#ffffff" stroke-width="2.2" stroke-opacity="0.8" stroke-linecap="round" />
+
+    <!-- Center to Bottom-Right (128, 145) -> (326, 368.5) -->
+    <line x1="256" y1="256" x2="326" y2="368.5" stroke="url(#rodGrad)" stroke-width="11" stroke-linecap="round" />
+    <line x1="256" y1="256" x2="326" y2="368.5" stroke="#ffffff" stroke-width="2.2" stroke-opacity="0.8" stroke-linecap="round" />
+
+
+    <!-- 2. Outer Spheres (drawn with base radial shader, top highlights and rim glowing accents) -->
+
+    <!-- Spheres - LEFT (126, 246) -->
+    <circle cx="126" cy="246" r="28" fill="url(#glassSphereShader)" />
+    <circle cx="118" cy="238" r="8" fill="#ffffff" fill-opacity="0.85" />
+    <ellipse cx="134" cy="254" rx="10" ry="4" transform="rotate(-45 134 254)" fill="#ffffff" fill-opacity="0.3" />
+
+    <!-- Spheres - RIGHT (386, 258.5) -->
+    <circle cx="386" cy="258.5" r="28" fill="url(#glassSphereShader)" />
+    <circle cx="378" cy="250.5" r="8" fill="#ffffff" fill-opacity="0.85" />
+    <ellipse cx="394" cy="266.5" rx="10" ry="4" transform="rotate(-45 394 266.5)" fill="#ffffff" fill-opacity="0.3" />
+
+    <!-- Spheres - TOP-LEFT (183.5, 151) -->
+    <circle cx="183.5" cy="151" r="28" fill="url(#glassSphereShader)" />
+    <circle cx="175.5" cy="143" r="8" fill="#ffffff" fill-opacity="0.85" />
+    <ellipse cx="191.5" cy="159" rx="10" ry="4" transform="rotate(-45 191.5 159)" fill="#ffffff" fill-opacity="0.3" />
+
+    <!-- Spheres - TOP-RIGHT (333.5, 136) -->
+    <circle cx="333.5" cy="136" r="28" fill="url(#glassSphereShader)" />
+    <circle cx="325.5" cy="128" r="8" fill="#ffffff" fill-opacity="0.85" />
+    <ellipse cx="341.5" cy="144" rx="10" ry="4" transform="rotate(-45 341.5 144)" fill="#ffffff" fill-opacity="0.3" />
+
+    <!-- Spheres - BOTTOM-LEFT (151, 358.5) -->
+    <circle cx="151" cy="358.5" r="28" fill="url(#glassSphereShader)" />
+    <circle cx="143" cy="350.5" r="8" fill="#ffffff" fill-opacity="0.85" />
+    <ellipse cx="159" cy="366.5" rx="10" ry="4" transform="rotate(-45 159 366.5)" fill="#ffffff" fill-opacity="0.3" />
+
+    <!-- Spheres - BOTTOM-RIGHT (326, 368.5) -->
+    <circle cx="326" cy="368.5" r="28" fill="url(#glassSphereShader)" />
+    <circle cx="318" cy="360.5" r="8" fill="#ffffff" fill-opacity="0.85" />
+    <ellipse cx="334" cy="376.5" rx="10" ry="4" transform="rotate(-45 334 376.5)" fill="#ffffff" fill-opacity="0.3" />
+
+
+    <!-- 3. Giant Central Node (256, 256) -->
+    <circle cx="256" cy="256" r="42" fill="url(#glassSphereShader)" />
+    <!-- Bright primary glass reflections -->
+    <circle cx="244" cy="244" r="12" fill="#ffffff" fill-opacity="0.9" />
+    <!-- Ambient diffuse glow bottom reflection -->
+    <ellipse cx="268" cy="268" rx="15" ry="6" transform="rotate(-45 268 268)" fill="#ffffff" fill-opacity="0.35" />
+    
+  </g>
+</svg>

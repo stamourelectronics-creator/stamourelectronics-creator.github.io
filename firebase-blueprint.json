@@ -1,0 +1,329 @@
+{
+  "entities": {
+    "LeaderboardSnake": {
+      "title": "LeaderboardSnake",
+      "description": "Leaderboard score record for the Snake game.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The custom nickname or name of the player."
+        },
+        "score": {
+          "type": "integer",
+          "description": "The score reached in the game."
+        },
+        "date": {
+          "type": "string",
+          "format": "date",
+          "description": "The simple date when the score was recorded (YYYY-MM-DD)."
+        },
+        "skin": {
+          "type": "string",
+          "description": "The skin name used during the game."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of creation."
+        }
+      },
+      "required": ["name", "score", "date", "skin", "createdAt"]
+    },
+    "UserSnakeSkin": {
+      "title": "UserSnakeSkin",
+      "description": "Custom designed snake skin associated with a specific user profile.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The Google authenticated UID of the owner."
+        },
+        "name": {
+          "type": "string",
+          "description": "The display name of the snake skin design."
+        },
+        "gradientStart": {
+          "type": "string",
+          "description": "The starting color hex/css for the gradient."
+        },
+        "gradientEnd": {
+          "type": "string",
+          "description": "The ending color hex/css for the gradient."
+        },
+        "glow": {
+          "type": "boolean",
+          "description": "Whether the skin has a glowing shadow effect."
+        },
+        "emoji": {
+          "type": "string",
+          "description": "The specific emoji representation used as the head."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of creation."
+        }
+      },
+      "required": ["userId", "name", "gradientStart", "gradientEnd", "glow", "emoji", "createdAt"]
+    },
+    "PublishedGame": {
+      "title": "PublishedGame",
+      "description": "A compiled fully autonomous web game built or published in the playground.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "The display name of the game."
+        },
+        "genre": {
+          "type": "string",
+          "description": "The game category/genre."
+        },
+        "tagline": {
+          "type": "string",
+          "description": "Short catchy tagline describing the game."
+        },
+        "rules": {
+          "type": "array",
+          "description": "Rules or key instructions to play."
+        },
+        "codeHtml": {
+          "type": "string",
+          "description": "Complete HTML/JS contents of the self-contained game."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of game publication."
+        },
+        "authorName": {
+          "type": "string",
+          "description": "Name of the creator who compiled or published the game."
+        }
+      },
+      "required": ["title", "genre", "tagline", "rules", "codeHtml", "createdAt", "authorName"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile nickname document tied to Google authenticated UID.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "UID of the authenticated user."
+        },
+        "username": {
+          "type": "string",
+          "description": "Custom preferred conversation or leaderboard identity handle."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Profile setup timestamp."
+        }
+      },
+      "required": ["userId", "username", "createdAt"]
+    },
+    "UserChat": {
+      "title": "UserChat",
+      "description": "Preserved interactive conversations synchronised with user's Google account.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "UID of the session owner."
+        },
+        "id": {
+          "type": "string",
+          "description": "Unique session key identification name."
+        },
+        "title": {
+          "type": "string",
+          "description": "Conversation topic title."
+        },
+        "messages": {
+          "type": "array",
+          "description": "Array of complete messaging histories inside the thread."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last modified timestamp."
+        }
+      },
+      "required": ["userId", "id", "title", "messages", "updatedAt"]
+    },
+    "UserSavedGame": {
+      "title": "UserSavedGame",
+      "description": "An AI-generated game saved to the user's secure account.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "UID of the owner."
+        },
+        "title": {
+          "type": "string",
+          "description": "Display name of the saved game."
+        },
+        "genre": {
+          "type": "string",
+          "description": "The category/genre style."
+        },
+        "tagline": {
+          "type": "string",
+          "description": "Brief catchy description."
+        },
+        "rules": {
+          "type": "array",
+          "description": "Array of gameplay controls."
+        },
+        "codeHtml": {
+          "type": "string",
+          "description": "Stand-alone compiled game code contents."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp."
+        }
+      },
+      "required": ["userId", "title", "genre", "tagline", "rules", "codeHtml", "createdAt"]
+    },
+    "BetaRequest": {
+      "title": "BetaRequest",
+      "description": "A beta access request with name and email.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Real name of the requestor."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the requestor."
+        },
+        "message": {
+          "type": "string",
+          "description": "Custom comments or reasons for joining."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of request creation."
+        }
+      },
+      "required": ["name", "email", "createdAt"]
+    },
+    "AuthorizedEmail": {
+      "title": "AuthorizedEmail",
+      "description": "Authorized developers allowed to log in and access developer beta.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "Email address authorized for beta access."
+        },
+        "addedBy": {
+          "type": "string",
+          "description": "Email or ID of the admin who added this record."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of adding authorization."
+        }
+      },
+      "required": ["email", "addedBy", "createdAt"]
+    },
+    "SharedChat": {
+      "title": "SharedChat",
+      "description": "Live synchronized real-time conversation accessible via share link.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique share ID room code."
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the shared conversation."
+        },
+        "messages": {
+          "type": "array",
+          "description": "Array of real-time synchronized messages."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last updated timestamp."
+        }
+      },
+      "required": ["id", "title", "messages", "updatedAt"]
+    },
+    "UserBookmark": {
+      "title": "UserBookmark",
+      "description": "Browser bookmarks synchronized to user's Google account.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner user UID."
+        },
+        "bookmarks": {
+          "type": "array",
+          "description": "List of saved bookmark objects with title, url, favicon, createdAt."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last modified timestamp."
+        }
+      },
+      "required": ["userId", "bookmarks", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "leaderboard_snake": {
+      "schema": "LeaderboardSnake",
+      "description": "Global leaderboard documents."
+    },
+    "user_snake_skins": {
+      "schema": "UserSnakeSkin",
+      "description": "User specific custom snake designs."
+    },
+    "published_games": {
+      "schema": "PublishedGame",
+      "description": "Public lobby published retro arcade games."
+    },
+    "user_profiles": {
+      "schema": "UserProfile",
+      "description": "User specific custom system setup variables."
+    },
+    "user_chats": {
+      "schema": "UserChat",
+      "description": "Cloud persistent conversation logs."
+    },
+    "user_saved_games": {
+      "schema": "UserSavedGame",
+      "description": "Cloud saved AI synthesized web games."
+    },
+    "beta_requests": {
+      "schema": "BetaRequest",
+      "description": "Access requests submitted by potential beta testers."
+    },
+    "authorized_emails": {
+      "schema": "AuthorizedEmail",
+      "description": "Allowlisted developer emails for beta access."
+    },
+    "shared_chats": {
+      "schema": "SharedChat",
+      "description": "Live shared conversation threads with real-time updates."
+    },
+    "user_bookmarks": {
+      "schema": "UserBookmark",
+      "description": "User browser bookmarks tied to Google/Firebase account."
+    }
+  }
+}

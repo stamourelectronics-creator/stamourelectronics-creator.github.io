@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "IsaiahAI Page Assistant",
+  "version": "1.0.0",
+  "description": "Ask IsaiahAI questions about the website in your current Chrome tab.",
+  "permissions": ["storage", "tabs"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "service_worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_page": "options.html"
+}

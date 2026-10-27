@@ -1,0 +1,6 @@
+{
+  "name": "IsaiahAI Acceleration",
+  "description": "A sleek, branded AI assistant by St.Amour Electronics featuring professional web chats, search grounding, trivia, customized games including Pong, Snake, and a creative HTML game generator.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

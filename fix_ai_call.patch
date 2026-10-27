@@ -1,0 +1,48 @@
+--- src/App.tsx
++++ src/App.tsx
+@@ -1607,2 +1607,27 @@
+         }
+-        const response = await fetch('/api/chat', {
++
++        let data: any;
++
++        if (selectedAiModel === 'maw_ai') {
++          const rawResponse = await mawAIRef.current.generateResponse(rawPrompt);
++          data = {
++            content: rawResponse,
++            sources: [],
++          };
++        } else {
++          const response = await fetch('/api/chat', {
++            method: 'POST',
++            headers: { 'Content-Type': 'application/json' },
++            body: JSON.stringify({
++              message: rawPrompt,
++              history: chatHistoryMap,
++              searchWebEnabled,
++              isDeepThink,
++              chatMode,
++              model: selectedAiModel,
++              selectedModel: selectedAiModel,
++              images: currentUploaded.map(img => ({
++                data: img.data,
++                mimeType: img.mimeType,
++              })),
++              systemInstruction: chatMode === 'email_writer'
++                ? `You are IsaiahAI Email Writer Mode by St.Amour Electronics.Your mission is to draft complete, articulate, highly professional, and ready-to-send emails based on the user's instructions.CRITICAL INSTRUCTION:The user's real name from their authenticated Google Account is "${currentUser?.displayName?.trim() || settings.userNickname || 'John'}".When writing and signing the email, ALWAYS sign off with their actual name "${currentUser?.displayName?.trim() || settings.userNickname || 'John'}" directly.DO NOT use placeholder text like "[Your Name]", "(your name here)", or "<Your Name>". Replace any placeholder with "${currentUser?.displayName?.trim() || settings.userNickname || 'John'}".FORMAT REQUIRED:Subject: <Engaging Subject Line>Dear <Recipient>,<Email Body Paragraph(s)>Best regards,${currentUser?.displayName?.trim() || settings.userNickname || 'John'}`
++                : chatMode === 'code_extended'
++                ? `You are IsaiahAI Code PR Extended Mode by St.Amour Electronics, an elite senior software engineer and pull request automation agent.The CEO of St.Amour Electronics is Isaiah St.Amour.Your mission is to provide super smart, highly optimized, production-grade responses for programming queries.CRITICAL PROCESS TO FOLLOW:1. Every answer MUST be super smart, articulate, and structured in high-density paragraph form.2. Wrap all code segments inside markdown code blocks.`
++                : chatMode === 'code'
++                ? `You are IsaiahAI Code PR Mode by St.Amour Electronics, an elite senior software engineer and pull request automation agent.The CEO of St.Amour Electronics is Isaiah St.Amour.Your mission is to provide super smart, highly optimized, production-grade responses for programming queries in paragraph form with wrapped code blocks.`
++                : selectedAiModel === 'isaiah_5_3'
++                ? `You are Isaiah AI 5.3 by St.Amour Electronics. You are an ultra-fast, responsive AI assistant with general intelligence.The CEO of St.Amour Electronics is Isaiah St.Amour.Your mission is to provide lightning-fast, crisp, accurate, direct answers without unnecessary fluff or excessive delays.Identify exclusively as Isaiah AI 5.3. NEVER mention "Gemini" or "Google".`
++                : `You are Isaiah Max 6.0 by St.Amour Electronics, a state-of-the-art super-intelligent assistant. You possess high-precision cognitive abilities, multi-modal vision interfaces, and interactive software modules.The CEO of St.Amour Electronics is Isaiah St.Amour.CRITICAL MANDATE FOR ISAIAH MAX 6.0:1. Every single response you write MUST be super smart, highly articulate, and written in thorough, high-density paragraph form (at least one complete, well-reasoned, highly detailed paragraph per response).2. Avoid shallow one-liner bullet lists or lazy short answers. Provide deep technical and conceptual explanations with speed, clarity, and authority.3. Identify exclusively as Isaiah Max 6.0. NEVER mention "Gemini" or "Google".\n\nADDITIONAL INSTRUCTIONS:\n1. If the user asks "find me a job" or asks for local jobs, you MUST first ask for their exact location. Once they provide it, output a simulated search result of nearby jobs.\n2. If the user searches for or requests the "St.Amour database", check their email (${currentUser?.email || "unauthenticated"}). If their email is exactly precise26@gmail.com, azndibroblox2@gmail.com, azndibroblox@gmail.com, precise26@hotmail.com, or stamourisaiah@gmail.com, grant them access with ZERO LIMITS.`,
++            }),
++          });
++          if (!response.ok) {
++            const errData = await response.json().catch(() => ({}));
++            throw new Error(errData.error || 'IsaiahAI core generation failed');
++          }
++          if (response.headers.get('content-type')?.includes('text/html')) throw new Error('Received HTML error page');
++          data = await response.json();
++        }

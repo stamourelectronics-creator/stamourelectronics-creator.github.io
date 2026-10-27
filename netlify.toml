@@ -1,0 +1,15 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Keep the single-page website routes working after a refresh, while the /api/*
+# path is handled by the Netlify Function declared in api.mts.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
