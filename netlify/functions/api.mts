@@ -168,7 +168,7 @@ function extraSearchPortals(query: string): SearchResult[] {
 
 async function bingRssResults(query: string, offset = 0): Promise<SearchResult[]> {
   try {
-    const url = `https://www.bing.com/search?format=rss&count=20&first=${Math.max(1, offset + 1)}&q=${encodeURIComponent(query)}`;
+    const url = `https://www.bing.com/search?format=rss&count=30&first=${Math.max(1, offset + 1)}&q=${encodeURIComponent(query)}`;
     const xml = await fetchText(url, 8000);
     const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)];
     return items.map(([_, item]) => {
@@ -221,12 +221,12 @@ async function searchWeb(query: string, options: { offset?: number; safeSearch?:
     seen.add(normalized);
     hostCounts.set(host, (hostCounts.get(host) || 0) + 1);
     out.push({ ...raw, url, siteName: raw.siteName || host });
-    if (out.length >= 24) break;
+    if (out.length >= 30) break;
   }
 
   // If live indexes provide too few direct pages, add clearly-labelled search portal links
   // rather than repeating encyclopedia entries or fabricating article URLs.
-  const minimum = options.minimum ?? 15;
+  const minimum = Math.min(27, Math.max(10, options.minimum ?? 18));
   if (out.length < minimum) {
     for (const result of extraSearchPortals(query)) {
       const normalized = result.url.toLowerCase();
@@ -234,7 +234,7 @@ async function searchWeb(query: string, options: { offset?: number; safeSearch?:
         seen.add(normalized);
         out.push(result);
       }
-      if (out.length >= Math.min(24, minimum + 3)) break;
+      if (out.length >= Math.min(30, minimum + 3)) break;
     }
   }
   return {
@@ -553,7 +553,9 @@ async function generateImage(body: AnyRecord) {
 
 export default async function handler(request: Request) {
   const url = new URL(request.url);
-  const path = url.pathname.replace(/^\/api(?=\/|$)/, '') || '/';
+  const path = url.pathname
+    .replace(/^\/\.netlify\/functions\/api(?=\/|$)/, '')
+    .replace(/^\/api(?=\/|$)/, '') || '/';
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' } });
 
   const body: AnyRecord = ['GET', 'HEAD'].includes(request.method) ? {} : await request.json().catch(() => ({}));

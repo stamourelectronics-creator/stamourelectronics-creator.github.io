@@ -7,8 +7,14 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
-# Keep the single-page website routes working after a refresh, while the /api/*
-# path is handled by the Netlify Function declared in api.mts.
+# Route API calls to the dynamic Netlify function before the SPA fallback.
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true
+
+# Keep website paths working after a refresh.
 [[redirects]]
   from = "/*"
   to = "/index.html"

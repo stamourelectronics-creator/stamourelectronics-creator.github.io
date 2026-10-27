@@ -111,6 +111,19 @@ export function BrowserView({
     news: NewsResult[];
   } | null>(null);
 
+  const searchRequestIdRef = useRef(0);
+  const briefRequestIdRef = useRef(0);
+  const [savedSources, setSavedSources] = useState<{ title: string; url: string; snippet: string; siteName: string; savedAt: string }[]>(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('isaiah_search_reading_list') || '[]');
+      return Array.isArray(stored) ? stored.filter((item: any) => item && typeof item.url === 'string' && /^https?:\/\//i.test(item.url)) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [showSavedSources, setShowSavedSources] = useState(false);
+  const [summaryCopied, setSummaryCopied] = useState(false);
+
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [localPlacesData, setLocalPlacesData] = useState<{
     city: string;
@@ -2135,26 +2148,64 @@ export function BrowserView({
     );
   };
 
+  const toggleSavedSource = (item: SearchResult) => {
+    const key = normalizeSearchResultUrl(item.url);
+    const exists = savedSources.some(saved => normalizeSearchResultUrl(saved.url) === key);
+    const updated = exists
+      ? savedSources.filter(saved => normalizeSearchResultUrl(saved.url) !== key)
+      : [{ title: item.title, url: item.url, snippet: item.snippet, siteName: item.siteName, savedAt: new Date().toISOString() }, ...savedSources].slice(0, 100);
+    setSavedSources(updated);
+    try { localStorage.setItem('isaiah_search_reading_list', JSON.stringify(updated)); } catch (error) { console.warn('[Reading List] Could not save local copy:', error); }
+    showToast(exists ? 'Removed from Read later' : 'Saved to Read later');
+  };
+
+  const removeSavedSource = (url: string) => {
+    const updated = savedSources.filter(item => normalizeSearchResultUrl(item.url) !== normalizeSearchResultUrl(url));
+    setSavedSources(updated);
+    try { localStorage.setItem('isaiah_search_reading_list', JSON.stringify(updated)); } catch (error) { console.warn('[Reading List] Could not update local copy:', error); }
+  };
+
+  const copyAssistantSummary = async () => {
+    const textToCopy = briefSummary || typedSummary;
+    if (!textToCopy.trim()) { showToast('Search Assist has no answer to copy yet'); return; }
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      setSummaryCopied(true);
+      showToast('Search Assist answer copied');
+      window.setTimeout(() => setSummaryCopied(false), 1800);
+    } catch {
+      showToast('Clipboard access was blocked by the browser');
+    }
+  };
+
   const fetchBriefSummary = async (queryStr: string, resultsList: any[]) => {
-    if (!queryStr || isLoadingBrief) return;
+    if (!queryStr) return;
+    const requestId = ++briefRequestIdRef.current;
     setIsLoadingBrief(true);
+    setBriefSummary('');
     try {
       const response = await fetch('/api/search-summary-brief', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: queryStr, results: resultsList })
       });
-      if (response.ok) {
-        if (response.headers.get('content-type')?.includes('text/html')) throw new Error('HTML');
-        const data = await response.json();
-        setBriefSummary(data.summary || '');
-      } else {
-        throw new Error('Brief summary failed');
-      }
+      if (!response.ok || response.headers.get('content-type')?.includes('text/html')) throw new Error('Brief summary request failed');
+      const data = await response.json();
+      if (requestId !== briefRequestIdRef.current) return;
+      const summary = String(data.summary || '').trim();
+      if (!summary) throw new Error('Search Assist returned an empty summary');
+      setBriefSummary(summary);
     } catch (err) {
-      setBriefSummary(`### Overview of ${queryStr}\n\nSearch indexing confirms active documentation and guides for **${queryStr}**.`);
+      if (requestId !== briefRequestIdRef.current) return;
+      const sourceList = (Array.isArray(resultsList) ? resultsList : []).slice(0, 6)
+        .filter((item: any) => item && /^https?:\/\//i.test(String(item.url || '')))
+        .map((item: any, index: number) => `${index + 1}. [${String(item.title || 'Search result').replace(/[\[\]]/g, '')}](${item.url}) — ${String(item.snippet || '').slice(0, 260)}`)
+        .join('\n');
+      setBriefSummary(sourceList
+        ? `### Search Assist for ${queryStr}\n\nThe AI summary could not load, so here are the matching sources that were returned:\n\n${sourceList}`
+        : `### Search Assist for ${queryStr}\n\nThe search assistant could not retrieve a live summary or direct source pages. Try another query or use the search links below.`);
     } finally {
-      setIsLoadingBrief(false);
+      if (requestId === briefRequestIdRef.current) setIsLoadingBrief(false);
     }
   };
 
@@ -2350,6 +2401,10 @@ export function BrowserView({
     if (e) e.preventDefault();
     const query = (forcedQuery !== undefined ? forcedQuery : searchQuery).trim();
     if (!query) return;
+    const requestId = ++searchRequestIdRef.current;
+    briefRequestIdRef.current += 1;
+    setIsLoadingBrief(false);
+    setIsTypingBrief(false);
 
     if (forcedQuery !== undefined) {
       setSearchQuery(forcedQuery);
@@ -2362,6 +2417,7 @@ export function BrowserView({
     setTypedSummary('');
     setTypedDetailed('');
     setAssistExpanded(false);
+    setShowSavedSources(false);
 
     // Direct URL detector to launch webpages directly
     const isDirectUrl = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?$/i.test(query) && !query.includes(' ');
@@ -2451,6 +2507,8 @@ export function BrowserView({
         throw new Error("Received HTML instead of JSON");
       }
       const quickData = await quickResponse.json();
+      if (requestId !== searchRequestIdRef.current) return;
+      if (!quickData || !Array.isArray(quickData.results)) throw new Error('Search service returned no result list.');
 
       // Enrich video/news thumbnails and site domains immediately
       const enrichedData = enrichSearchResults(quickData);
@@ -2471,6 +2529,7 @@ export function BrowserView({
         fetchBriefSummary(query, enrichedData.results || []);
       }
     } catch (err) {
+      if (requestId !== searchRequestIdRef.current) return;
       console.error('[Search Engine] Error querying fast results:', err);
       // Fallback search results with zero lag
       const encodedQuery = encodeURIComponent(query);
@@ -2498,8 +2557,10 @@ export function BrowserView({
         fetchBriefSummary(query, fallbackData.results);
       }
     } finally {
-      setIsSearching(false);
-      setIsGeneratingSummary(false);
+      if (requestId === searchRequestIdRef.current) {
+        setIsSearching(false);
+        setIsGeneratingSummary(false);
+      }
     }
   };
 
@@ -2608,6 +2669,12 @@ export function BrowserView({
 
   const currentActiveTab = tabs.find(t => t.id === activeTabId) || tabs[0];
   const isViewingLiveWebpage = Boolean(currentActiveTab?.url && currentActiveTab.url.trim().length > 0);
+  const relatedSearchSuggestions = activeSearch ? [
+    `${activeSearch} explained`,
+    `${activeSearch} examples`,
+    `${activeSearch} latest updates`,
+    `${activeSearch} comparison`
+  ].filter((item, index, all) => item.toLowerCase() !== activeSearch.toLowerCase() && all.findIndex(x => x.toLowerCase() === item.toLowerCase()) === index).slice(0, 4) : [];
 
   return (
     <div className={`flex-1 flex flex-col h-full max-h-full overflow-hidden relative w-full min-h-0 ${customBackgroundUrl ? (isLight ? "bg-white/30 backdrop-blur-3xl text-zinc-900" : "bg-black/40 backdrop-blur-3xl text-zinc-100") : "bg-[#f8f9fa] text-zinc-800"}`}>
@@ -3141,13 +3208,17 @@ export function BrowserView({
 
                   {/* Top Right Icons */}
                   <div className="flex items-center gap-1">
-                    <button className="p-1.5 rounded-full hover:bg-zinc-100 text-zinc-500 transition-colors cursor-pointer" title="Copy">
-                      <Copy className="w-4 h-4" />
+                    <button onClick={() => void copyAssistantSummary()} className="p-1.5 rounded-full hover:bg-zinc-100 text-zinc-500 transition-colors cursor-pointer" title={summaryCopied ? "Copied" : "Copy answer"} aria-label="Copy Search Assist answer">
+                      {summaryCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                    <button onClick={() => setShowSavedSources(value => !value)} className="p-1.5 rounded-full hover:bg-zinc-100 text-zinc-500 transition-colors cursor-pointer relative" title="Read later" aria-label="Open Read later list">
+                      <Bookmark className={`w-4 h-4 ${showSavedSources ? 'text-indigo-600' : ''}`} />
+                      {savedSources.length > 0 && <span className="absolute -top-1 -right-1 min-w-[15px] h-[15px] px-1 rounded-full bg-indigo-600 text-white text-[9px] leading-[15px] text-center font-bold">{savedSources.length > 99 ? '99+' : savedSources.length}</span>}
                     </button>
                     <button className="p-1.5 rounded-full hover:bg-zinc-100 text-zinc-500 transition-colors cursor-pointer" title="Share" onClick={handleShareDirect}>
                       <Share className="w-4 h-4" />
                     </button>
-                    <button className="p-1.5 rounded-full hover:bg-zinc-100 text-zinc-500 transition-colors cursor-pointer" title="Info">
+                    <button onClick={() => showToast('Search Assist uses the current result links. Open sources to verify details and publication dates.')} className="p-1.5 rounded-full hover:bg-zinc-100 text-zinc-500 transition-colors cursor-pointer" title="About this answer" aria-label="About this answer">
                       <Info className="w-4 h-4" />
                     </button>
                     <button className="p-1.5 rounded-full hover:bg-zinc-100 text-zinc-500 transition-colors cursor-pointer" title="Settings" onClick={() => { setMenuOpen(true); setActivePanel('none'); }}>
@@ -3155,6 +3226,32 @@ export function BrowserView({
                     </button>
                   </div>
                 </div>
+
+                {showSavedSources && (
+                  <div className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-3 space-y-2 text-left">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-bold text-indigo-900">Read later ({savedSources.length})</span>
+                      {savedSources.length > 0 && <button type="button" onClick={() => { setSavedSources([]); try { localStorage.removeItem('isaiah_search_reading_list'); } catch {} showToast('Read later list cleared'); }} className="text-[10px] text-zinc-500 hover:text-red-600 underline">Clear list</button>}
+                    </div>
+                    {savedSources.length === 0 ? (
+                      <p className="text-xs text-zinc-600">Save a result with “Read later” to keep it here on this device.</p>
+                    ) : (
+                      <div className="space-y-2 max-h-56 overflow-y-auto">
+                        {savedSources.map((saved) => (
+                          <div key={normalizeSearchResultUrl(saved.url)} className="flex items-start gap-2 rounded-xl bg-white border border-indigo-100 p-2">
+                            <button type="button" onClick={() => openWebpage(saved.url)} className="flex-1 min-w-0 text-left">
+                              <span className="block text-xs font-semibold text-indigo-700 hover:underline">{saved.title}</span>
+                              <span className="block text-[10px] text-zinc-500 truncate">{saved.siteName} · {saved.url}</span>
+                            </button>
+                            <button type="button" onClick={() => removeSavedSource(saved.url)} className="p-1 text-zinc-400 hover:text-red-600" aria-label="Remove saved result" title="Remove">
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Body paragraph summary with typewriter streaming animation */}
                 <div className="text-zinc-800 text-sm leading-relaxed space-y-3 font-sans font-medium text-left">
@@ -3165,9 +3262,13 @@ export function BrowserView({
                     </div>
                   ) : (
                     <div className="relative">
-                      <p className="inline whitespace-pre-line text-zinc-800 leading-relaxed text-sm">
-                        {typedSummary || briefSummary || "Click the 'Search Assist' button above to generate an AI summary."}
-                      </p>
+                      <div className="text-zinc-800 leading-relaxed text-sm [&_a]:text-indigo-600 [&_a]:underline [&_a]:underline-offset-2 [&_p]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5">
+                        <Markdown components={{
+                          a: ({ node, ...props }) => <a {...props} target="_blank" rel="noreferrer" className="text-indigo-600 underline underline-offset-2 break-words" />
+                        }}>
+                          {typedSummary || briefSummary || "Click the 'Search Assist' button above to generate an AI summary."}
+                        </Markdown>
+                      </div>
                       {isTypingBrief && (
                         <span className="inline-block w-1.5 h-4 ml-1 bg-indigo-600 animate-pulse align-middle" />
                       )}
@@ -3190,6 +3291,21 @@ export function BrowserView({
                     </div>
                   )}
                 </div>
+
+                {activeSearch && relatedSearchSuggestions.length > 0 && (
+                  <div className="rounded-2xl border border-zinc-100 bg-zinc-50/80 p-3 text-left">
+                    <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-zinc-500">
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-500" /> Explore next
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {relatedSearchSuggestions.map((suggestion) => (
+                        <button key={suggestion} type="button" onClick={() => void handleSearchSubmit(undefined, suggestion)} className="rounded-full border border-indigo-100 bg-white px-3 py-1.5 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-50 transition-colors">
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Divider with central controls */}
                 <div className="relative flex items-center justify-center py-2">
@@ -3307,6 +3423,7 @@ export function BrowserView({
                       const titleSizeClass = searchFontSize === 'Small' ? 'text-base sm:text-lg' : searchFontSize === 'Medium' ? 'text-lg sm:text-xl' : 'text-xl sm:text-[22px]';
                       const snippetSizeClass = searchFontSize === 'Small' ? 'text-xs sm:text-[13px]' : searchFontSize === 'Medium' ? 'text-[13px] sm:text-[14px]' : 'text-[14px] sm:text-[15px]';
                       const metaSizeClass = searchFontSize === 'Small' ? 'text-[11px]' : searchFontSize === 'Medium' ? 'text-[11.5px]' : 'text-[12.5px]';
+                      const isSourceSaved = savedSources.some(saved => normalizeSearchResultUrl(saved.url) === normalizeSearchResultUrl(resItem.url));
 
                       return (
                         <div 
@@ -3402,6 +3519,16 @@ export function BrowserView({
                           <p className={`text-[14px] ${isLight ? "text-zinc-800" : "text-zinc-300"} font-sans leading-normal ${snippetSizeClass}`}>
                             {resItem.snippet}
                           </p>
+
+                          <div className="flex flex-wrap items-center gap-3 pt-1">
+                            <button type="button" onClick={() => toggleSavedSource(resItem)} className={`inline-flex items-center gap-1 text-[11px] font-semibold transition-colors cursor-pointer ${isSourceSaved ? 'text-indigo-700' : 'text-zinc-500 hover:text-indigo-700'}`}>
+                              <Bookmark className={`w-3.5 h-3.5 ${isSourceSaved ? 'fill-indigo-200' : ''}`} />
+                              {isSourceSaved ? 'Saved to Read later' : 'Read later'}
+                            </button>
+                            <button type="button" onClick={async () => { try { await navigator.clipboard.writeText(resItem.url); showToast('Result link copied'); } catch { showToast('Clipboard access was blocked by the browser'); } }} className="inline-flex items-center gap-1 text-[11px] font-semibold text-zinc-500 hover:text-indigo-700 transition-colors cursor-pointer">
+                              <Copy className="w-3.5 h-3.5" /> Copy link
+                            </button>
+                          </div>
                           
                           {/* Sublinks Action Pills Row (Image 4 Style) */}
                           {resItem.subLinks && resItem.subLinks.length > 0 && (
