@@ -1,3 +1,4 @@
+# CI publication for the IsaiahAI static frontend.
 name: Publish IsaiahAI to GitHub Pages
 on:
   push:
