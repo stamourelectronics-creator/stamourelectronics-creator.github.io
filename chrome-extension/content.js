@@ -51,9 +51,9 @@
   panel.setAttribute('role', 'dialog');
   panel.setAttribute('aria-label', 'IsaiahAI page assistant');
   panel.innerHTML = `
-    <div class="header"><div class="brand">IA</div><div><div class="heading">IsaiahAI Page Assistant</div><div class="sub">Ask about the page, links, or visible content</div></div><button class="close" type="button" aria-label="Close">×</button></div>
+    <div class="header"><div class="brand">IA</div><div><div class="heading">IsaiahAI</div><div class="sub">Ask about the page, links, or visible content</div></div><button class="close" type="button" aria-label="Close">×</button></div>
     <div class="conversation"><div class="empty">Ask about this webpage. IsaiahAI can use the page text, links, a screenshot of the visible page, and fresh web-search results.</div></div>
-    <form class="form"><textarea class="question" placeholder="What is this page about? Summarize it, compare details, explain a section…" aria-label="Question" maxlength="6000"></textarea><div class="controls"><button class="send" type="submit">Ask IsaiahAI ↗</button><div class="status" aria-live="polite">Free OpenRouter models</div></div><div class="privacy">Page text, links and a screenshot are sent to the IsaiahAI server only when you click Ask. Password/form values are not collected.</div></form>
+    <form class="form"><textarea class="question" placeholder="What is this page about? Summarize it, compare details, explain a section…" aria-label="Question" maxlength="6000"></textarea><div class="controls"><button class="send" type="submit">Ask IsaiahAI ↗</button><div class="status" aria-live="polite">IsaiahAI is ready</div></div><div class="privacy">Page text, links and a screenshot are sent to the IsaiahAI server only when you click Ask. Password/form values are not collected.</div></form>
   `;
   shadow.appendChild(panel);
   const closeButton = panel.querySelector('.close');
@@ -138,11 +138,11 @@
       const answer = String(data.content || 'No answer was returned.');
       history.push({ role: 'user', content: priorQuestion }, { role: 'assistant', content: answer });
       appendBubble(answer, 'assistant', data.sources || []);
-      status.textContent = `${data.provider || 'OpenRouter free'}${data.screenshotUsed ? ' · page screenshot included' : ' · page text included'}`;
+      status.textContent = data.screenshotUsed ? 'IsaiahAI · screenshot included' : 'IsaiahAI · page context included';
     } catch (error) {
       const message = error && error.message ? error.message : String(error);
-      appendBubble(`Unable to reach IsaiahAI: ${message}`, 'assistant');
-      status.textContent = 'Connection failed';
+      appendBubble('IsaiahAI could not complete that request. Check your website URL in extension Settings, then try again.', 'assistant');
+      status.textContent = 'IsaiahAI connection failed';
     } finally {
       sendButton.disabled = false;
       sendButton.textContent = 'Ask IsaiahAI ↗';

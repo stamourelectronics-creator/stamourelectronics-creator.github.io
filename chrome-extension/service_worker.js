@@ -116,7 +116,8 @@ async function askIsaiahAI(message, sender) {
       return { ...data, screenshotUsed: Boolean(screenshot), pageTitle, pageUrl, apiBase: base };
     } catch (error) { errors.push(base + ' /api/chat: ' + asError(error)); }
   }
-  throw new Error('Unable to reach an IsaiahAI chat API. Check that a Netlify site has an AI chat route and its server-side key is configured. ' + errors.join(' | '));
+  console.warn('[IsaiahAI] No endpoint answered:', errors.map(item => item.split(' /')[0]).join('; '));
+  throw new Error('IsaiahAI could not connect. Check the website URL in Settings and try again.');
 }
 async function testConnection() {
   const errors = [];
@@ -124,7 +125,7 @@ async function testConnection() {
     try {
       const response = await fetch(base + '/api/health', { method: 'GET', signal: AbortSignal.timeout(8000), cache: 'no-store' });
       const data = await response.json().catch(() => null);
-      if (response.ok && data && data.aiConfigured === true) return { connected: true, message: 'Connected to ' + base + '. Server confirms an AI key is configured.' };
+      if (response.ok && data && data.aiConfigured === true) return { connected: true, message: 'IsaiahAI is connected and ready.' };
       errors.push(base + ': health endpoint HTTP ' + response.status + (data && data.aiConfigured === false ? ' (no server-side AI key)' : ''));
     } catch (error) { errors.push(base + ': health check — ' + asError(error)); }
     try {
@@ -135,7 +136,8 @@ async function testConnection() {
       return { connected: true, message: 'Chat works at ' + base + ' via ' + data.apiRoute + '. A health endpoint is optional.' };
     } catch (error) { errors.push(base + ': chat check — ' + asError(error)); }
   }
-  return { connected: false, message: 'No configured IsaiahAI endpoint answered. ' + errors.join(' | ') };
+  console.warn('[IsaiahAI] Connection test failed:', errors.map(item => item.split(':')[0]).join('; '));
+  return { connected: false, message: 'IsaiahAI could not connect. Check the website URL in Settings and try again.' };
 }
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || !message.type) return;

@@ -56,7 +56,7 @@ form.addEventListener('submit', async event => {
   try {
     const data = await sendRuntime({ type: 'ISAIAHAI_POPUP_ASK', question: text, history: history.slice(-8) });
     pending.textContent = String(data.content || 'I did not receive an answer.');
-    setStatus('Answered by ' + data.apiBase + (data.apiRoute || '') + (data.screenshotUsed ? ' · screenshot included' : ' · text context used'), 'good');
+    setStatus(data.screenshotUsed ? 'IsaiahAI answered · screenshot included' : 'IsaiahAI answered · page context included', 'good');
     history.push({ role: 'user', content: text }, { role: 'assistant', content: String(data.content || '') });
     history = history.slice(-10);
     if (Array.isArray(data.sources) && data.sources.length) {
@@ -75,8 +75,8 @@ form.addEventListener('submit', async event => {
       if (list.childElementCount) pending.appendChild(list);
     }
   } catch (error) {
-    pending.textContent = 'Unable to reach IsaiahAI: ' + (error.message || String(error));
-    setStatus('API connection failed · open Settings or Test connection', 'error');
+    pending.textContent = 'IsaiahAI could not complete that request. Check the website URL in Settings, then try again.';
+    setStatus('IsaiahAI connection failed · check Settings', 'error');
   } finally { setBusy(false); }
 });
 testButton.addEventListener('click', async () => {
@@ -85,8 +85,8 @@ testButton.addEventListener('click', async () => {
   setStatus('Checking configured IsaiahAI endpoints…');
   try {
     const data = await sendRuntime({ type: 'ISAIAHAI_TEST_CONNECTION' });
-    setStatus(data.message || 'Connection succeeded.', 'good');
-  } catch (error) { setStatus(error.message || String(error), 'error'); }
+    setStatus(data.message || 'IsaiahAI is connected and ready.', 'good');
+  } catch (_) { setStatus('IsaiahAI could not connect. Check the website URL in Settings and try again.', 'error'); }
   finally { setBusy(false); }
 });
 document.getElementById('settings').addEventListener('click', () => chrome.runtime.openOptionsPage());

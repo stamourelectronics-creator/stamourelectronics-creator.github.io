@@ -23,10 +23,10 @@ textarea:focus{border-color:#e5b63a;box-shadow:0 0 0 2px #eab3081c}
 .test{border:1px solid #3b3c44;background:#1a1b21;color:#e4e4e7;border-radius:10px;padding:9px;font-size:11px;cursor:pointer}.test:hover{background:#272830}
 .fineprint{font-size:9px;color:#71717a;line-height:1.45;margin-top:7px}
 </style></head><body>
-<header><div class="mark">IA</div><div><div class="headtitle">IsaiahAI Page Assistant</div><div class="subtitle" id="tabTitle">Reads the page when you ask</div></div><button id="settings" class="iconbtn" title="Extension settings" aria-label="Extension settings">⚙</button></header>
+<header><div class="mark">IA</div><div><div class="headtitle">IsaiahAI</div><div class="subtitle" id="tabTitle">Reads the page when you ask</div></div><button id="settings" class="iconbtn" title="Extension settings" aria-label="Extension settings">⚙</button></header>
 <div id="status" class="statusbar"><span class="dot"></span><span id="statusText">Ready · ask about this page or any topic</span></div>
 <main id="messages" aria-live="polite"><div class="empty">Ask about a problem, worksheet, code error, or anything visible on this screen. IsaiahAI uses readable page text and a screenshot when available.</div></main>
 <form id="composer" class="composer"><textarea id="question" placeholder="What is the answer to the problem on my screen?" aria-label="Ask IsaiahAI"></textarea>
 <div class="row"><button type="submit" id="send" class="send">Ask IsaiahAI</button><button type="button" id="test" class="test">Test connection</button></div>
-<div class="fineprint">The extension sends page context only when you press Ask. Your API key stays in Netlify environment variables, never in this extension.</div></form>
+<div class="fineprint">Page context is shared with IsaiahAI only when you press Ask. Passwords and form fields are never collected.</div></form>
 <script src="popup.js"></script></body></html>
