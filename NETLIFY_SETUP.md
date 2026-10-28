@@ -4,7 +4,7 @@ The public frontend is configured to publish to https://stamourelectronics-creat
 
 ## Build settings
 
-The included `netlify.toml` sets the build command to `npm run build`, publishes `dist`, and uses the `netlify/functions` directory.
+The included `netlify.toml` builds the regular website until GitHub Pages is live, then switches the Netlify homepage to a lightweight iframe. Once the iframe is live, `scripts/netlify-ignore-build.mjs` skips Netlify builds for frontend-only changes while still deploying changes to `netlify/functions/`, dependencies, and build configuration. `scripts/build-netlify-site.mjs` deliberately falls back to the full site until Pages is reachable, so the homepage will not be switched to a broken iframe.
 
 ## Environment variables
 

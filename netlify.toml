@@ -1,5 +1,6 @@
 [build]
-  command = "npm run build"
+  command = "node scripts/build-netlify-site.mjs"
+  ignore = "node scripts/netlify-ignore-build.mjs"
   publish = "dist"
   functions = "netlify/functions"
 
