@@ -17,9 +17,15 @@ const env = (name: string): string => {
   return (typeof process !== 'undefined' ? process.env?.[name] : '')?.trim?.() || '';
 };
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Max-Age': '86400',
+};
 const json = (payload: unknown, status = 200) => Response.json(payload, {
   status,
-  headers: { 'Cache-Control': 'no-store' },
+  headers: { ...corsHeaders, 'Cache-Control': 'no-store' },
 });
 
 function decodeHtml(input: string): string {
@@ -556,28 +562,20 @@ export default async function handler(request: Request) {
   const path = url.pathname
     .replace(/^\/\.netlify\/functions\/api(?=\/|$)/, '')
     .replace(/^\/api(?=\/|$)/, '') || '/';
-  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' } });
+  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
 
   const body: AnyRecord = ['GET', 'HEAD'].includes(request.method) ? {} : await request.json().catch(() => ({}));
   const queryParam = url.searchParams.get('q') || url.searchParams.get('query') || url.searchParams.get('text') || '';
 
   try {
     if (path === '/health' && request.method === 'GET') {
-      const standardKey = env('OPENROUTER_API_KEY');
-      const legacyKey = env('ISAIAH_OPENROUTER_API_KEY');
-      const keyVariable = standardKey ? 'OPENROUTER_API_KEY' : legacyKey ? 'ISAIAH_OPENROUTER_API_KEY' : null;
-      return json({
-        ok: true,
-        service: 'IsaiahAI Netlify Function',
-        aiConfigured: Boolean(keyVariable),
-        keyVariable,
-        note: keyVariable ? 'OpenRouter key detected server-side; the key itself is never returned.' : 'No OpenRouter key is visible to this function runtime. Set OPENROUTER_API_KEY with Functions scope for the active deploy context, then redeploy.',
-      });
+      const aiConfigured = Boolean(env('OPENROUTER_API_KEY') || env('ISAIAH_OPENROUTER_API_KEY') || env('GEMINI_API_KEY'));
+      return json({ ok: true, service: 'IsaiahAI', aiConfigured });
     }
     if (path === '/opensearch.xml' && request.method === 'GET') {
       const origin = url.origin.replace(/&/g, '&amp;').replace(/\"/g, '&quot;');
       const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/"><ShortName>Isaiah Search</ShortName><Description>Search the web with Isaiah Search</Description><InputEncoding>UTF-8</InputEncoding><Url type="text/html" template="${origin}/?q={searchTerms}" /></OpenSearchDescription>`;
-      return new Response(xml, { status: 200, headers: { 'Content-Type': 'application/opensearchdescription+xml; charset=utf-8', 'Cache-Control': 'public, max-age=300' } });
+      return new Response(xml, { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/opensearchdescription+xml; charset=utf-8', 'Cache-Control': 'public, max-age=300' } });
     }
     if (path === '/chat' && request.method === 'POST') {
       const result = await handleChat(body);
@@ -623,7 +621,7 @@ export default async function handler(request: Request) {
           controller.close();
         },
       });
-      return new Response(stream, { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } });
+      return new Response(stream, { headers: { ...corsHeaders, 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
     if (path === '/search-ddg' && request.method === 'POST') {
       const query = String(body.query || '').trim();
