@@ -204,6 +204,16 @@ export function Sidebar({
           <span className="text-[8px] bg-emerald-500/20 text-emerald-400 px-1 py-0.5 rounded font-bold font-mono">LIVE</span>
         </button>
 
+        <a
+          href={`${import.meta.env.BASE_URL}downloads/isaiahai-agent.html`}
+          className="w-full h-9 flex items-center gap-2.5 px-3 rounded-xl text-xs font-semibold transition-all text-left cursor-pointer hover:bg-zinc-850 text-zinc-300 hover:text-white"
+          title="Download the Windows IsaiahAI Agent"
+        >
+          <Download className="w-3.5 h-3.5 text-violet-400" />
+          <span className="truncate flex-1">Windows AI Agent</span>
+          <span className="text-[8px] bg-violet-500/20 text-violet-300 px-1 py-0.5 rounded font-bold font-mono">EXE</span>
+        </a>
+
         <button
           onClick={() => {
             onSelectView('versions');

@@ -2568,44 +2568,61 @@ export function BrowserView({
     }
   };
 
-  // Open link securely in a new tab, persist to history & sync tab
+  // Open destinations inside Isaiah Search's own tab manager, like a regular browser.
+  // Sites that disallow embedding still offer an explicit external-browser action in the viewer.
   const openWebpage = (url: string, title?: string) => {
     if (!url) return;
     let formattedUrl = url.trim();
-    if (!/^https?:\/\//i.test(formattedUrl) && !formattedUrl.startsWith('about:')) {
-      formattedUrl = 'https://' + formattedUrl;
+    if (!/^https?:\/\//i.test(formattedUrl)) formattedUrl = 'https://' + formattedUrl;
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(formattedUrl);
+      if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+        showToast('Only HTTP and HTTPS webpages can open in this browser.');
+        return;
+      }
+      formattedUrl = parsedUrl.href;
+    } catch {
+      showToast('That web address is not valid. Check it and try again.');
+      return;
     }
-
-    const websiteTitle = title || formattedUrl.replace(/^https?:\/\//i, '').split('/')[0] || formattedUrl;
-
-    // Automatically record website visit to history
+    const websiteTitle = title || parsedUrl.hostname || formattedUrl;
     if (!incognito) {
       const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       setHistoryList(prev => {
         const filtered = prev.filter(item => item.query !== formattedUrl);
-        return [{ query: formattedUrl, title: websiteTitle, timestamp, incognito: false, type: 'website' }, ...filtered];
+        const updated = [{ query: formattedUrl, title: websiteTitle, timestamp, incognito: false, type: 'website' as const }, ...filtered].slice(0, 500);
+        try { localStorage.setItem('isaiah_browser_history', JSON.stringify(updated)); } catch { /* browser storage may be full */ }
+        return updated;
       });
-
       if (auth?.currentUser && db) {
         addDoc(collection(db, 'users', auth.currentUser.uid, 'history'), {
-          query: formattedUrl,
-          title: websiteTitle,
-          timestamp,
-          incognito: false,
-          type: 'website',
-          createdAt: serverTimestamp()
+          query: formattedUrl, title: websiteTitle, timestamp, incognito: false,
+          type: 'website', createdAt: serverTimestamp()
         }).catch(err => console.error('[Firebase] Error syncing website history to DB:', err));
       }
     }
-
-    // Follow the chosen link in a real browser tab, not inside the in-app proxy viewer.
-    // The setting controls whether the destination replaces this tab or opens a new tab.
     if (openLinksInNewTab) {
-      const opened = window.open(formattedUrl, '_blank', 'noopener,noreferrer');
-      if (!opened) showToast('Your browser blocked the new tab. Allow pop-ups for Isaiah Search, then try again.');
+      const newTab = { id: Date.now().toString(), title: websiteTitle, url: formattedUrl, searchQuery: '', activeSearch: '' };
+      setTabs(prev => [...prev, newTab]);
+      setActiveTabId(newTab.id);
     } else {
-      window.location.assign(formattedUrl);
+      setTabs(prev => prev.map(tab => tab.id === activeTabId
+        ? { ...tab, title: websiteTitle, url: formattedUrl, searchQuery: '', activeSearch: '' }
+        : tab));
     }
+    setSearchQuery('');
+    setActiveSearch('');
+    setSearchResults(null);
+    setBriefSummary('');
+    setAddonSummary('');
+    setTypedSummary('');
+    setTypedDetailed('');
+    setIsSearching(false);
+    setIsLoadingBrief(false);
+    setIsTypingBrief(false);
+    setShowExpandedResultsPage(false);
+    setAssistExpanded(false);
   };
 
   const handleSelectTab = (tabId: string) => {

@@ -107,6 +107,8 @@ export const LiveWebProxyViewer: React.FC<LiveWebProxyViewerProps> = ({
   // Listen to postMessage from the proxied iframe (Puter.surf standard)
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
+      // Ignore messages from unrelated frames or tabs.
+      if (event.source !== iframeRef.current?.contentWindow) return;
       if (!event.data || typeof event.data !== 'object') return;
 
       if (event.data.type === 'PUTER_SURF_LOCATION') {
@@ -269,7 +271,7 @@ export const LiveWebProxyViewer: React.FC<LiveWebProxyViewerProps> = ({
       }`}
     >
       {/* 1. EMBEDDED BROWSER CONTROL BAR (Puter.surf Style) */}
-      <div className={`flex items-center gap-2 px-3 py-2 border-b flex-shrink-0 z-20 ${
+      <div className={`flex flex-wrap sm:flex-nowrap items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 border-b flex-shrink-0 z-20 ${
         isLight 
           ? 'bg-white border-zinc-200/80 shadow-xs' 
           : 'bg-zinc-900/90 border-zinc-800 backdrop-blur-md'
@@ -326,7 +328,7 @@ export const LiveWebProxyViewer: React.FC<LiveWebProxyViewerProps> = ({
         </div>
 
         {/* Omnibox / Address Bar Form (Default: IsaiahSearch) */}
-        <form onSubmit={handleUrlSubmit} className="flex-1 min-w-0 relative flex items-center">
+        <form onSubmit={handleUrlSubmit} className="order-3 sm:order-none w-full sm:flex-1 min-w-0 relative flex items-center">
           <div className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs transition-all ${
             isLight
               ? 'bg-zinc-100/80 border-zinc-300 focus-within:border-cyan-500 focus-within:bg-white text-zinc-900'
@@ -340,10 +342,10 @@ export const LiveWebProxyViewer: React.FC<LiveWebProxyViewerProps> = ({
             {/* Puter.surf Wisp Protocol Badge */}
             <span 
               className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 uppercase shrink-0"
-              title="Puter.surf Wisp Protocol & client-side TLS (rustls-wasm) active"
+              title="Embedded webpage proxy; restricted websites may require opening in the external browser."
             >
               <Radio className="w-2.5 h-2.5 animate-pulse text-cyan-400" />
-              Wisp Surf
+              Web Proxy
             </span>
 
             {/* IsaiahSearch Engine indicator */}
@@ -360,8 +362,9 @@ export const LiveWebProxyViewer: React.FC<LiveWebProxyViewerProps> = ({
               type="text"
               value={inputUrl}
               onChange={(e) => setInputUrl(e.target.value)}
-              placeholder="Search with IsaiahSearch or enter website address (e.g. youtube.com, speedtest.net)..."
-              className="flex-1 min-w-0 bg-transparent border-none focus:outline-none text-xs font-mono truncate"
+              placeholder="Search or enter a website address"
+              aria-label="Search or enter a website address"
+              className="flex-1 min-w-0 bg-transparent border-none focus:outline-none text-base sm:text-xs font-mono truncate"
             />
 
             {/* Omnibox Actions: Copy, Reader Mode, External Escape Hatch */}
@@ -441,10 +444,10 @@ export const LiveWebProxyViewer: React.FC<LiveWebProxyViewerProps> = ({
                 ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20'
                 : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700'
             }`}
-            title={mode === 'proxy' ? 'Puter.surf Wisp Engine with DOM parsing active' : 'Direct iframe embed'}
+            title={mode === 'proxy' ? 'Isaiah embedded-page proxy' : 'Direct iframe embed'}
           >
             <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="text-[11px]">{mode === 'proxy' ? 'Puter.surf (Wisp)' : 'Direct'}</span>
+            <span className="text-[11px]">{mode === 'proxy' ? 'Web Proxy' : 'Direct'}</span>
           </button>
 
           {/* Tab Manager Button */}
@@ -567,8 +570,9 @@ export const LiveWebProxyViewer: React.FC<LiveWebProxyViewerProps> = ({
           key={iframeKey}
           src={iframeSrc}
           title={pageTitle}
-          sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-modals allow-downloads"
-          referrerPolicy="no-referrer"
+          sandbox="allow-scripts allow-forms allow-popups allow-modals allow-downloads"
+          allow="camera; microphone; geolocation; clipboard-read; clipboard-write; fullscreen; picture-in-picture"
+          referrerPolicy="strict-origin-when-cross-origin"
           className="w-full h-full border-0 absolute inset-0 bg-white"
           onLoad={() => setIsLoading(false)}
         />

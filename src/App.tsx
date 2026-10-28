@@ -1972,9 +1972,26 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
           if (selectedAiModel === 'maw_ai' && mawAIRef.current) {
             console.warn('[Maw AI] API unavailable, engaging local Maw core:', apiErr);
             const rawResponse = await mawAIRef.current.generateResponse(rawPrompt);
-            data = { content: rawResponse, sources: [] };
+            data = { content: rawResponse, sources: [], provider: 'Maw local fallback' };
           } else {
-            throw apiErr;
+            const puter = typeof window !== 'undefined' ? (window as any).puter : null;
+            const canUsePuter = isPuterSignedIn() && puter?.ai?.chat && currentUploaded.length === 0;
+            if (!canUsePuter) throw apiErr;
+            const puterMessages = [
+              { role: 'system', content: `You are IsaiahAI 7.0 SUPER, an accurate and thoughtful assistant. Answer directly, verify assumptions, explain uncertainty, never invent citations or claim actions you did not perform. Current specialized mode: ${chatMode}.` },
+              ...chatHistoryMap.slice(-12).map((item: any) => ({
+                role: item.role === 'assistant' ? 'assistant' : 'user',
+                content: String(item.content || '')
+              })),
+              { role: 'user', content: promptToSend }
+            ];
+            const puterResponse = await puter.ai.chat(puterMessages, { model: 'openrouter/free', normalize: true, max_tokens: 4096 });
+            const puterContent = typeof puterResponse === 'string' ? puterResponse
+              : typeof puterResponse?.message?.content === 'string' ? puterResponse.message.content
+              : Array.isArray(puterResponse?.message?.content) ? puterResponse.message.content.map((part: any) => part?.text || '').join('\n')
+              : typeof puterResponse?.text === 'string' ? puterResponse.text : '';
+            if (!puterContent.trim()) throw apiErr;
+            data = { content: puterContent.trim(), sources: [], provider: 'Puter account fallback' };
           }
         }
 
@@ -2241,7 +2258,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
       )}
 
       {/* 2. MAIN CORE CONTENT FIELD (ChatGPT Dark Canvas UI representation) */}
-      <div className={`flex-1 flex flex-col h-full overflow-hidden ${currentTheme.bg}`}>
+      <div className={`flex-1 flex flex-col h-full overflow-hidden ${currentTheme.bg} ${activeView === 'chat' ? 'isaiah-ai-studio' : ''}`}>
         
         {/* Top Header Selector (Model Switcher dropdown lookalike) */}
         {activeView !== 'browser' && (
@@ -2743,7 +2760,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
               )
             ) : (
                 /* Chat Messages List */
-                <div className="max-w-2xl sm:max-w-3xl mx-auto w-full py-4 space-y-6">
+                <div className="isaiah-ai-transcript max-w-2xl sm:max-w-3xl mx-auto w-full py-4 space-y-6">
                   {activeSession.messages.map((msg) => {
                     const isAI = msg.role === 'assistant';
                     
@@ -3307,7 +3324,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
             <div className="p-4 md:px-6 flex-shrink-0 selection:bg-zinc-700 select-none">
               <form 
                 onSubmit={handleSendMessage} 
-                className={`mx-auto space-y-3 transition-all duration-300 ${
+                className={`isaiah-ai-composer mx-auto space-y-3 transition-all duration-300 ${
                   isSidebarOpen ? 'max-w-2xl' : 'max-w-4xl'
                 }`}
                 onDragOver={(e) => e.preventDefault()}
