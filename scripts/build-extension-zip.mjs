@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 const root = process.cwd();
 const source = path.join(root, 'chrome-extension');
 const output = path.join(root, 'public', 'downloads', 'isaiahai-chrome-extension.zip');
-const files = ['manifest.json','popup.html','popup.js','service_worker.js','content.js','options.html','options.js','README_INSTALL.txt'];
+const files = ['manifest.json','popup.html','popup.js','service_worker.js','content.js','options.html','options.js','README_INSTALL.txt','INSTALL_GUIDE.html'];
 function crc32(buffer) {
   let crc = 0xffffffff;
   for (let i = 0; i < buffer.length; i++) {

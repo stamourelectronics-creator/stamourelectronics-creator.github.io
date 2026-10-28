@@ -1,6 +1,6 @@
 # IsaiahAI Acceleration — Netlify deployment
 
-The browser UI is unchanged. `netlify/functions/api.mts` supplies the server-side HTTP API paths used by chat and web search when this site is deployed to Netlify.
+The public frontend is configured to publish to https://stamourelectronics-creator.github.io/isaiahsearch/. After the repository owner enables GitHub Pages with the GitHub Actions source, Netlify can serve a lightweight iframe wrapper while its Functions continue to provide the AI chat and web-search API.
 
 ## Build settings
 
