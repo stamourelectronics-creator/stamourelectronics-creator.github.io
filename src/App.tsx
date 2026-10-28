@@ -2045,15 +2045,11 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
       const errMsgStr = err.message || '';
       const isQuota = /quota|exhausted|limit|429|resource_exhausted/i.test(errMsgStr);
       
-      let errorText = `❌ **Accelerator Core Offline:** I encountered a problem compiling that query. Please verify process logs.\n\n*Detail: ${errMsgStr || 'Check St.Amour connection'}*`;
-      
-      if (isQuota) {
-        if (isImagePrefix) {
-          errorText = `⚠️ **St.Amour Vision Node: Free-Tier Quota Exceeded**\n\nThe premium Image Generation model (**gemini-3.1-flash-image**) was unable to process your request because your active API key does not have image generation quota enabled or is on the free tier.\n\n### ⚡ How to resolve this:\n1. **Upgrade API Key**: Go to **Settings (Gear Icon ⚙️)** -> **Secrets** and verify your Gemini credentials have payment/billing active in Google AI Studio.\n2. **Run General Assistance**: Switch the input mode selector from **🎨 Image Gen** back to **⚡ Assistant**. General helper chats run on standard tiers with wide free boundaries!\n\n*System logs reported: ${errMsgStr}*`;
-        } else {
-          errorText = `⚠️ **St.Amour Electronics: Free-Tier Quota Exceeded**\n\nThe premium language model (**gemini-3.5-flash**) was unable to process your request because your active API key has reached its daily/minute quota limits for free tier access.\n\n### ⚡ How to resolve this:\n1. **Upgrade API Key**: Go to **Settings (Gear Icon ⚙️)** -> **Secrets** and verify your Gemini credentials have payment/billing active in Google AI Studio.\n2. **Use Offline/Search Modes**: Try starting your query with **w!** to search Wikipedia, or **d!** to sweep DuckDuckGo. These fallback search nodes remain fully operational on standard lines!\n\n*System logs reported: ${errMsgStr}*`;
-        }
-      }
+      let errorText = isImagePrefix
+        ? 'IsaiahAI could not create that image on this attempt. Try a shorter, more specific prompt, or continue developing the idea in regular chat.'
+        : isQuota
+          ? 'IsaiahAI is busy right now. Please try again in a moment. Your conversation has been kept.'
+          : 'IsaiahAI could not complete that reply right now. Your message is still in the conversation—please try again in a moment.';
 
       const errMsg: Message = {
         id: `msg-${Date.now()}-error`,
@@ -2411,8 +2407,12 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
         ) : activeView === 'versions' ? (
           <VersionsSandbox />
         ) : activeView === 'browser' ? (
-          <BrowserView 
-            onGoToChat={() => setActiveView('chat')} 
+          <BrowserView
+            onGoToChat={() => setActiveView('chat')}
+            onContinueWithPrompt={(prompt) => {
+              setInputText(prompt);
+              setActiveView('chat');
+            }}
             onGoToMode={(mode) => {
               if (mode === 'games') {
                  setActiveView('games');
@@ -3707,7 +3707,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                                       <span>IsaiahAI 7.0 SUPER</span>
                                       <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-mono font-bold uppercase">SUPER</span>
                                     </div>
-                                    <div className="text-[9px] text-zinc-400 font-normal">OpenRouter · GPT-4o</div>
+                                    <div className="text-[9px] text-zinc-400 font-normal">Advanced reasoning and research</div>
                                   </div>
                                   {chatMode === 'general' && selectedAiModel === 'isaiahai_7_super' && (
                                     <Check className="w-3.5 h-3.5 text-amber-500 shrink-0" />
@@ -4011,7 +4011,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                                   <span>IsaiahAI 7.0 SUPER</span>
                                   <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-mono font-bold uppercase">SUPER</span>
                                 </div>
-                                <div className="text-[9px] text-zinc-400 font-normal">OpenRouter · GPT-4o</div>
+                                <div className="text-[9px] text-zinc-400 font-normal">Advanced reasoning and research</div>
                               </div>
                               {chatMode === 'general' && selectedAiModel === 'isaiahai_7_super' && (
                                 <Check className="w-3.5 h-3.5 text-amber-500 shrink-0" />

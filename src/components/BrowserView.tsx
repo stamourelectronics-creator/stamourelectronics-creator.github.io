@@ -24,6 +24,7 @@ import {
 interface BrowserViewProps {
   customBackgroundUrl?: string;
   onGoToChat: () => void;
+  onContinueWithPrompt?: (prompt: string) => void;
   onGoToMode?: (mode: 'general'|'code'|'image'|'games'|'voice') => void;
   isSidebarOpen?: boolean;
   onToggleSidebar?: () => void;
@@ -90,7 +91,8 @@ const getFaviconUrl = (urlStr: string) => {
 };
 
 export function BrowserView({ 
-  onGoToChat, 
+  onGoToChat,
+  onContinueWithPrompt,
   onGoToMode,
   isSidebarOpen, 
   onToggleSidebar,
@@ -113,6 +115,9 @@ export function BrowserView({
 
   const searchRequestIdRef = useRef(0);
   const briefRequestIdRef = useRef(0);
+  const moreRequestIdRef = useRef(0);
+  const moreLinksOffsetRef = useRef(0);
+  const [continueChatText, setContinueChatText] = useState('');
   const [savedSources, setSavedSources] = useState<{ title: string; url: string; snippet: string; siteName: string; savedAt: string }[]>(() => {
     try {
       const stored = JSON.parse(localStorage.getItem('isaiah_search_reading_list') || '[]');
@@ -2210,99 +2215,95 @@ export function BrowserView({
   };
 
   const fetchMoreSummary = async (queryStr: string, resultsList: any[], currentBrief: string) => {
-    if (!queryStr || isLoadingMore) return;
-    setIsLoadingMore(true);
-    setAddonSummary('');
-    setTypedDetailed('');
-    setIsTypingMore(true);
+    if (!queryStr) return;
+    const requestId = ++moreRequestIdRef.current;
+    setIsLoadingMore(true); setAddonSummary(''); setTypedDetailed(''); setIsTypingMore(true);
+    const body = { query: queryStr, results: resultsList, previousSummary: currentBrief };
     try {
-      const response = await fetch('/api/search-summary-more-stream', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: queryStr, results: resultsList, previousSummary: currentBrief })
-      });
-      if (!response.ok) throw new Error('Network response was not ok');
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
+      const response = await fetch('/api/search-summary-more-stream', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      if (!response.ok || response.headers.get('content-type')?.includes('text/html')) throw new Error('Deep report request failed');
+      const reader = response.body?.getReader(), decoder = new TextDecoder();
+      let complete = '';
       if (reader) {
-        let fullText = '';
         while (true) {
           const { done, value } = await reader.read();
+          if (requestId !== moreRequestIdRef.current) return;
           if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          fullText += chunk;
-          
-          // Smooth simulated typing effect on the stream
-          for (let i = 0; i < chunk.length; i++) {
-            setTypedDetailed(prev => prev + chunk[i]);
-            await new Promise(r => setTimeout(r, 5)); // 5ms per char
-          }
-          setAddonSummary(fullText);
+          complete += decoder.decode(value, { stream: true });
+          setTypedDetailed(complete); setAddonSummary(complete);
         }
+        complete += decoder.decode();
       }
-    } catch (err) {
-      const fallback = `### Deep Dive Report\n\nFurther analysis confirms active integrations, specifications, and discussions around **${queryStr}**.`;
-      setAddonSummary(fallback);
-      setTypedDetailed(fallback);
-    } finally {
-      setIsLoadingMore(false);
-      setIsTypingMore(false);
-    }
+      if (complete.trim()) {
+        if (requestId === moreRequestIdRef.current) { setTypedDetailed(complete); setAddonSummary(complete); }
+        return;
+      }
+      throw new Error('Empty deep report');
+    } catch {
+      if (requestId !== moreRequestIdRef.current) return;
+      try {
+        const retry = await fetch('/api/search-summary-more', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        if (retry.ok && !retry.headers.get('content-type')?.includes('text/html')) {
+          const data = await retry.json(), report = String(data.moreSummary || data.assistantDetailedSummary || '').trim();
+          if (report && requestId === moreRequestIdRef.current) { setAddonSummary(report); setTypedDetailed(report); return; }
+        }
+      } catch { /* fall back to real source links */ }
+      const links = (Array.isArray(resultsList) ? resultsList : []).slice(0, 12)
+        .filter((item: any) => item && /^https?:\/\//i.test(String(item.url || '')))
+        .map((item: any, i: number) => `${i + 1}. **[${String(item.title || 'Search result').replace(/[\\[\\]]/g, '')}](${item.url})** — ${String(item.snippet || '').slice(0, 360)}`).join('\\n');
+      const fallback = links
+        ? `## More research on ${queryStr}\\n\\nThe deeper AI report could not load this time, so here are the actual source pages returned for your search.\\n\\n${links}`
+        : `## More research on ${queryStr}\\n\\nIsaiahAI could not load a deeper report just now. Try again or continue in full chat.`;
+      if (requestId === moreRequestIdRef.current) { setAddonSummary(fallback); setTypedDetailed(fallback); }
+    } finally { if (requestId === moreRequestIdRef.current) { setIsLoadingMore(false); setIsTypingMore(false); } }
   };
 
   const loadMoreLinks = async (): Promise<boolean> => {
-    if (!activeSearch || isLoadingMoreLinks) return false;
+    if (!activeSearch || !searchResults || isLoadingMoreLinks) return false;
+    const requestId = searchRequestIdRef.current;
     setIsLoadingMoreLinks(true);
+    const existingUrls = new Set((searchResults.results || []).map(item => normalizeSearchResultUrl(item.url)).filter(Boolean));
     try {
-      const response = await fetch('/api/more-search-links', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: activeSearch,
-          engine: preferredSearchEngine,
-          safeSearch: safeSearchFilter,
-          offset: searchResults?.results?.length || 0
-        }),
-      });
-      if (!response.ok) throw new Error('Failed to load more links');
-      const moreData = await response.json();
-      
-      const enrichedMore = enrichSearchResults(moreData);
-      let addedResults = 0;
-      if (enrichedMore) {
-        const existingUrls = new Set((searchResults?.results || []).map(item => normalizeSearchResultUrl(item.url)).filter(Boolean));
-        addedResults = (enrichedMore.results || []).filter((item: SearchResult) => { const key = normalizeSearchResultUrl(item.url); return key && !existingUrls.has(key); }).length;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const offset = Math.max(searchResults.results?.length || 0, moreLinksOffsetRef.current);
+        const response = await fetch('/api/more-search-links', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: activeSearch, engine: preferredSearchEngine, safeSearch: safeSearchFilter, offset }),
+        });
+        moreLinksOffsetRef.current = offset + 20;
+        if (requestId !== searchRequestIdRef.current) return false;
+        if (!response.ok || response.headers.get('content-type')?.includes('text/html')) throw new Error('Could not load the next result page');
+        const incoming = enrichSearchResults(await response.json());
+        if (!incoming) continue;
+        const freshResults = (incoming.results || []).filter((item: SearchResult) => {
+          const key = normalizeSearchResultUrl(item.url);
+          if (!key || existingUrls.has(key)) return false;
+          existingUrls.add(key); return true;
+        });
+        const freshImages = incoming.images || [], freshVideos = incoming.videos || [], freshNews = incoming.news || [];
+        if (!freshResults.length && !freshImages.length && !freshVideos.length && !freshNews.length) continue;
         setSearchResults(prev => {
           if (!prev) return null;
-          const mergeUnique = (current: any[] = [], incoming: any[] = [], identity: (item: any) => string = item => String(item?.url || '')) => {
+          const mergeUnique = (current: any[] = [], next: any[] = [], identity: (item: any) => string) => {
             const seen = new Set(current.map(identity).filter(Boolean));
-            const additions = incoming.filter(item => {
-              const key = identity(item);
-              if (!key || seen.has(key)) return false;
-              seen.add(key);
-              return true;
-            });
-            return [...current, ...additions];
+            return [...current, ...next.filter(item => { const key = identity(item); if (!key || seen.has(key)) return false; seen.add(key); return true; })];
           };
           return {
             ...prev,
-            results: mergeUnique(prev.results || [], enrichedMore.results || [], item => normalizeSearchResultUrl(String(item?.url || item?.uri || ''))),
-            images: mergeUnique(prev.images || [], enrichedMore.images || [], item => String(item?.imageUrl || item?.url || '')),
-            videos: mergeUnique(prev.videos || [], enrichedMore.videos || [], item => String(item?.url || item?.title || '')),
-            news: mergeUnique(prev.news || [], enrichedMore.news || [], item => String(item?.url || item?.title || ''))
+            results: mergeUnique(prev.results || [], freshResults, item => normalizeSearchResultUrl(String(item?.url || item?.uri || ''))),
+            images: mergeUnique(prev.images || [], freshImages, item => String(item?.imageUrl || item?.url || '')),
+            videos: mergeUnique(prev.videos || [], freshVideos, item => String(item?.url || item?.title || '')),
+            news: mergeUnique(prev.news || [], freshNews, item => String(item?.url || item?.title || '')),
           };
         });
+        return true;
       }
-      return addedResults > 0;
-    } catch (err) {
-      console.error('[Search Engine] Error loading deeper results:', err);
       return false;
-    } finally {
-      setIsLoadingMoreLinks(false);
-    }
+    } catch (error) { console.error('[IsaiahAI Search] Additional links failed:', error); return false; }
+    finally { setIsLoadingMoreLinks(false); }
   };
 
-  // Client-side visual media enrichments (prevents gray or black boxes, adds platform diversity)
+    // Client-side visual media enrichments (prevents gray or black boxes, adds platform diversity)
   const enrichSearchResults = (data: any) => {
     if (!data) return null;
     const query = searchQuery.trim() || 'tech';
@@ -2403,6 +2404,9 @@ export function BrowserView({
     if (!query) return;
     const requestId = ++searchRequestIdRef.current;
     briefRequestIdRef.current += 1;
+    moreRequestIdRef.current += 1;
+    moreLinksOffsetRef.current = 0;
+    setContinueChatText('');
     setIsLoadingBrief(false);
     setIsTypingBrief(false);
 
@@ -3354,10 +3358,30 @@ export function BrowserView({
                           )}
                         </div>
 
+                        <div className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-3 space-y-2.5">
+                          <label htmlFor="search-assist-follow-up" className="block text-xs font-bold text-indigo-950">Keep chatting about this search</label>
+                          <textarea id="search-assist-follow-up" value={continueChatText} onChange={(event) => setContinueChatText(event.target.value)} placeholder={`Ask a follow-up about “${activeSearch || 'these results'}”…`} rows={2} className="w-full resize-y rounded-xl border border-indigo-100 bg-white px-3 py-2.5 text-sm text-zinc-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" />
+                          <button type="button" onClick={() => {
+                            const followUp = continueChatText.trim();
+                            if (!followUp) { showToast('Type a follow-up question first'); return; }
+                            const context = (typedDetailed || addonSummary || briefSummary || '').trim().slice(0, 9000);
+                            const prompt = `Continue our IsaiahAI Search Assist conversation about: ${activeSearch}.\\n\\nSearch summary and research so far:\\n${context || '(No summary was available yet.)'}\\n\\nMy follow-up question: ${followUp}\\n\\nContinue with this context and answer the follow-up directly.`;
+                            if (onContinueWithPrompt) onContinueWithPrompt(prompt);
+                            else { try { sessionStorage.setItem('isaiah_search_assist_handoff', prompt); } catch {} onGoToChat(); }
+                          }} className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 active:scale-[0.99]">
+                            <MessageSquare className="w-4 h-4" /> Continue in full IsaiahAI chat
+                          </button>
+                        </div>
+
                         {/* RAINBOW BORDERED CONTINUE BUTTON AT THE BOTTOM OF THE MORE EXPANDED SECTION */}
                         <div className="pt-5 pb-1 flex justify-center">
                           <button
-                            onClick={onGoToChat}
+                            onClick={() => {
+                              const context = (typedDetailed || addonSummary || briefSummary || '').trim().slice(0, 9000);
+                              const prompt = `Continue our IsaiahAI Search Assist conversation about: ${activeSearch}.\\n\\nResearch so far:\\n${context}\\n\\nPlease continue with the conclusion and help me explore this topic further.`;
+                              if (onContinueWithPrompt) onContinueWithPrompt(prompt);
+                              else { try { sessionStorage.setItem('isaiah_search_assist_handoff', prompt); } catch {} onGoToChat(); }
+                            }}
                             className="w-full text-center py-4 bg-zinc-950 hover:bg-zinc-900 border-2 border-transparent rounded-2xl font-black text-xs tracking-wide text-white transition-all cursor-pointer uppercase flex items-center justify-center gap-2.5 rainbow-ring-active hover:scale-[1.01] duration-500 shadow-xl"
                           >
                             <MessageSquare className="w-4 h-4 text-amber-300 animate-pulse" />
@@ -3371,7 +3395,7 @@ export function BrowserView({
 
                 {/* Footer labels */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 pt-3 border-t border-zinc-100 text-[10px] text-zinc-400 font-mono">
-                  <span>Auto-generated based on listed sources. Private gateway active.</span>
+                  <span>AI overview based on the listed sources.</span>
                   <div className="flex items-center gap-3">
                     <span className="font-semibold text-zinc-450">Was this helpful?</span>
                     <div className="flex items-center gap-2">
