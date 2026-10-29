@@ -515,7 +515,7 @@ async function askOpenRouter(body: AnyRecord, systemInstruction: string, preferr
   let lastError: any;
   const seen = new Set<string>();
   const startedAt = Date.now();
-  const overallBudgetMs = 44000; // leave room for web search and overhead inside Netlify's synchronous function window
+  const overallBudgetMs = 26000; // leave room for the Gemini-first attempt, optional summary, and Netlify's 60-second synchronous limit
   for (const model of candidates) {
     if (seen.has(model)) continue;
     seen.add(model);
