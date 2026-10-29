@@ -706,14 +706,26 @@ ${webText || '(No live results. Disclose uncertainty.)'}`;
 }
 
 async function generateSummary(query: string, results: SearchResult[], mode: 'brief' | 'full' | 'more') {
+  const today = new Date().toISOString().slice(0, 10);
   const sources = results.filter(item => /^https?:\/\//i.test(String(item?.url || '')));
-  const sourceText = sources.slice(0, mode === 'more' ? 18 : 12).map((item, i) => `${i + 1}. ${item.title}\\nURL: ${item.url}\\n${item.snippet}`).join('\\n\\n');
-  const prompt = mode === 'brief'
-    ? `Answer the query directly in 1–3 useful paragraphs and cite important source URLs. Query: ${query}\\nSources:\\n${sourceText}`
-    : mode === 'more'
-      ? `Write a useful deep research report about: ${query}. Include the direct answer, context, key findings, comparisons or competing explanations, implications, uncertainties, and practical next steps. Tie factual statements to supplied URLs with Markdown links, separate evidence from inference, and never fabricate citations. Do not reveal hidden chain-of-thought.\\nSources:\\n${sourceText}`
-      : `Answer ${query} directly, then give a structured explanation grounded in supplied source URLs. Never invent citations.\\nSources:\\n${sourceText}`;
-  const models = mode === 'more' ? ['nvidia/nemotron-3-ultra-550b-a55b:free', 'openrouter/free'] : ['openrouter/free', 'nvidia/nemotron-3.5-lightning:free'];
+  const sourceText = sources.slice(0, mode === 'more' ? 18 : 12).map((item, i) =>
+    (i + 1) + '. ' + String(item.title || 'Untitled source') +
+    '\nURL: ' + item.url +
+    '\nSnippet: ' + String(item.snippet || '').slice(0, 1200)
+  ).join('\n\n');
+  const briefInstructions =
+    'Give the direct answer first in 1–3 useful paragraphs. Add inline Markdown links for claims the supplied sources support. Mention when a source is a search portal or a snippet instead of a full article.';
+  const fullInstructions =
+    'Give a direct answer first, then organize the findings with clear headings. Compare independent sources, separate verified facts from inference, highlight important dates and conflicting accounts, explain limitations, and give practical implications. Use inline Markdown citations to supplied URLs close to the claims they support. Do not invent article contents, publication dates, quotations, statistics, or citations.';
+  const moreInstructions =
+    'Produce a careful research report with an executive answer, key findings, source-by-source evidence, comparisons or competing explanations, a dated timeline when relevant, uncertainties, and practical next steps. Cross-check claims across independent sources where possible. Prioritize primary/official sources and recent relevant reporting for current questions. Clearly flag older source dates, missing evidence, or contradictions. Cite factual claims with supplied Markdown URLs and never fabricate sources.';
+  const instructions = mode === 'brief' ? briefInstructions : mode === 'more' ? moreInstructions : fullInstructions;
+  const prompt = 'Today is ' + today + '.\nQuestion: ' + query + '\n\nTask: ' + instructions +
+    '\n\nSource material (search snippets only; do not pretend to have read full pages unless their content is included):\n' +
+    (sourceText || '(No direct web sources were returned. Disclose this limitation and do not guess.)');
+  const models = mode === 'more'
+    ? ['nvidia/nemotron-3-ultra-550b-a55b:free', 'openrouter/free']
+    : ['openrouter/free', 'nvidia/nemotron-3.5-lightning:free'];
   if (env('OPENROUTER_API_KEY') || env('ISAIAH_OPENROUTER_API_KEY')) {
     const started = Date.now(), budget = mode === 'more' ? 18000 : 11000;
     for (const model of models) {
@@ -721,31 +733,49 @@ async function generateSummary(query: string, results: SearchResult[], mode: 'br
       if (remaining < 1300) break;
       try {
         const response = await openRouterChat(model, [
-          { role: 'system', content: 'You are IsaiahAI Search Assist. Be thoughtful, analytical and accurate; ground conclusions in the supplied sources. Never invent citations.' },
+          { role: 'system', content: 'You are IsaiahAI Search Assist. Be an evidence-first web research assistant. Prefer precise claims over confidence, compare source dates, disclose gaps, and attach inline links to the facts they support. Never invent citations. Do not reveal hidden chain-of-thought.' },
           { role: 'user', content: prompt },
         ], Math.max(1200, Math.min(mode === 'more' ? 8000 : 5500, remaining - 200)));
         const summary = extractOpenRouterContent(response).trim();
         if (summary) return summary;
-      } catch (error: any) { console.warn('[IsaiahAI Search Assist] Model attempt failed:', String(error?.message || error).slice(0, 140)); }
+      } catch (error: any) {
+        console.warn('[IsaiahAI Search Assist] Model attempt failed:', String(error?.message || error).slice(0, 140));
+      }
     }
   }
   if (env('GEMINI_API_KEY')) {
     try {
       const ai = new GoogleGenAI({ apiKey: env('GEMINI_API_KEY') });
       const result = await Promise.race([
-        ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt, config: { systemInstruction: 'You are IsaiahAI Search Assist. Ground answers in supplied sources; for deep reports, compare evidence and explain uncertainty.', temperature: 0.35, maxOutputTokens: mode === 'more' ? 6000 : 1600 } }),
+        ai.models.generateContent({
+          model: 'gemini-2.5-flash', contents: prompt,
+          config: {
+            systemInstruction: 'You are IsaiahAI Search Assist. Be evidence-first, cite only supplied URLs, compare source dates, explain contradictions, and disclose when only search snippets were supplied.',
+            temperature: 0.25,
+            maxOutputTokens: mode === 'more' ? 6000 : 1800
+          }
+        }),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Summary request timeout')), 9000)),
       ]) as any;
       if (result?.text?.trim()) return result.text.trim();
-    } catch (error: any) { console.warn('[IsaiahAI Search Assist] Backup summary failed:', String(error?.message || error).slice(0, 140)); }
+    } catch (error: any) {
+      console.warn('[IsaiahAI Search Assist] Backup summary failed:', String(error?.message || error).slice(0, 140));
+    }
   }
   const linked = sources.slice(0, mode === 'more' ? 18 : 8)
-    .map((item, i) => `${i + 1}. **[${String(item.title || 'Search result').replace(/[\\[\\]]/g, '')}](${item.url})** — ${String(item.snippet || '').slice(0, 420)}`).join('\\n');
-  if (mode === 'brief') return `### Overview: ${query}\\n\\nThe AI summary service could not complete this request, so here are the actual source links returned for your query rather than a guessed answer.\\n\\n${linked || 'No direct source pages were returned. Try another query.'}`;
-  if (mode === 'more') return `## More research on ${query}\\n\\nThe deeper analysis service was unavailable, so I won't invent a report. Use these source pages to compare evidence and dates.\\n\\n${linked || 'No direct source pages were returned. Try again shortly or continue in the full chat.'}`;
-  return `## Search summary: ${query}\\n\\n${sources[0]?.snippet || 'I could not generate a summary from available services.'}\\n\\n### Relevant links\\n\\n${linked}`;
+    .map((item, i) => (i + 1) + '. **[' + String(item.title || 'Search result').replace(/[\[\]]/g, '') + '](' + item.url + ')** — ' + String(item.snippet || '').slice(0, 420))
+    .join('\n');
+  if (mode === 'brief') {
+    return '### Overview: ' + query + '\n\nThe AI summary service could not complete this request, so here are the actual source links returned for the query rather than a guessed answer.\n\n' +
+      (linked || 'No direct source pages were returned. Try another query.');
+  }
+  if (mode === 'more') {
+    return '## More research on ' + query + '\n\nThe deeper analysis service was unavailable, so I will not invent a report. Compare these source pages and their dates.\n\n' +
+      (linked || 'No direct source pages were returned. Try again shortly or continue in the full chat.');
+  }
+  return '## Search summary: ' + query + '\n\n' +
+    (sources[0]?.snippet || 'I could not generate a summary from available services.') + '\n\n### Relevant links\n\n' + linked;
 }
-
 function xmlUnescape(s: string) { return decodeHtml(s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')); }
 
 async function handleWiki(query: string) {

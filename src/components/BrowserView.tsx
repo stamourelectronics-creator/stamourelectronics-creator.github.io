@@ -269,7 +269,7 @@ export function BrowserView({
   const [bookmarksList, setBookmarksList] = useState<{ title: string; query: string }[]>(() => {
     const saved = localStorage.getItem('isaiah_browser_bookmarks');
     return saved ? JSON.parse(saved) : [
-      { title: 'DuckDuckGo AI Chat', query: 'duckduckgo ai chat' },
+      { title: 'IsaiahSearch', query: 'IsaiahSearch' },
       { title: 'YouTube Trending', query: 'youtube trending' },
       { title: 'Wikipedia Tech News', query: 'wikipedia tech news' }
     ];
@@ -2538,7 +2538,6 @@ export function BrowserView({
       // Fallback search results with zero lag
       const encodedQuery = encodeURIComponent(query);
       const fallbackPortals = [
-        { title: `DuckDuckGo results for ${query}`, url: `https://duckduckgo.com/?q=${encodedQuery}`, snippet: `Search the web for pages matching ${query}.`, siteName: 'DuckDuckGo' },
         { title: `Google results for ${query}`, url: `https://www.google.com/search?q=${encodedQuery}`, snippet: `Search Google for pages matching ${query}.`, siteName: 'Google' },
         { title: `Bing results for ${query}`, url: `https://www.bing.com/search?q=${encodedQuery}`, snippet: `Search Bing for pages matching ${query}.`, siteName: 'Bing' },
         { title: `Wikipedia results for ${query}`, url: `https://en.wikipedia.org/w/index.php?search=${encodedQuery}`, snippet: `Search Wikipedia articles related to ${query}.`, siteName: 'Wikipedia' },
@@ -2568,9 +2567,9 @@ export function BrowserView({
     }
   };
 
-  // Open destinations inside Isaiah Search's own tab manager, like a regular browser.
-  // Sites that disallow embedding still offer an explicit external-browser action in the viewer.
-  const openWebpage = (url: string, title?: string, forceNewTab = false) => {
+  // IsaiahSearch is the website's search surface, not an embedded browser.
+  // Opening a result launches the destination in a normal browser tab and leaves search results available.
+  const openWebpage = (url: string, title?: string, _forceNewTab = false) => {
     if (!url) return;
     let formattedUrl = url.trim();
     if (!/^https?:\/\//i.test(formattedUrl)) formattedUrl = 'https://' + formattedUrl;
@@ -2578,7 +2577,7 @@ export function BrowserView({
     try {
       parsedUrl = new URL(formattedUrl);
       if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
-        showToast('Only HTTP and HTTPS webpages can open in this browser.');
+        showToast('Only HTTP and HTTPS webpages can be opened.');
         return;
       }
       formattedUrl = parsedUrl.href;
@@ -2590,8 +2589,8 @@ export function BrowserView({
     if (!incognito) {
       const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       setHistoryList(prev => {
-        const filtered = prev.filter(item => item.query !== formattedUrl);
-        const updated = [{ query: formattedUrl, title: websiteTitle, timestamp, incognito: false, type: 'website' as const }, ...filtered].slice(0, 500);
+        const updated = [{ query: formattedUrl, title: websiteTitle, timestamp, incognito: false, type: 'website' as const },
+          ...prev.filter(item => item.query !== formattedUrl)].slice(0, 500);
         try { localStorage.setItem('isaiah_browser_history', JSON.stringify(updated)); } catch { /* browser storage may be full */ }
         return updated;
       });
@@ -2599,30 +2598,11 @@ export function BrowserView({
         addDoc(collection(db, 'users', auth.currentUser.uid, 'history'), {
           query: formattedUrl, title: websiteTitle, timestamp, incognito: false,
           type: 'website', createdAt: serverTimestamp()
-        }).catch(err => console.error('[Firebase] Error syncing website history to DB:', err));
+        }).catch(err => console.error('[IsaiahSearch] History sync failed:', err));
       }
     }
-    if (openLinksInNewTab || forceNewTab) {
-      const newTab = { id: Date.now().toString(), title: websiteTitle, url: formattedUrl, searchQuery: '', activeSearch: '' };
-      setTabs(prev => [...prev, newTab]);
-      setActiveTabId(newTab.id);
-    } else {
-      setTabs(prev => prev.map(tab => tab.id === activeTabId
-        ? { ...tab, title: websiteTitle, url: formattedUrl, searchQuery: '', activeSearch: '' }
-        : tab));
-    }
-    setSearchQuery('');
-    setActiveSearch('');
-    setSearchResults(null);
-    setBriefSummary('');
-    setAddonSummary('');
-    setTypedSummary('');
-    setTypedDetailed('');
-    setIsSearching(false);
-    setIsLoadingBrief(false);
-    setIsTypingBrief(false);
-    setShowExpandedResultsPage(false);
-    setAssistExpanded(false);
+    const opened = window.open(formattedUrl, '_blank', 'noopener,noreferrer');
+    if (!opened) showToast('Your browser blocked the new tab. Allow pop-ups for IsaiahSearch and try again.');
   };
 
   const handleSelectTab = (tabId: string) => {
@@ -2689,7 +2669,7 @@ export function BrowserView({
                         activeSearch.toLowerCase().includes('isaiah game');
 
   const currentActiveTab = tabs.find(t => t.id === activeTabId) || tabs[0];
-  const isViewingLiveWebpage = Boolean(currentActiveTab?.url && currentActiveTab.url.trim().length > 0);
+  const isViewingLiveWebpage = false; // The website is search-only; real pages open in browser tabs.
   const relatedSearchSuggestions = activeSearch ? [
     `${activeSearch} explained`,
     `${activeSearch} examples`,
@@ -4081,7 +4061,7 @@ export function BrowserView({
       </div>
 
       {/* MOBILE BOTTOM BAR */}
-      <div className={`md:hidden absolute bottom-0 left-0 right-0 h-14 ${incognito ? 'bg-zinc-900 border-t border-zinc-800 text-zinc-400' : 'bg-[#f8f9fa] border-t border-zinc-200 text-zinc-500'} flex items-center justify-between px-4 z-40 shadow-[0_-4px_10px_rgba(0,0,0,0.02)]`}>
+      <div style={{ display: 'none' }} className={`md:hidden absolute bottom-0 left-0 right-0 h-14 ${incognito ? 'bg-zinc-900 border-t border-zinc-800 text-zinc-400' : 'bg-[#f8f9fa] border-t border-zinc-200 text-zinc-500'} flex items-center justify-between px-4 z-40 shadow-[0_-4px_10px_rgba(0,0,0,0.02)]`}>
         {!activeSearch ? (
           <>
             <button className="p-2 hover:bg-zinc-200/50 rounded-full transition-colors cursor-pointer" onClick={() => { setMenuOpen(true); setActivePanel('bookmarks'); }}>

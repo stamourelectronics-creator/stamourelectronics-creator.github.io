@@ -1986,23 +1986,76 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
             data = { content: rawResponse, sources: [], provider: 'Maw local fallback' };
           } else {
             const puter = typeof window !== 'undefined' ? (window as any).puter : null;
-            const canUsePuter = isPuterSignedIn() && puter?.ai?.chat && currentUploaded.length === 0;
-            if (!canUsePuter) throw apiErr;
+            if (!puter?.ai?.chat || currentUploaded.length > 0) throw apiErr;
+
+            // Puter is a user-authorized backup route, not a provider quota bypass.
+            if (!isPuterSignedIn()) {
+              try { await signInPuter(); }
+              catch (signInError) {
+                console.warn('[Puter fallback] Sign-in was canceled or unavailable:', signInError);
+                throw apiErr;
+              }
+            }
+            if (!isPuterSignedIn()) throw apiErr;
+
+            let fallbackSources: { title: string; uri: string }[] = [];
+            try {
+              const searchResponse = await fetch('/api/quick-search-links', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: rawPrompt, engine: 'isaiah', safeSearch: 'Moderate' })
+              });
+              if (searchResponse.ok && !searchResponse.headers.get('content-type')?.includes('text/html')) {
+                const searchData = await searchResponse.json();
+                fallbackSources = (Array.isArray(searchData.results) ? searchData.results : [])
+                  .filter((item: any) => /^https?:\/\//i.test(String(item?.url || '')))
+                  .slice(0, 8)
+                  .map((item: any) => ({ title: String(item.title || item.siteName || 'Web source'), uri: item.url }));
+              }
+            } catch (searchError) {
+              console.warn('[Puter fallback] Live-source retrieval failed; continuing without search:', searchError);
+            }
+            const sourceContext = fallbackSources.length
+              ? '\n\nLive web sources retrieved for this question. Cite only these URLs and disclose when snippets do not settle a fact:\n' +
+                fallbackSources.map((source, index) => (index + 1) + '. ' + source.title + ' (' + source.uri + ')').join('\n')
+              : '\n\nLive web search was unavailable for this fallback response. Do not claim you searched the web or invent citations.';
             const puterMessages = [
-              { role: 'system', content: `You are IsaiahAI 7.0 SUPER, an accurate and thoughtful assistant. Answer directly, verify assumptions, explain uncertainty, never invent citations or claim actions you did not perform. Current specialized mode: ${chatMode}.` },
+              {
+                role: 'system',
+                content: 'You are IsaiahAI 7.0 SUPER, an accurate, thoughtful assistant. Answer directly, verify assumptions, explain uncertainty, and never invent sources or claim to perform actions you did not perform. When live source notes are supplied, ground current facts in them and use their URLs as Markdown links. Current specialized mode: ' + chatMode + '.'
+              },
               ...chatHistoryMap.slice(-12).map((item: any) => ({
                 role: item.role === 'assistant' ? 'assistant' : 'user',
                 content: String(item.content || '')
               })),
-              { role: 'user', content: promptToSend }
+              { role: 'user', content: promptToSend + sourceContext }
             ];
-            const puterResponse = await puter.ai.chat(puterMessages, { model: 'openrouter/free', normalize: true, max_tokens: 4096 });
+            const freeModels: string[] = ['openrouter/free'];
+            try {
+              const catalogue = await puter.ai.listModels?.();
+              if (Array.isArray(catalogue)) {
+                for (const model of catalogue) {
+                  const id = String(model?.id || '');
+                  if (/:free$/i.test(id) && !freeModels.includes(id)) freeModels.push(id);
+                  if (freeModels.length >= 4) break;
+                }
+              }
+            } catch { /* use the free router alias */ }
+            let puterResponse: any = null;
+            let lastPuterError: any = null;
+            for (const model of freeModels) {
+              try {
+                puterResponse = await puter.ai.chat(puterMessages, { model, normalize: true, max_tokens: 4096 });
+                if (puterResponse) break;
+              } catch (puterError) { lastPuterError = puterError; }
+            }
+            if (!puterResponse) throw lastPuterError || apiErr;
             const puterContent = typeof puterResponse === 'string' ? puterResponse
               : typeof puterResponse?.message?.content === 'string' ? puterResponse.message.content
               : Array.isArray(puterResponse?.message?.content) ? puterResponse.message.content.map((part: any) => part?.text || '').join('\n')
               : typeof puterResponse?.text === 'string' ? puterResponse.text : '';
             if (!puterContent.trim()) throw apiErr;
-            data = { content: puterContent.trim(), sources: [], provider: 'Puter account fallback' };
+            data = { content: puterContent.trim(), sources: fallbackSources, provider: 'Puter free-model fallback' };
           }
         }
 

@@ -200,8 +200,8 @@ export function Sidebar({
           }`}
         >
           <Globe className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="truncate flex-1">Web Browser</span>
-          <span className="text-[8px] bg-emerald-500/20 text-emerald-400 px-1 py-0.5 rounded font-bold font-mono">LIVE</span>
+          <span className="truncate flex-1">IsaiahSearch</span>
+          <span className="text-[8px] bg-emerald-500/20 text-emerald-400 px-1 py-0.5 rounded font-bold font-mono">AI + WEB</span>
         </button>
 
         <a
