@@ -716,7 +716,7 @@ export function BrowserView({
         setHistoryList(savedHist ? JSON.parse(savedHist) : []);
         const savedBook = localStorage.getItem('isaiah_browser_bookmarks');
         setBookmarksList(savedBook ? JSON.parse(savedBook) : [
-          { title: 'DuckDuckGo AI Chat', query: 'duckduckgo ai chat' },
+          { title: 'IsaiahAI Chat', query: 'IsaiahAI chat' },
           { title: 'YouTube Trending', query: 'youtube trending' },
           { title: 'Wikipedia Tech News', query: 'wikipedia tech news' }
         ]);

@@ -48,19 +48,13 @@ function safeUrl(raw: string): string {
   let href = decodeHtml(raw.trim());
   if (href.startsWith('//')) href = `https:${href}`;
   try {
-    const parsed = new URL(href, 'https://duckduckgo.com');
-    if (parsed.hostname.includes('duckduckgo.com') && parsed.pathname.includes('/l/')) {
-      href = parsed.searchParams.get('uddg') || href;
-    }
-    const normalized = new URL(href);
+    const normalized = new URL(href, 'https://www.bing.com');
     if (normalized.protocol !== 'http:' && normalized.protocol !== 'https:') return '';
-    if (/duckduckgo\.com\/l\//i.test(normalized.href)) return '';
     return normalized.href;
   } catch {
     return '';
   }
 }
-
 
 /** Public-Internet-only browser proxy. Local/private targets and redirect pivots are blocked. */
 function proxyIsPublicIp(address: string): boolean {
@@ -266,41 +260,6 @@ async function fetchText(url: string, timeoutMs = 9000): Promise<string> {
   return response.text();
 }
 
-async function duckDuckGoResults(query: string, offset = 0, safeSearch = 'Moderate'): Promise<SearchResult[]> {
-  const params = new URLSearchParams({ q: query, s: String(offset), ia: 'web' });
-  if (/strict/i.test(safeSearch)) params.set('kp', '1');
-  else if (/off/i.test(safeSearch)) params.set('kp', '-1');
-  else params.set('kp', '-2');
-  const html = await fetchText(`https://html.duckduckgo.com/html/?${params.toString()}`);
-  const links: { url: string; title: string }[] = [];
-  const anchorPattern = /<a\b(?=[^>]*class=["'][^"']*result__a[^"']*["'])[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
-  let match: RegExpExecArray | null;
-  while ((match = anchorPattern.exec(html)) !== null) {
-    const url = safeUrl(match[1]);
-    const title = stripTags(match[2]);
-    if (!url || !title || /duckduckgo\.com/i.test(new URL(url).hostname)) continue;
-    links.push({ url, title });
-  }
-  const snippets: string[] = [];
-  const snippetPattern = /<(?:a|div|span)\b(?=[^>]*class=["'][^"']*result__snippet[^"']*["'])[^>]*>([\s\S]*?)<\/(?:a|div|span)>/gi;
-  while ((match = snippetPattern.exec(html)) !== null) snippets.push(stripTags(match[1]));
-  const out: SearchResult[] = [];
-  const seen = new Set<string>();
-  links.forEach((item, i) => {
-    if (seen.has(item.url)) return;
-    seen.add(item.url);
-    let siteName = 'Web';
-    try { siteName = new URL(item.url).hostname.replace(/^www\./, ''); } catch { /* keep default */ }
-    out.push({
-      title: item.title,
-      url: item.url,
-      snippet: snippets[i] || `Open ${item.title} for information related to “${query}”.`,
-      siteName,
-    });
-  });
-  return out;
-}
-
 async function wikipediaResults(query: string, offset = 0): Promise<SearchResult[]> {
   const params = new URLSearchParams({ action: 'query', list: 'search', srsearch: query, srlimit: '20', sroffset: String(offset), format: 'json', utf8: '1' });
   const res = await fetch(`https://en.wikipedia.org/w/api.php?${params}`, { signal: AbortSignal.timeout(8000), headers: { 'User-Agent': 'IsaiahAI/1.0 (web search)' } });
@@ -348,7 +307,7 @@ async function googleNewsResults(query: string): Promise<any[]> {
 function extraSearchPortals(query: string): SearchResult[] {
   const q = encodeURIComponent(query);
   return [
-    { title: `More web results for ${query}`, url: `https://duckduckgo.com/?q=${q}`, snippet: 'Open the full DuckDuckGo results page.', siteName: 'DuckDuckGo' },
+    { title: `IsaiahSearch results for ${query}`, url: `https://www.google.com/search?q=${q}`, snippet: 'Open more web results from the IsaiahSearch fallback collection.', siteName: 'IsaiahSearch' },
     { title: `Google results for ${query}`, url: `https://www.google.com/search?q=${q}`, snippet: 'Search the web on Google.', siteName: 'Google' },
     { title: `Bing results for ${query}`, url: `https://www.bing.com/search?q=${q}`, snippet: 'Search the web on Bing.', siteName: 'Bing' },
     { title: `Brave Search results for ${query}`, url: `https://search.brave.com/search?q=${q}`, snippet: 'Search the web with Brave Search.', siteName: 'Brave Search' },
@@ -389,15 +348,14 @@ async function bingRssResults(query: string, offset = 0): Promise<SearchResult[]
 
 async function searchWeb(query: string, options: { offset?: number; safeSearch?: string; minimum?: number } = {}) {
   const offset = options.offset || 0;
-  const [webResults, bingResults, wikiAll, images, news] = await Promise.all([
-    duckDuckGoResults(query, offset, options.safeSearch || 'Moderate').catch(() => [] as SearchResult[]),
+  const [bingResults, wikiAll, images, news] = await Promise.all([
     bingRssResults(query, offset).catch(() => [] as SearchResult[]),
     wikipediaResults(query, offset).catch(() => [] as SearchResult[]),
     wikiImages(query),
     googleNewsResults(query),
   ]);
-  // Do not let a single encyclopedia dominate when a web index is slow or blocked.
-  // Mix regular web results, Bing RSS, publisher news, and only a couple of Wikipedia pages.
+  // IsaiahSearch combines web-index, encyclopedia, and publisher-news results.
+  // Keep direct pages diverse and use search-provider links only as an explicit fallback.
   const wiki = wikiAll.slice(0, 2);
   const newsAsResults: SearchResult[] = news.map((item: any) => ({
     title: String(item.title || 'News result'),
@@ -408,7 +366,7 @@ async function searchWeb(query: string, options: { offset?: number; safeSearch?:
   const out: SearchResult[] = [];
   const seen = new Set<string>();
   const hostCounts = new Map<string, number>();
-  const candidates = [...webResults, ...bingResults, ...newsAsResults, ...wiki];
+  const candidates = [...bingResults, ...newsAsResults, ...wiki];
   for (const raw of candidates) {
     const url = safeUrl(raw.url);
     if (!url) continue;
