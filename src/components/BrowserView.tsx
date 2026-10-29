@@ -2570,7 +2570,7 @@ export function BrowserView({
 
   // Open destinations inside Isaiah Search's own tab manager, like a regular browser.
   // Sites that disallow embedding still offer an explicit external-browser action in the viewer.
-  const openWebpage = (url: string, title?: string) => {
+  const openWebpage = (url: string, title?: string, forceNewTab = false) => {
     if (!url) return;
     let formattedUrl = url.trim();
     if (!/^https?:\/\//i.test(formattedUrl)) formattedUrl = 'https://' + formattedUrl;
@@ -2602,7 +2602,7 @@ export function BrowserView({
         }).catch(err => console.error('[Firebase] Error syncing website history to DB:', err));
       }
     }
-    if (openLinksInNewTab) {
+    if (openLinksInNewTab || forceNewTab) {
       const newTab = { id: Date.now().toString(), title: websiteTitle, url: formattedUrl, searchQuery: '', activeSearch: '' };
       setTabs(prev => [...prev, newTab]);
       setActiveTabId(newTab.id);
@@ -2710,7 +2710,8 @@ export function BrowserView({
           onNavigate={(newUrl, newTitle) => {
             setTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, url: newUrl, title: newTitle || t.title } : t));
           }}
-          onClose={() => {
+          onOpenWebTab={(newUrl, newTitle) => openWebpage(newUrl, newTitle, true)}
+          onClose={() => {}
             setTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, url: '' } : t));
           }}
           onSearch={(searchQueryText) => {

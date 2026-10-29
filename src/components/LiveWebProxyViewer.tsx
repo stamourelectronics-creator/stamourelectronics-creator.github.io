@@ -43,6 +43,7 @@ interface LiveWebProxyViewerProps {
   onSearch?: (query: string) => void;
   onClose?: () => void;
   onOpenExternal?: (url: string) => void;
+  onOpenWebTab?: (url: string, title?: string) => void;
   onOpenTabs?: () => void;
   tabCount?: number;
 }
@@ -56,6 +57,7 @@ export const LiveWebProxyViewer: React.FC<LiveWebProxyViewerProps> = ({
   onSearch,
   onClose,
   onOpenExternal,
+  onOpenWebTab,
   onOpenTabs,
   tabCount
 }) => {
@@ -123,14 +125,15 @@ export const LiveWebProxyViewer: React.FC<LiveWebProxyViewerProps> = ({
       } else if (event.data.type === 'PUTER_SURF_NAVIGATE') {
         const targetUrl = event.data.url;
         if (targetUrl) {
-          navigateToUrl(targetUrl);
+          if (event.data.openNewTab && onOpenWebTab) onOpenWebTab(targetUrl);
+          else navigateToUrl(targetUrl);
         }
       }
     };
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [currentUrl, onNavigate]);
+  }, [currentUrl, onNavigate, onOpenWebTab]);
 
   const navigateToUrl = (rawUrl: string, title?: string, skipStack = false) => {
     let formatted = rawUrl.trim();
