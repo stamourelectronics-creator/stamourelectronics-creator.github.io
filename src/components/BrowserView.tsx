@@ -2711,7 +2711,7 @@ export function BrowserView({
             setTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, url: newUrl, title: newTitle || t.title } : t));
           }}
           onOpenWebTab={(newUrl, newTitle) => openWebpage(newUrl, newTitle, true)}
-          onClose={() => {}
+          onClose={() => {
             setTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, url: '' } : t));
           }}
           onSearch={(searchQueryText) => {
