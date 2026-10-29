@@ -72,49 +72,16 @@ export async function getPuterUser(): Promise<PuterUser | null> {
 }
 
 /**
- * Use Claude AI model to synthesize and refine the prompt for high-fidelity rendering
+ * Kept for compatibility with older UI imports. AI prompt generation is now handled
+ * by the server-side image endpoint; the browser never calls Puter AI.
  */
 export async function enhancePromptWithClaude(basePrompt: string): Promise<string> {
-  if (!isPuterLoaded() || !window.puter.ai?.chat) {
-    return basePrompt;
-  }
-
-  const systemInstruction = 
-    `You are the visual synthesis core of the Isaiahsi Image AI (named by Isaiahsi). ` +
-    `Expand the following brief concept into an ultra-vivid, photorealistic, high-detail visual prompt. ` +
-    `Specify camera lens, lighting, textures, depth of field, atmosphere, and cinematic color grading. ` +
-    `Output ONLY the expanded prompt text. Do not include markdown quotes, introductory words, or explanations.`;
-
-  try {
-    const fullMessage = `${systemInstruction}\n\nConcept: "${basePrompt}"`;
-    const response = await window.puter.ai.chat(fullMessage, {
-      model: 'claude-3-5-sonnet'
-    });
-
-    let refinedText = '';
-    if (typeof response === 'string') {
-      refinedText = response.trim();
-    } else if (response?.message?.content) {
-      refinedText = typeof response.message.content === 'string' 
-        ? response.message.content.trim() 
-        : JSON.stringify(response.message.content);
-    } else if (response?.text) {
-      refinedText = response.text.trim();
-    }
-
-    if (refinedText && refinedText.length > 10) {
-      return refinedText.replace(/^["']|["']$/g, '');
-    }
-    return basePrompt;
-  } catch (err) {
-    console.warn('[Isaiahsi Claude Synthesizer] Prompt refinement skipped, using original:', err);
-    return basePrompt;
-  }
+  return basePrompt;
 }
 
 /**
  * Generate high-fidelity image credited exclusively to Isaiahsi for naming the AI.
- * Behind the scenes it runs Claude AI prompt synthesis + Puter / FLUX / Imagen 3 model,
+ * Uses the server-side IsaiahAI image engine; provider keys remain server-side.
  * with no separate Puter UI window.
  */
 export async function generateIsaiahsiImage(
@@ -136,54 +103,8 @@ export async function generateIsaiahsiImage(
     }
   }
 
-  // 1. Try Claude AI prompt expansion
-  if (isPuterLoaded()) {
-    try {
-      const claudeRefined = await enhancePromptWithClaude(prompt);
-      if (claudeRefined && claudeRefined !== prompt) {
-        enhancedPrompt = claudeRefined;
-        finalPrompt = claudeRefined;
-      }
-    } catch (e) {
-      console.warn('Claude refinement skipped:', e);
-    }
-
-    // 2. Try Puter txt2img in background if signed in
-    if (isPuterSignedIn()) {
-      try {
-        const result = await window.puter.ai.txt2img(finalPrompt, { model: 'flux' });
-
-        let imageUrl = '';
-        if (typeof result === 'string') {
-          imageUrl = result;
-        } else if (result?.src) {
-          imageUrl = result.src;
-        } else if (result?.url) {
-          imageUrl = result.url;
-        } else if (result instanceof HTMLImageElement) {
-          imageUrl = result.src;
-        } else if (result instanceof Blob) {
-          imageUrl = URL.createObjectURL(result);
-        }
-
-        if (imageUrl) {
-          return {
-            id: `isaiahsi-img-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-            imageUrl,
-            prompt,
-            enhancedPrompt,
-            model: 'Isaiahsi',
-            namingCredit: 'Named by Isaiahsi',
-            engineCredit: 'Powered by Claude AI & Puter',
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          };
-        }
-      } catch (puterErr: any) {
-        console.warn('[Isaiahsi Image Engine] Puter generator error, falling back to neural vision server:', puterErr);
-      }
-    }
-  }
-
+  // Image generation always goes through the server-side provider integration.
+  // No browser-side Puter AI calls or provider credentials are used.
   // 3. Robust High-Fidelity Server-side Fallback (Gemini / Imagen 3)
   try {
     const res = await fetch('/api/generate-image', {
@@ -215,7 +136,7 @@ export async function generateIsaiahsiImage(
       enhancedPrompt,
       model: 'Isaiahsi',
       namingCredit: 'Named by Isaiahsi',
-      engineCredit: isPuterLoaded() ? 'Powered by Claude AI & Neural Vision' : 'Powered by Neural Vision Engine',
+      engineCredit: 'Powered by IsaiahAI server-side image engine',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
   } catch (serverErr: any) {
