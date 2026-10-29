@@ -1420,7 +1420,7 @@ export default function App() {
     // Prefix & natural language commands parsing
     const lowerPrompt = rawPrompt.toLowerCase().trim();
     const isWPrefix = rawPrompt.toLowerCase().startsWith('w!') || lowerPrompt.startsWith('wikipedia ') || lowerPrompt.startsWith('wiki ') || lowerPrompt === 'wikipedia' || lowerPrompt === 'wiki';
-    const isIsaiahSearchPrefix = rawPrompt.toLowerCase().startsWith('s!') || lowerPrompt.startsWith('isaiahsearch ') || lowerPrompt.startsWith('isaiah search ') || lowerPrompt === 'isaiahsearch' || lowerPrompt === 'isaiah search' || rawPrompt.toLowerCase().startsWith('d!') || lowerPrompt.startsWith('duckduckgo ') || lowerPrompt.startsWith('duckduck go ') || lowerPrompt === 'duckduckgo' || lowerPrompt === 'duckduck go';
+    const isIsaiahSearchPrefix = rawPrompt.toLowerCase().startsWith('s!') || lowerPrompt.startsWith('isaiahsearch ') || lowerPrompt.startsWith('isaiah search ') || lowerPrompt === 'isaiahsearch' || lowerPrompt === 'isaiah search';
     
     // Natural Image Generation Request detection
     const isNaturalImageQuery = lowerPrompt.startsWith('make me an image of') || 
@@ -1847,11 +1847,9 @@ export default function App() {
       } else if (isIsaiahSearchPrefix) {
         // IsaiahSearch command; legacy d! aliases remain accepted.
         let wideQuery = rawPrompt;
-        if (rawPrompt.toLowerCase().startsWith('s!') || rawPrompt.toLowerCase().startsWith('d!')) wideQuery = rawPrompt.slice(2).trim();
+        if (rawPrompt.toLowerCase().startsWith('s!')) wideQuery = rawPrompt.slice(2).trim();
         else if (lowerPrompt.startsWith('isaiahsearch ')) wideQuery = rawPrompt.slice(12).trim();
         else if (lowerPrompt.startsWith('isaiah search ')) wideQuery = rawPrompt.slice(14).trim();
-        else if (lowerPrompt.startsWith('duckduckgo ')) wideQuery = rawPrompt.slice(11).trim();
-        else if (lowerPrompt.startsWith('duckduck go ')) wideQuery = rawPrompt.slice(12).trim();
         else wideQuery = 'St.Amour Electronics';
 
         setCurrentSearchPrompt(`IsaiahSearch Wide Sweep: "${wideQuery}"`);
@@ -1859,7 +1857,7 @@ export default function App() {
         const response = await fetch('/api/search-wide', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: ddgQuery }),
+          body: JSON.stringify({ query: wideQuery }),
         });
 
         if (!response.ok) {
@@ -1878,8 +1876,8 @@ export default function App() {
           model: activeModelKey,
           modelDisplayName: activeModelDisplayName,
           isSearch: true,
-          searchType: 'ddg',
-          summaryQuery: ddgQuery,
+          searchType: 'isaiahsearch',
+          summaryQuery: wideQuery,
           searchResults: data.boxes,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         };

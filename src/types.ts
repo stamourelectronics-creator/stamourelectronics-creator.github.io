@@ -20,7 +20,7 @@ export interface Message {
   model?: string;
   modelDisplayName?: string;
   isSearch?: boolean;
-  searchType?: 'wiki' | 'ddg' | 'google';
+  searchType?: 'wiki' | 'isaiahsearch' | 'google';
   summaryQuery?: string;
   searchResults?: SearchResultBox[];
   loadingSearch?: boolean;

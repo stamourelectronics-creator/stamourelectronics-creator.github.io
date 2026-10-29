@@ -853,7 +853,7 @@ export default async function handler(request: Request) {
       });
       return new Response(stream, { headers: { ...corsHeaders, 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
-    if ((path === '/search-wide' || path === '/search-ddg') && request.method === 'POST') {
+    if (path === '/search-wide' && request.method === 'POST') {
       const query = String(body.query || '').trim();
       if (!query) return json({ error: 'Query is required.' }, 400);
       return json(await handleIsaiahWideSearch(query));
