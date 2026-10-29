@@ -189,14 +189,33 @@ async function fetchWikipediaWebImages(query: string): Promise<string[]> {
 
 // Robust fallback and retry runner for generateContent calls
 async function generateContentWithFallback(ai: GoogleGenAI, params: any) {
-  // Try preferred model first (defaulting to gemini-3.8-flash), then stable alternative
-  const preferredModel = params.model || 'gemini-3.8-flash';
+  // Prefer the requested flagship when available, then move to stable, compatible alternatives.
+  const preferredModel = params.model || 'gemini-4-argon';
   const fallbackModels = ['gemini-3.8-flash', 'gemini-2.5-flash'];
-  
-  // Combine into an ordered list of unique models (excluding any deprecated pro models)
   const modelsToTry = Array.from(new Set([preferredModel, ...fallbackModels])).filter(
     (m) => m !== 'gemini-2.5-pro' && m !== 'gemini-2.0-pro'
   );
+  const configForModel = (model: string, baseConfig: any) => {
+    const config = { ...(baseConfig || {}) };
+    if (model === 'gemini-4-argon') {
+      delete config.temperature;
+      delete config.topP;
+      delete config.topK;
+      config.thinkingConfig = { thinkingLevel: 'HIGH' };
+      config.maxOutputTokens = Math.max(Number(config.maxOutputTokens) || 0, 32768);
+    } else if (model === 'gemini-3.8-flash') {
+      delete config.temperature;
+      delete config.topP;
+      delete config.topK;
+      config.thinkingConfig = { thinkingLevel: 'HIGH' };
+      config.maxOutputTokens = Math.max(Number(config.maxOutputTokens) || 0, 8192);
+    } else if (model === 'gemini-2.5-flash') {
+      delete config.thinkingConfig;
+      config.temperature = typeof baseConfig?.temperature === 'number' ? baseConfig.temperature : 0.65;
+      config.maxOutputTokens = Math.max(Number(config.maxOutputTokens) || 0, 8192);
+    }
+    return config;
+  };
   let lastError: any = null;
   let firstQuotaError: any = null;
 
@@ -204,9 +223,11 @@ async function generateContentWithFallback(ai: GoogleGenAI, params: any) {
     // 1. Try with the full provided parameters
     try {
       console.log(`[Gemini Request] Invoking model: "${model}"`);
+      const modelConfig = configForModel(model, params.config);
       const response = await ai.models.generateContent({
         ...params,
         model,
+        config: modelConfig,
       });
       console.log(`[Gemini Request] Success with model: "${model}"`);
       return response;
@@ -222,10 +243,11 @@ async function generateContentWithFallback(ai: GoogleGenAI, params: any) {
       }
 
       // 2. If it had googleSearch tool and failed, immediately retry without the search tool
-      if (params.config?.tools && params.config.tools.some((t: any) => t.googleSearch)) {
+      const effectiveConfig = configForModel(model, params.config);
+      if (effectiveConfig?.tools && effectiveConfig.tools.some((t: any) => t.googleSearch)) {
         try {
           console.log(`[Gemini Request] Retrying model "${model}" without search tool grounding...`);
-          const sanitizedConfig = { ...params.config };
+          const sanitizedConfig = { ...effectiveConfig };
           delete sanitizedConfig.tools;
 
           const response = await ai.models.generateContent({
@@ -2350,7 +2372,7 @@ app.post('/api/chat', async (req, res) => {
       parts: userParts,
     });
 
-    let preferredModel = 'gemini-3.8-flash';
+    let preferredModel = 'gemini-4-argon';
 
     let augmentedSystemInstruction = systemInstruction;
     if (!augmentedSystemInstruction) {
@@ -2483,9 +2505,12 @@ Incorporate this fresh knowledge to describe it cleanly, answer in thorough para
     const isCodingMode = req.body.chatMode === 'code' || req.body.chatMode === 'code_extended';
     const config: any = {
       systemInstruction: augmentedSystemInstruction,
-      temperature: isCodingMode ? 0.2 : 0.7,
-      maxOutputTokens: 8192,
+      maxOutputTokens: 32768,
+      thinkingConfig: { thinkingLevel: 'HIGH' },
     };
+    // Gemini 4 Argon ignores sampling settings; the compatible model fallback helper
+    // supplies generation parameters separately when switching to older Gemini models.
+    if (isCodingMode) config.maxOutputTokens = 32768;
 
     if (searchWebEnabled) {
       config.tools = [{ googleSearch: {} }];
