@@ -1,0 +1,46 @@
+name: Build IsaiahAI Agent for Windows
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'electron-agent/**'
+      - 'public/downloads/isaiahai-agent.html'
+      - '.github/workflows/build-windows-agent.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Check out IsaiahAI
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        working-directory: electron-agent
+        run: npm install
+      - name: Build Windows installer and portable EXE
+        working-directory: electron-agent
+        run: npm run dist
+      - name: Upload Windows binaries as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: IsaiahAI-Agent-Windows
+          path: electron-agent/release/*
+          if-no-files-found: error
+          retention-days: 90
+      - name: Publish downloadable release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: isaiahai-agent-build-${{ github.run_number }}
+          name: IsaiahAI Agent Windows build ${{ github.run_number }}
+          body: |
+            IsaiahAI Agent Windows installer and portable executable.
+            Includes Chromium browsing and a user-approved local workspace.
+            Cloud AI provider usage policies still apply.
+          files: electron-agent/release/*
+          make_latest: true
