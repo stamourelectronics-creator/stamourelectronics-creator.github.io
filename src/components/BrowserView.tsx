@@ -2601,8 +2601,14 @@ export function BrowserView({
         }).catch(err => console.error('[IsaiahSearch] History sync failed:', err));
       }
     }
-    const opened = window.open(formattedUrl, '_blank', 'noopener,noreferrer');
-    if (!opened) showToast('Your browser blocked the new tab. Allow pop-ups for IsaiahSearch and try again.');
+    // Do not pass noopener to window.open itself: browsers may return null even when
+    // they successfully open the tab. Clear opener explicitly on the returned handle.
+    const opened = window.open(formattedUrl, '_blank');
+    if (!opened) {
+      showToast('Your browser blocked the new tab. Allow pop-ups for IsaiahSearch and try again.');
+    } else {
+      try { opened.opener = null; } catch { /* tab was still opened */ }
+    }
   };
 
   const handleSelectTab = (tabId: string) => {
