@@ -2079,81 +2079,165 @@ app.post('/api/chat', async (req, res) => {
   const searchWebEnabled = req.body.disableWebSearch !== true;
   const activeAiModel = model || selectedModel || 'isaiah_5_3';
 
-  // IsaiahAI 7.0 SUPER uses OpenRouter; leave the existing providers and routes unchanged for other models.
+  // IsaiahAI 7.0 SUPER uses Gemini first, then OpenRouter's dynamic free-model router.
   if (activeAiModel === 'isaiahai_7_super' && (!req.body.chatMode || req.body.chatMode === 'general')) {
-    // Support both the current and legacy Netlify variable names.
-    const openRouterApiKey = process.env.OPENROUTER_API_KEY?.trim()
-      || process.env.ISAIAH_OPENROUTER_API_KEY?.trim();
-    if (!openRouterApiKey) {
-      return res.status(500).json({
-        error: 'OpenRouter API key is not visible to the server. Configure OPENROUTER_API_KEY (or ISAIAH_OPENROUTER_API_KEY) for the serverless Functions runtime and redeploy.',
-      });
+    const persona = typeof systemInstruction === 'string' && systemInstruction.trim()
+      ? systemInstruction
+      : 'You are IsaiahAI 7.0 SUPER by St.Amour Electronics. Be accurate, helpful, thoughtful, and clear. Answer directly, verify assumptions, and cite sources when web grounding is supplied. Do not reveal hidden chain-of-thought.';
+    const userText = typeof message === 'string' ? message : String(message ?? '');
+    const geminiContents: any[] = [];
+    if (Array.isArray(history)) {
+      for (const item of history.slice(-16)) {
+        if (!item || typeof item.content !== 'string' || !item.content.trim()) continue;
+        geminiContents.push({
+          role: item.role === 'assistant' || item.role === 'model' ? 'model' : 'user',
+          parts: [{ text: item.content.slice(0, 24000) }],
+        });
+      }
+    }
+    const imageParts = Array.isArray(images) ? images.map((img: any) => {
+      const raw = typeof img?.data === 'string' ? img.data : '';
+      if (!raw) return null;
+      const base64 = raw.replace(/^data:[^,]*;base64,/i, '');
+      return { inlineData: { mimeType: String(img?.mimeType || 'image/png'), data: base64 } };
+    }).filter(Boolean) : [];
+    geminiContents.push({ role: 'user', parts: [{ text: userText }, ...imageParts] });
+
+    let reply = '';
+    let selectedProvider: 'Gemini' | 'OpenRouter' = 'Gemini';
+    let lastGeminiError: any = null;
+    const geminiKeyExists = Boolean(process.env.GEMINI_API_KEY?.trim());
+    if (geminiKeyExists) {
+      try {
+        const ai = getGeminiClient();
+        const attempts = [
+          { model: 'gemini-4-argon', timeoutMs: 11000, highReasoning: true },
+          { model: 'gemini-3.8-flash', timeoutMs: 7000, highReasoning: true },
+          { model: 'gemini-2.5-flash', timeoutMs: 5000, highReasoning: false },
+        ];
+        for (const attempt of attempts) {
+          try {
+            const config: any = {
+              systemInstruction: persona + '\n\nReason carefully, verify relevant details, and answer clearly. Do not output hidden chain-of-thought.',
+              maxOutputTokens: attempt.model === 'gemini-4-argon' ? 32768 : 8192,
+            };
+            if (attempt.highReasoning) config.thinkingConfig = { thinkingLevel: 'HIGH' };
+            else config.temperature = 0.65;
+            if (searchWebEnabled) config.tools = [{ googleSearch: {} }];
+            const response: any = await Promise.race([
+              ai.models.generateContent({ model: attempt.model, contents: geminiContents, config }),
+              new Promise((_, reject) => setTimeout(() => reject(new Error(`Gemini ${attempt.model} timed out`)), attempt.timeoutMs)),
+            ]);
+            const parts = response?.candidates?.[0]?.content?.parts || [];
+            reply = parts.filter((part: any) => !part?.thought && typeof part?.text === 'string').map((part: any) => part.text).join('');
+            if (!reply.trim()) reply = String(response?.text || '').trim();
+            if (!reply) throw new Error(`Gemini ${attempt.model} returned an empty answer.`);
+            break;
+          } catch (error: any) {
+            lastGeminiError = error;
+            console.warn(`[IsaiahAI 7.0 SUPER] Gemini ${attempt.model} failed:`, String(error?.message || error).slice(0, 160));
+          }
+        }
+      } catch (error: any) {
+        lastGeminiError = error;
+      }
     }
 
-    try {
-      const openRouterMessages: any[] = [{
-        role: 'system',
-        content: typeof systemInstruction === 'string' && systemInstruction.trim()
-          ? systemInstruction
-          : 'You are IsaiahAI 7.0 SUPER, an advanced AI assistant made by St.Amour Electronics. The CEO of St.Amour Electronics is Isaiah John St.Amour. Be accurate, helpful, thoughtful, and clear. Identify as IsaiahAI 7.0 SUPER by St.Amour Electronics.'
-      }];
-
-      if (Array.isArray(history)) {
-        for (const item of history) {
-          if (!item || typeof item.content !== 'string' || !item.content.trim()) continue;
-          const role = item.role === 'assistant' || item.role === 'model' ? 'assistant' : 'user';
-          openRouterMessages.push({ role, content: item.content });
+    if (!reply.trim()) {
+      const openRouterApiKey = process.env.OPENROUTER_API_KEY?.trim()
+        || process.env.ISAIAH_OPENROUTER_API_KEY?.trim();
+      if (openRouterApiKey) {
+        selectedProvider = 'OpenRouter';
+        try {
+          const messages: any[] = [{ role: 'system', content: persona + '\n\nUse strong reasoning and provide the answer, but never reveal hidden chain-of-thought.' }];
+          if (Array.isArray(history)) {
+            for (const item of history.slice(-16)) {
+              if (!item || typeof item.content !== 'string' || !item.content.trim()) continue;
+              messages.push({ role: item.role === 'assistant' || item.role === 'model' ? 'assistant' : 'user', content: item.content.slice(0, 24000) });
+            }
+          }
+          const imageUrls = Array.isArray(images) ? images.map((img: any) => {
+            const raw = typeof img?.data === 'string' ? img.data : '';
+            if (!raw) return null;
+            return { type: 'image_url', image_url: { url: raw.startsWith('data:') ? raw : `data:${img?.mimeType || 'image/png'};base64,${raw}` } };
+          }).filter(Boolean) : [];
+          messages.push({ role: 'user', content: imageUrls.length ? [{ type: 'text', text: userText }, ...imageUrls] : userText });
+          let lastOpenRouterError: any = null;
+          for (const modelId of ['openrouter/free', 'nvidia/nemotron-3-ultra-550b-a55b:free', 'nvidia/nemotron-3.5-lightning:free']) {
+            try {
+              const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                  Authorization: `Bearer ${openRouterApiKey}`,
+                  'HTTP-Referer': process.env.APP_URL || `http://localhost:${PORT}`,
+                  'X-Title': 'IsaiahAI 7.0 SUPER',
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ model: modelId, messages, reasoning: { effort: 'high', exclude: true }, max_tokens: 8192 }),
+                signal: AbortSignal.timeout(12000),
+              });
+              const data: any = await response.json().catch(() => ({}));
+              if (!response.ok) throw new Error(data?.error?.message || `OpenRouter request failed (${response.status})`);
+              const rawContent = data?.choices?.[0]?.message?.content;
+              reply = typeof rawContent === 'string' ? rawContent
+                : Array.isArray(rawContent) ? rawContent.map((part: any) => typeof part?.text === 'string' ? part.text : '').join('\n') : '';
+              if (reply.trim()) break;
+              throw new Error('OpenRouter returned an empty response.');
+            } catch (error: any) {
+              lastOpenRouterError = error;
+              console.warn(`[IsaiahAI 7.0 SUPER] OpenRouter ${modelId} failed:`, String(error?.message || error).slice(0, 160));
+            }
+          }
+          if (!reply.trim()) throw lastOpenRouterError || new Error('No OpenRouter free model answered.');
+        } catch (error: any) {
+          console.error('[IsaiahAI 7.0 SUPER / OpenRouter]', error?.message || error);
         }
       }
-
-      const userText = typeof message === 'string' ? message : String(message ?? '');
-      const imageItems = Array.isArray(images) ? images.map((img: any) => {
-        const data = typeof img?.data === 'string' ? img.data : '';
-        if (!data) return null;
-        const imageUrl = data.startsWith('data:') ? data : `data:${img.mimeType || 'image/png'};base64,${data}`;
-        return { type: 'image_url', image_url: { url: imageUrl } };
-      }).filter(Boolean) : [];
-      openRouterMessages.push({
-        role: 'user',
-        content: imageItems.length > 0 ? [{ type: 'text', text: userText }, ...imageItems] : userText
-      });
-
-      const openRouterResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${openRouterApiKey}`,
-          'HTTP-Referer': process.env.APP_URL || `http://localhost:${PORT}`,
-          'X-Title': 'IsaiahAI 7.0 SUPER',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'nvidia/nemotron-3-ultra-550b-a55b:free',
-          messages: openRouterMessages,
-          temperature: 0.7,
-          max_tokens: 8192
-        })
-      });
-
-      const openRouterData: any = await openRouterResponse.json().catch(() => ({}));
-      if (!openRouterResponse.ok) {
-        const providerMessage = openRouterData?.error?.message || `OpenRouter request failed (${openRouterResponse.status}).`;
-        return res.status(openRouterResponse.status).json({ error: providerMessage });
-      }
-
-      const responseContent = openRouterData?.choices?.[0]?.message?.content;
-      const reply = typeof responseContent === 'string'
-        ? responseContent
-        : Array.isArray(responseContent)
-          ? responseContent.map((part: any) => typeof part?.text === 'string' ? part.text : '').join('\n')
-          : '';
-
-      return res.json({ content: reply || 'I could not generate a response. Please try again.', thinking: '', sources: [] });
-    } catch (error: any) {
-      console.error('[IsaiahAI 7.0 SUPER / OpenRouter]', error?.message || error);
-      return res.status(502).json({ error: 'IsaiahAI 7.0 SUPER could not reach OpenRouter. Check the server key and try again.' });
     }
+
+    if (!reply.trim()) {
+      console.error('[IsaiahAI 7.0 SUPER] Gemini/OpenRouter unavailable:', lastGeminiError?.message || 'No provider returned a reply.');
+      return res.status(502).json({ error: 'IsaiahAI is temporarily unable to reach Gemini or the OpenRouter free-model router. Please retry shortly.' });
+    }
+
+    let thinking = '';
+    if (req.body.showThinking === true) {
+      const prompt = 'In 1–3 sentences, give a user-facing summary of the approach used in this answer. Mention the main factors or evidence, but do not provide hidden chain-of-thought or a private thought transcript.\n\nQuestion: ' + userText.slice(0, 4000) + '\n\nAnswer: ' + reply.slice(0, 6000);
+      try {
+        if (selectedProvider === 'Gemini' && process.env.GEMINI_API_KEY) {
+          const summary: any = await Promise.race([
+            getGeminiClient().models.generateContent({
+              model: 'gemini-3.8-flash',
+              contents: prompt,
+              config: { systemInstruction: 'Only provide a concise, user-facing reasoning summary; never reveal hidden chain-of-thought.', maxOutputTokens: 180, thinkingConfig: { thinkingLevel: 'LOW' } } as any,
+            }),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Summary timed out')), 3000)),
+          ]);
+          thinking = String(summary?.text || '').trim();
+        }
+      } catch (error: any) {
+        console.warn('[IsaiahAI] Optional reasoning summary unavailable:', String(error?.message || error).slice(0, 120));
+      }
+      if (!thinking) thinking = 'I focused on the question, relevant context and constraints, then organized the most useful points into the answer. This is a brief explanation of the approach, not a transcript of private internal reasoning.';
+    }
+
+    let sources: any[] = [];
+    if (searchWebEnabled) {
+      try {
+        const query = userText.trim();
+        if (query) {
+          const [wikiData, ddgData] = await Promise.all([
+            getWikipediaSummary(query).catch(() => null),
+            searchDuckDuckGoAPI(query).catch(() => null),
+          ]);
+          if (wikiData?.content_urls?.desktop?.page) sources.push({ title: wikiData.title || 'Wikipedia', uri: wikiData.content_urls.desktop.page });
+          if (ddgData?.AbstractURL) sources.push({ title: ddgData.Heading || 'Web result', uri: ddgData.AbstractURL });
+        }
+      } catch { /* the answer itself remains available without optional citations */ }
+    }
+    return res.json({ content: reply.trim(), thinking, thinkingSummary: thinking, sources, provider: selectedProvider });
   }
-  
+
   // Pre-check for image-related questions & general safety on all devices
   const isImageRelated = (images && images.length > 0) || /image|picture|photo|draw|generate|paint|visual/i.test(message || '');
   if (isImageRelated) {
