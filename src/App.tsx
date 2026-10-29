@@ -13,7 +13,7 @@ import { LocalFileWorkspaceModal } from './components/LocalFileWorkspaceModal';
 import { InteractiveQuizCard, parseQuizFromText } from './components/InteractiveQuizCard';
 import { SchoolDocSyncModal } from './components/SchoolDocSyncModal';
 import { ChromeExtensionPrompt } from './components/ChromeExtensionPrompt';
-import { generateIsaiahsiImage, isPuterSignedIn, signInPuter } from './lib/puterClient';
+import { generateIsaiahsiImage } from './lib/puterClient';
 import { formatMathAndFractions, MATH_FRACTION_SYMBOLS, MATH_OPERATION_SYMBOLS } from './lib/mathFormatter';
 import { pickLocalFile, pickLocalDirectory, readFileText, writeFileText, extractCodeBlockFromResponse, LocalFileItem, isFileSystemAccessSupported } from './lib/localWorkspace';
 import MawAI from "./lib/MawAI";
@@ -624,17 +624,7 @@ export default function App() {
   const [shareModalOpen, setShareModalOpen] = useState<boolean>(false);
   const [shareUrl, setShareUrl] = useState<string>('');
   const [shareNotice, setShareNotice] = useState<string | null>(null);
-  const [puterConnected, setPuterConnected] = useState<boolean>(() => isPuterSignedIn());
-
-  const handleConnectPuter = async () => {
-    try {
-      await signInPuter();
-      setPuterConnected(true);
-      setShareNotice('Puter AI is connected. Regular chat can use it as a fallback when the hosted AI service is unavailable. Your Puter account policies still apply.');
-    } catch (error: any) {
-      setShareNotice('Puter connection did not complete: ' + String(error?.message || 'Please try again.'));
-    }
-  };
+  const [showReasoningSummary, setShowReasoningSummary] = useState<boolean>(false);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   
@@ -1917,6 +1907,7 @@ export default function App() {
               message: promptToSend,
               history: chatHistoryMap,
               searchWebEnabled,
+              showThinking: showReasoningSummary,
               chatMode,
               model: selectedAiModel,
               selectedModel: selectedAiModel,
@@ -1983,79 +1974,18 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
           if (selectedAiModel === 'maw_ai' && mawAIRef.current) {
             console.warn('[Maw AI] API unavailable, engaging local Maw core:', apiErr);
             const rawResponse = await mawAIRef.current.generateResponse(rawPrompt);
-            data = { content: rawResponse, sources: [], provider: 'Maw local fallback' };
+            data = {
+              content: rawResponse,
+              sources: [],
+              thinking: showReasoningSummary
+                ? 'Maw AI used its local knowledge and available public lookup fallback to prepare this response. This is a brief explanation of the approach, not private internal reasoning.'
+                : '',
+              provider: 'Maw local fallback'
+            };
           } else {
-            const puter = typeof window !== 'undefined' ? (window as any).puter : null;
-            if (!puter?.ai?.chat || currentUploaded.length > 0) throw apiErr;
-
-            // Puter is a user-authorized backup route, not a provider quota bypass.
-            if (!isPuterSignedIn()) {
-              try { await signInPuter(); }
-              catch (signInError) {
-                console.warn('[Puter fallback] Sign-in was canceled or unavailable:', signInError);
-                throw apiErr;
-              }
-            }
-            if (!isPuterSignedIn()) throw apiErr;
-
-            let fallbackSources: { title: string; uri: string }[] = [];
-            try {
-              const searchResponse = await fetch('/api/quick-search-links', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query: rawPrompt, engine: 'isaiah', safeSearch: 'Moderate' })
-              });
-              if (searchResponse.ok && !searchResponse.headers.get('content-type')?.includes('text/html')) {
-                const searchData = await searchResponse.json();
-                fallbackSources = (Array.isArray(searchData.results) ? searchData.results : [])
-                  .filter((item: any) => /^https?:\/\//i.test(String(item?.url || '')))
-                  .slice(0, 8)
-                  .map((item: any) => ({ title: String(item.title || item.siteName || 'Web source'), uri: item.url }));
-              }
-            } catch (searchError) {
-              console.warn('[Puter fallback] Live-source retrieval failed; continuing without search:', searchError);
-            }
-            const sourceContext = fallbackSources.length
-              ? '\n\nLive web sources retrieved for this question. Cite only these URLs and disclose when snippets do not settle a fact:\n' +
-                fallbackSources.map((source, index) => (index + 1) + '. ' + source.title + ' (' + source.uri + ')').join('\n')
-              : '\n\nLive web search was unavailable for this fallback response. Do not claim you searched the web or invent citations.';
-            const puterMessages = [
-              {
-                role: 'system',
-                content: 'You are IsaiahAI 7.0 SUPER, an accurate, thoughtful assistant. Answer directly, verify assumptions, explain uncertainty, and never invent sources or claim to perform actions you did not perform. When live source notes are supplied, ground current facts in them and use their URLs as Markdown links. Current specialized mode: ' + chatMode + '.'
-              },
-              ...chatHistoryMap.slice(-12).map((item: any) => ({
-                role: item.role === 'assistant' ? 'assistant' : 'user',
-                content: String(item.content || '')
-              })),
-              { role: 'user', content: promptToSend + sourceContext }
-            ];
-            const freeModels: string[] = ['openrouter/free'];
-            try {
-              const catalogue = await puter.ai.listModels?.();
-              if (Array.isArray(catalogue)) {
-                for (const model of catalogue) {
-                  const id = String(model?.id || '');
-                  if (/:free$/i.test(id) && !freeModels.includes(id)) freeModels.push(id);
-                  if (freeModels.length >= 4) break;
-                }
-              }
-            } catch { /* use the free router alias */ }
-            let puterResponse: any = null;
-            let lastPuterError: any = null;
-            for (const model of freeModels) {
-              try {
-                puterResponse = await puter.ai.chat(puterMessages, { model, normalize: true, max_tokens: 4096 });
-                if (puterResponse) break;
-              } catch (puterError) { lastPuterError = puterError; }
-            }
-            if (!puterResponse) throw lastPuterError || apiErr;
-            const puterContent = typeof puterResponse === 'string' ? puterResponse
-              : typeof puterResponse?.message?.content === 'string' ? puterResponse.message.content
-              : Array.isArray(puterResponse?.message?.content) ? puterResponse.message.content.map((part: any) => part?.text || '').join('\n')
-              : typeof puterResponse?.text === 'string' ? puterResponse.text : '';
-            if (!puterContent.trim()) throw apiErr;
-            data = { content: puterContent.trim(), sources: fallbackSources, provider: 'Puter free-model fallback' };
+            // Never route chat to Puter. The hosted server is responsible for Gemini-first
+            // generation and the server-side OpenRouter fallback; surface a retryable error if both fail.
+            throw apiErr;
           }
         }
 
@@ -3030,6 +2960,17 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                               );
                             })()}
 
+                            {msg.thinking && (
+                              <details className={`rounded-xl border px-3 py-2.5 text-xs leading-relaxed ${isLight ? 'border-violet-200 bg-violet-50/70 text-zinc-700' : 'border-violet-500/20 bg-violet-500/5 text-zinc-300'}`}>
+                                <summary className="cursor-pointer font-semibold select-none">
+                                  <Brain className="w-3.5 h-3.5 inline mr-1.5 align-[-2px]" />
+                                  Reasoning summary
+                                </summary>
+                                <p className="mt-2 whitespace-pre-wrap">{msg.thinking}</p>
+                                <p className="mt-1 opacity-70">A concise explanation of the approach — not a transcript of private internal reasoning.</p>
+                              </details>
+                            )}
+
                             {/* Dynamically extract and display code blocks as downloadable files */}
                             {(() => {
                               const parsedFiles: { language: string; content: string; filename: string; sizeStr: string }[] = [];
@@ -3623,12 +3564,13 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
 
                         <button
                           type="button"
-                          onClick={handleConnectPuter}
-                          className={`p-1.5 rounded-full transition-colors cursor-pointer ${puterConnected ? 'text-emerald-400 bg-emerald-500/10' : isLight ? 'text-violet-500 hover:bg-zinc-200/50' : 'text-violet-300 hover:bg-zinc-800/60'}`}
-                          title={puterConnected ? 'Puter AI fallback is connected' : 'Connect Puter AI for a regular-chat backup'}
-                          aria-label="Connect Puter AI fallback"
+                          onClick={() => setShowReasoningSummary(value => !value)}
+                          className={`p-1.5 rounded-full transition-colors cursor-pointer ${showReasoningSummary ? 'text-emerald-400 bg-emerald-500/10' : isLight ? 'text-violet-500 hover:bg-zinc-200/50' : 'text-violet-300 hover:bg-zinc-800/60'}`}
+                          title={showReasoningSummary ? 'Hide reasoning summaries' : 'Show concise reasoning summaries'}
+                          aria-label="Toggle reasoning summary"
+                          aria-pressed={showReasoningSummary}
                         >
-                          <Sparkles className="w-5 h-5" />
+                          <Brain className="w-5 h-5" />
                         </button>
 
                         {/* 3. Zap button -> Turbo / Fast mode toggle */}
@@ -4290,14 +4232,15 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                     </button>
 
                     <button
-                      type="button"
-                      onClick={handleConnectPuter}
-                      className={`p-1.5 rounded-full transition-colors cursor-pointer ${puterConnected ? 'text-emerald-400 bg-emerald-500/10' : isLight ? 'text-violet-500 hover:bg-zinc-200/50' : 'text-violet-300 hover:bg-zinc-800/60'}`}
-                      title={puterConnected ? 'Puter AI fallback is connected' : 'Connect Puter AI for a regular-chat backup'}
-                      aria-label="Connect Puter AI fallback"
-                    >
-                      <Sparkles className="w-5 h-5" />
-                    </button>
+                          type="button"
+                          onClick={() => setShowReasoningSummary(value => !value)}
+                          className={`p-1.5 rounded-full transition-colors cursor-pointer ${showReasoningSummary ? 'text-emerald-400 bg-emerald-500/10' : isLight ? 'text-violet-500 hover:bg-zinc-200/50' : 'text-violet-300 hover:bg-zinc-800/60'}`}
+                          title={showReasoningSummary ? 'Hide reasoning summaries' : 'Show concise reasoning summaries'}
+                          aria-label="Toggle reasoning summary"
+                          aria-pressed={showReasoningSummary}
+                        >
+                          <Brain className="w-5 h-5" />
+                        </button>
 
                     {/* Live Voice Audio Session Button */}
                     <button
