@@ -2,8 +2,11 @@ const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
+const http = require('node:http');
 
 let mainWindow;
+let appServer = null;
+let appOrigin = null;
 let workspaceRoot = null;
 const skippedDirs = new Set(['.git', 'node_modules', 'dist', 'build', 'release', '.next', '.cache', '.idea', '.vscode']);
 const textExtensions = new Set(['.txt', '.md', '.json', '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.css', '.html', '.htm', '.py', '.rs', '.go', '.java', '.cs', '.xml', '.yml', '.yaml', '.toml', '.ini', '.sh', '.bat', '.ps1', '.sql', '.svg', '.env.example']);
@@ -24,16 +27,53 @@ function createWindow() {
       contextIsolation: true, nodeIntegration: false, sandbox: true, webviewTag: true
     }
   });
-  mainWindow.loadFile(path.join(__dirname, 'index.html'));
+
+  // Puter auth requires a real web origin, not file://. Serve only the bundled UI on a
+  // loopback-only ephemeral port so its sign-in callback has an origin to return to.
+  appServer = http.createServer(async (request, response) => {
+    const pathname = new URL(request.url || '/', 'http://localhost').pathname;
+    if (pathname !== '/' && pathname !== '/index.html') {
+      response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+      response.end('Not found');
+      return;
+    }
+    try {
+      const page = await fs.readFile(path.join(__dirname, 'index.html'));
+      response.writeHead(200, {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff'
+      });
+      response.end(page);
+    } catch {
+      response.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+      response.end('IsaiahAI Agent could not load its interface.');
+    }
+  });
+  appServer.listen(0, 'localhost', () => {
+    const address = appServer.address();
+    const port = address && typeof address === 'object' ? address.port : 0;
+    appOrigin = 'http://localhost:' + port;
+    mainWindow.loadURL(appOrigin + '/');
+  });
+
+  // Keep the app's local UI local. A sandboxed popup is allowed for OAuth flows;
+  // ordinary website popups from the Browser tab are handled separately below.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https?:\/\//i.test(url)) shell.openExternal(url).catch(() => {});
+    if (/^https?:\/\//i.test(url)) {
+      return {
+        action: 'allow',
+        overrideBrowserWindowOptions: {
+          width: 620, height: 780, parent: mainWindow, autoHideMenuBar: true,
+          webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true, webviewTag: false }
+        }
+      };
+    }
     return { action: 'deny' };
   });
   mainWindow.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith('file://')) event.preventDefault();
+    if (!appOrigin || !(url === appOrigin || url.startsWith(appOrigin + '/'))) event.preventDefault();
   });
-  // Websites inside the Chromium webview may open login or external links in a new window.
-  // Route those links to the user's default browser rather than an untrusted new Electron window.
   mainWindow.webContents.on('did-attach-webview', (_event, guestContents) => {
     guestContents.setWindowOpenHandler(({ url }) => {
       if (/^https?:\/\//i.test(url)) shell.openExternal(url).catch(() => {});
@@ -46,6 +86,12 @@ app.whenReady().then(() => {
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+app.on('before-quit', () => {
+  if (appServer) {
+    try { appServer.close(); } catch { /* app is exiting */ }
+    appServer = null;
+  }
+});
 
 function requireWorkspace() {
   if (!workspaceRoot) throw new Error('Choose a workspace folder first.');
