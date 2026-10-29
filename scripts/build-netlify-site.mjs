@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
-const pagesUrl = 'https://stamourelectronics-creator.github.io/isaiahsearch/';
+const pagesUrl = 'https://stamourelectronics-creator.github.io/';
 
 async function isPagesReady() {
   try {

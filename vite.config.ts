@@ -3,9 +3,8 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
 
-const onGitHubPages = process.env.GITHUB_PAGES === 'true';
 const netlifyIframeWrapper = process.env.VITE_NETLIFY_IFRAME_WRAPPER === 'true';
-const pagesUrl = 'https://stamourelectronics-creator.github.io/isaiahsearch/';
+const pagesUrl = 'https://stamourelectronics-creator.github.io/';
 
 const netlifyWrapperHtml = `<!doctype html>
 <html lang="en"><head>
@@ -21,7 +20,7 @@ const netlifyWrapperHtml = `<!doctype html>
 </body></html>`;
 
 export default defineConfig(() => ({
-  base: onGitHubPages ? '/isaiahsearch/' : '/',
+  base: '/',
   plugins: [
     react(),
     tailwindcss(),

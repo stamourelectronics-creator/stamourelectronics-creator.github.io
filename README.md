@@ -6,7 +6,7 @@
 
 This contains everything you need to run your app locally.
 
-GitHub Pages frontend: https://stamourelectronics-creator.github.io/isaiahsearch/
+GitHub Pages frontend: https://stamourelectronics-creator.github.io/
 
 The static frontend publishes with GitHub Actions. AI chat and web search continue to use the existing Netlify Functions backend. GitHub Pages hosts the static site only.
 

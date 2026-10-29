@@ -9,7 +9,7 @@ async function hasLivePagesWrapper() {
     const response = await fetch(productionUrl, { signal: AbortSignal.timeout(4000), redirect: 'follow' });
     if (!response.ok) return false;
     const html = await response.text();
-    return html.includes('<iframe') && html.includes('stamourelectronics-creator.github.io/isaiahsearch/');
+    return html.includes('<iframe') && html.includes('stamourelectronics-creator.github.io/');
   } catch {
     return false;
   }
