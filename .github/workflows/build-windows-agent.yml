@@ -40,7 +40,7 @@ jobs:
           name: IsaiahAI Agent Windows build ${{ github.run_number }}
           body: |
             IsaiahAI Agent Windows installer and portable executable.
-            Includes Chromium browsing and a user-approved local workspace.
+            Includes IsaiahSearch-powered Chromium browsing and computer tools inside AI chat. File writes and commands require Windows approval.
             Cloud AI provider usage policies still apply.
           files: electron-agent/release/*
           make_latest: true
