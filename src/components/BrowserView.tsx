@@ -161,7 +161,9 @@ export function BrowserView({
 
   // Search Engine & Safe Search Global Preferences
   const [preferredSearchEngine, setPreferredSearchEngine] = useState<string>(() => {
-    return localStorage.getItem('isaiah_preferred_search_engine') || 'Isaiah Engine (Default)';
+    const saved = localStorage.getItem('isaiah_preferred_search_engine');
+    const supported = ['Isaiah Engine (Default)', 'Google', 'Bing', 'Brave'];
+    return saved && supported.includes(saved) ? saved : 'Isaiah Engine (Default)';
   });
   const [safeSearchFilter, setSafeSearchFilter] = useState<'Strict' | 'Moderate' | 'Off'>(() => {
     const saved = localStorage.getItem('isaiah_safe_search_filter');
