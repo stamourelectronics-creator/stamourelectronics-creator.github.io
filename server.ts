@@ -301,11 +301,15 @@ app.post('/api/beta/request', async (req, res) => {
 // API Endpoint: Create a Hyperbeam Virtual Browser Session
 app.post('/api/hyperbeam-session', async (req, res) => {
   const { startUrl } = req.body;
+  const hyperbeamApiKey = process.env.HYPERBEAM_API_KEY;
+  if (!hyperbeamApiKey) {
+    return res.status(503).json({ error: 'Remote browser sessions are not configured on this server.' });
+  }
   try {
     const response = await fetch('https://engine.hyperbeam.com/v1/sessions', {
       method: 'POST',
       headers: {
-        'Authorization': 'Bearer sk_live_rexAShD5AwWh9CtlNlC9ws2psK1ZdDHqPsjJW__Wyho',
+        'Authorization': 'Bearer ' + hyperbeamApiKey,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -316,7 +320,7 @@ app.post('/api/hyperbeam-session', async (req, res) => {
     if (!response.ok) {
       const errText = await response.text();
       console.error('[Hyperbeam Session] Error from Hyperbeam API:', errText);
-      return res.status(response.status).json({ error: `Hyperbeam API error: ${errText}` });
+      return res.status(503).json({ error: 'Remote browser session creation failed. Check the server configuration and provider status.' });
     }
     
     const data = await response.json();

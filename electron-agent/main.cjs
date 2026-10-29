@@ -32,6 +32,14 @@ function createWindow() {
   mainWindow.webContents.on('will-navigate', (event, url) => {
     if (!url.startsWith('file://')) event.preventDefault();
   });
+  // Websites inside the Chromium webview may open login or external links in a new window.
+  // Route those links to the user's default browser rather than an untrusted new Electron window.
+  mainWindow.webContents.on('did-attach-webview', (_event, guestContents) => {
+    guestContents.setWindowOpenHandler(({ url }) => {
+      if (/^https?:\/\//i.test(url)) shell.openExternal(url).catch(() => {});
+      return { action: 'deny' };
+    });
+  });
 }
 app.whenReady().then(() => {
   createWindow();
