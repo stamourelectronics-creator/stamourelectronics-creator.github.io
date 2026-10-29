@@ -624,6 +624,17 @@ export default function App() {
   const [shareModalOpen, setShareModalOpen] = useState<boolean>(false);
   const [shareUrl, setShareUrl] = useState<string>('');
   const [shareNotice, setShareNotice] = useState<string | null>(null);
+  const [puterConnected, setPuterConnected] = useState<boolean>(() => isPuterSignedIn());
+
+  const handleConnectPuter = async () => {
+    try {
+      await signInPuter();
+      setPuterConnected(true);
+      setShareNotice('Puter AI is connected. Regular chat can use it as a fallback when the hosted AI service is unavailable. Your Puter account policies still apply.');
+    } catch (error: any) {
+      setShareNotice('Puter connection did not complete: ' + String(error?.message || 'Please try again.'));
+    }
+  };
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   
@@ -3557,6 +3568,16 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                           )}
                         </div>
 
+                        <button
+                          type="button"
+                          onClick={handleConnectPuter}
+                          className={`p-1.5 rounded-full transition-colors cursor-pointer ${puterConnected ? 'text-emerald-400 bg-emerald-500/10' : isLight ? 'text-violet-500 hover:bg-zinc-200/50' : 'text-violet-300 hover:bg-zinc-800/60'}`}
+                          title={puterConnected ? 'Puter AI fallback is connected' : 'Connect Puter AI for a regular-chat backup'}
+                          aria-label="Connect Puter AI fallback"
+                        >
+                          <Sparkles className="w-5 h-5" />
+                        </button>
+
                         {/* 3. Zap button -> Turbo / Fast mode toggle */}
                         <button
                           type="button"
@@ -4213,6 +4234,16 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                       title={isListening ? "Stop Voice Input" : "Start Voice Input"}
                     >
                       <Mic className="w-5 h-5" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleConnectPuter}
+                      className={`p-1.5 rounded-full transition-colors cursor-pointer ${puterConnected ? 'text-emerald-400 bg-emerald-500/10' : isLight ? 'text-violet-500 hover:bg-zinc-200/50' : 'text-violet-300 hover:bg-zinc-800/60'}`}
+                      title={puterConnected ? 'Puter AI fallback is connected' : 'Connect Puter AI for a regular-chat backup'}
+                      aria-label="Connect Puter AI fallback"
+                    >
+                      <Sparkles className="w-5 h-5" />
                     </button>
 
                     {/* Live Voice Audio Session Button */}
