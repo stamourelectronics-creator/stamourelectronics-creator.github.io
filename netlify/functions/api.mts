@@ -453,7 +453,7 @@ async function openRouterChat(model: string, messages: any[], timeoutMs = 30000)
       'HTTP-Referer': env('APP_URL') || 'https://isaiahai.netlify.app',
       'X-Title': 'IsaiahAI Acceleration',
     },
-    body: JSON.stringify({ model, messages, temperature: 0.65, max_tokens: 8192 }),
+    body: JSON.stringify({ model, messages, reasoning: { effort: 'high', exclude: true }, max_tokens: 8192 }),
     signal: AbortSignal.timeout(timeoutMs),
   });
   const data = await response.json().catch(() => ({}));
@@ -534,27 +534,38 @@ async function askGemini(body: AnyRecord, systemInstruction: string, webSearch: 
   if (!key) throw new Error('GEMINI_API_KEY is not configured.');
   const ai = new GoogleGenAI({ apiKey: key });
   const contents = dedupeMessages(body.history || [], body.message || '', body.images || []);
+  const attempts = [
+    { model: 'gemini-4-argon', timeoutMs: 10500, highReasoning: true },
+    { model: 'gemini-3.8-flash', timeoutMs: 6500, highReasoning: true },
+    { model: 'gemini-2.5-flash', timeoutMs: 4500, highReasoning: false },
+  ];
   let lastError: any;
-  for (const model of ['gemini-2.5-flash']) {
+  const startedAt = Date.now();
+  for (const attempt of attempts) {
+    if (Date.now() - startedAt > 21500) break;
     try {
       const config: AnyRecord = {
         systemInstruction,
-        temperature: body.chatMode === 'code' || body.chatMode === 'code_extended' ? 0.2 : 0.7,
-        maxOutputTokens: 8192,
+        maxOutputTokens: attempt.model === 'gemini-4-argon' ? 32768 : 8192,
       };
+      if (attempt.highReasoning) config.thinkingConfig = { thinkingLevel: 'HIGH' };
+      else config.temperature = body.chatMode === 'code' || body.chatMode === 'code_extended' ? 0.2 : 0.7;
       if (body.disableWebSearch !== true) config.tools = [{ googleSearch: {} }];
+      const timeoutMs = Math.min(attempt.timeoutMs, Math.max(1000, 22000 - (Date.now() - startedAt)));
       const response = await Promise.race([
-        ai.models.generateContent({ model, contents, config: config as any }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('AI request timed out; trying another available model.')), 7000)),
+        ai.models.generateContent({ model: attempt.model, contents, config: config as any }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error(`Gemini ${attempt.model} timed out; trying the next available model.`)), timeoutMs)),
       ]) as any;
+
       let content = '';
-      let thinking = '';
       const parts = response?.candidates?.[0]?.content?.parts || [];
       for (const part of parts) {
-        if (part?.thought) thinking += part.text || '';
-        else if (part?.text) content += part.text;
+        // Provider-internal thought parts are deliberately never returned to clients.
+        if (!part?.thought && typeof part?.text === 'string') content += part.text;
       }
       if (!content) content = response?.text || '';
+      if (!content.trim()) throw new Error(`Gemini ${attempt.model} returned an empty answer.`);
+
       const sources = (response?.candidates?.[0]?.groundingMetadata?.groundingChunks || [])
         .map((chunk: any) => ({ title: chunk?.web?.title || 'Web result', uri: chunk?.web?.uri || '' }))
         .filter((item: any) => item.uri);
@@ -564,12 +575,44 @@ async function askGemini(body: AnyRecord, systemInstruction: string, webSearch: 
           if (!sources.some((source: any) => source.uri === item.url)) sources.push({ title: item.title, uri: item.url });
         }
       }
-      return { content, thinking, sources };
-    } catch (error) { lastError = error; }
+      return { content: content.trim(), thinking: '', sources, model: attempt.model };
+    } catch (error: any) {
+      lastError = error;
+      console.warn(`[Gemini] ${attempt.model} failed; trying the next configured model:`, String(error?.message || error).slice(0, 180));
+    }
   }
   throw lastError || new Error('No Gemini model was available.');
 }
 
+async function makeThinkingSummary(question: string, answer: string, provider: 'Gemini' | 'OpenRouter'): Promise<string> {
+  const system = 'Write a short, user-facing reasoning summary, not hidden chain-of-thought. In 1–3 sentences, explain the main factors, evidence, or approach visible from the question and final answer. Do not reveal private internal reasoning, hidden deliberation, tokens, or a verbatim thought transcript.';
+  const prompt = `Question: ${question.slice(0, 5000)}\n\nFinal answer: ${answer.slice(0, 8000)}\n\nProvide only the concise user-facing summary.`;
+  try {
+    if (provider === 'Gemini' && env('GEMINI_API_KEY')) {
+      const ai = new GoogleGenAI({ apiKey: env('GEMINI_API_KEY') });
+      const result = await Promise.race([
+        ai.models.generateContent({
+          model: 'gemini-3.8-flash',
+          contents: prompt,
+          config: { systemInstruction: system, maxOutputTokens: 180, thinkingConfig: { thinkingLevel: 'LOW' } } as any,
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Thinking summary timed out')), 3000)),
+      ]) as any;
+      const summary = String(result?.text || '').trim();
+      if (summary) return summary.slice(0, 1200);
+    } else if ((env('OPENROUTER_API_KEY') || env('ISAIAH_OPENROUTER_API_KEY'))) {
+      const result = await openRouterChat('openrouter/free', [
+        { role: 'system', content: system },
+        { role: 'user', content: prompt },
+      ], 3000);
+      const summary = extractOpenRouterContent(result).trim();
+      if (summary) return summary.slice(0, 1200);
+    }
+  } catch (error: any) {
+    console.warn('[IsaiahAI] Optional reasoning summary unavailable:', String(error?.message || error).slice(0, 120));
+  }
+  return 'I focused on the question, relevant context and constraints, then organized the most useful points into the answer. This is a brief explanation of the approach, not a transcript of private internal reasoning.';
+}
 async function handleChat(body: AnyRecord) {
   const activeModel = body.model || body.selectedModel || 'isaiah_5_3';
   const systemInstruction = personaFor(body, activeModel);
@@ -588,32 +631,36 @@ Live web findings follow. Use them as evidence and cite useful URLs in Markdown.
   }
   const sources = webSearch?.results?.slice(0, 12).map((item: SearchResult) => ({ title: item.title, uri: item.url })) || [];
   const hasImages = Array.isArray(body.images) && body.images.length > 0;
-  const preferred = hasImages ? 'nvidia/nemotron-3.5-super-vl:free'
-    : activeModel === 'isaiah_5_3' ? 'nvidia/nemotron-3.5-lightning:free'
-    : 'nvidia/nemotron-3-ultra-550b-a55b:free';
-  if (env('OPENROUTER_API_KEY') || env('ISAIAH_OPENROUTER_API_KEY')) {
-    try {
-      const response = await askOpenRouter({ ...body, message: query }, system, preferred);
-      const content = extractOpenRouterContent(response).trim();
-      if (content) return { content, thinking: '', sources, provider: 'IsaiahAI' };
-    } catch (error: any) {
-      console.warn('[IsaiahAI] Primary generation failed:', String(error?.message || error).slice(0, 180));
-    }
-  }
+  let content = '';
+  let thinking = '';
+  let provider: 'Gemini' | 'OpenRouter' = 'Gemini';
+  let geminiSources: any[] = [];
   if (env('GEMINI_API_KEY')) {
     try {
-      const backup = await askGemini({ ...body, message: query, disableWebSearch: true }, system, webSearch);
-      const mergedSources = [...(backup.sources || [])];
-      for (const source of sources) {
-        if (mergedSources.length >= 12) break;
-        if (!mergedSources.some((item: any) => item.uri === source.uri)) mergedSources.push(source);
-      }
-      if (backup.content?.trim()) return { ...backup, sources: mergedSources, provider: 'IsaiahAI' };
+      const primary = await askGemini({ ...body, message: query, disableWebSearch: true }, system, webSearch);
+      content = String(primary.content || '').trim();
+      geminiSources = Array.isArray(primary.sources) ? primary.sources : [];
     } catch (error: any) {
-      console.warn('[IsaiahAI] Backup generation failed:', String(error?.message || error).slice(0, 180));
+      console.warn('[IsaiahAI] Gemini primary failed; routing to OpenRouter free fallback:', String(error?.message || error).slice(0, 180));
     }
   }
-  throw new Error('IsaiahAI is temporarily unable to complete that reply. Please try again in a moment.');
+  if (!content && (env('OPENROUTER_API_KEY') || env('ISAIAH_OPENROUTER_API_KEY'))) {
+    provider = 'OpenRouter';
+    try {
+      const response = await askOpenRouter({ ...body, message: query }, system, 'openrouter/free');
+      content = extractOpenRouterContent(response).trim();
+    } catch (error: any) {
+      console.warn('[IsaiahAI] OpenRouter fallback failed:', String(error?.message || error).slice(0, 180));
+    }
+  }
+  if (!content) throw new Error('IsaiahAI could not reach Gemini or the OpenRouter free-model router. Please retry shortly.');
+  const mergedSources = [...geminiSources];
+  for (const source of sources) {
+    if (mergedSources.length >= 12) break;
+    if (!mergedSources.some((item: any) => item.uri === source.uri)) mergedSources.push(source);
+  }
+  if (body.showThinking === true) thinking = await makeThinkingSummary(query, content, provider);
+  return { content, thinking, thinkingSummary: thinking, sources: mergedSources, provider: 'IsaiahAI', selectedProvider: provider, model: provider === 'Gemini' ? 'Gemini 4 Argon (fallback chain)' : 'OpenRouter Free Router', hasImages };
 }
 
 async function handleSiteAssist(body: AnyRecord) {
@@ -648,19 +695,25 @@ ${pageLinkText || '(No links captured.)'}
 WEB SEARCH RESULTS:
 ${webText || '(No live results. Disclose uncertainty.)'}`;
   const chatBody = { message: question, history: Array.isArray(body.history) ? body.history.slice(-8) : [], images: Array.isArray(body.images) ? body.images.slice(0, 1) : [] };
-  const preferred = Array.isArray(body.images) && body.images.length ? 'nvidia/nemotron-3.5-super-vl:free' : 'nvidia/nemotron-3.5-lightning:free';
   let answer = '';
-  if (env('OPENROUTER_API_KEY') || env('ISAIAH_OPENROUTER_API_KEY')) {
-    try { answer = extractOpenRouterContent(await askOpenRouter(chatBody, system, preferred)).trim(); }
-    catch (error: any) { console.warn('[IsaiahAI page assist] Primary generation failed:', String(error?.message || error).slice(0, 160)); }
+  let provider: 'Gemini' | 'OpenRouter' = 'Gemini';
+  let thinking = '';
+  if (env('GEMINI_API_KEY')) {
+    try {
+      answer = String((await askGemini({ ...chatBody, disableWebSearch: true }, system, webSearch)).content || '').trim();
+    } catch (error: any) {
+      console.warn('[IsaiahAI page assist] Gemini primary failed; using OpenRouter backup:', String(error?.message || error).slice(0, 160));
+    }
   }
-  if (!answer && env('GEMINI_API_KEY')) {
-    try { answer = (await askGemini({ ...chatBody, disableWebSearch: true }, system, webSearch)).content?.trim() || ''; }
-    catch (error: any) { console.warn('[IsaiahAI page assist] Backup generation failed:', String(error?.message || error).slice(0, 160)); }
+  if (!answer && (env('OPENROUTER_API_KEY') || env('ISAIAH_OPENROUTER_API_KEY'))) {
+    provider = 'OpenRouter';
+    try { answer = extractOpenRouterContent(await askOpenRouter(chatBody, system, 'openrouter/free')).trim(); }
+    catch (error: any) { console.warn('[IsaiahAI page assist] OpenRouter fallback failed:', String(error?.message || error).slice(0, 160)); }
   }
   if (!answer) throw new Error('IsaiahAI could not answer this page right now. Please try again shortly.');
+  if (body.showThinking === true) thinking = await makeThinkingSummary(question, answer, provider);
   const sources = (webSearch?.results || []).slice(0, 10).map((item: SearchResult) => ({ title: item.title, uri: item.url }));
-  return { content: answer, sources, provider: 'IsaiahAI', pageTitle, pageUrl };
+  return { content: answer, thinking, thinkingSummary: thinking, sources, provider: 'IsaiahAI', selectedProvider: provider, pageTitle, pageUrl };
 }
 
 async function generateSummary(query: string, results: SearchResult[], mode: 'brief' | 'full' | 'more') {
