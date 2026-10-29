@@ -7,6 +7,12 @@ on:
       - 'public/downloads/isaiahai-agent.html'
       - '.github/workflows/build-windows-agent.yml'
   workflow_dispatch:
+
+# Cancel stale builds so an older Windows package cannot publish after a newer source commit.
+concurrency:
+  group: windows-agent-${{ github.workflow }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
   actions: read
