@@ -160,7 +160,8 @@ function rewriteBrowserHtml(html: string, pageUrl: string, proxyOrigin: string):
     (_m, before, css, after) => before + rewriteBrowserCss(css, pageUrl, proxyOrigin) + after);
   const baseTag = '<base href="' + browserEscapeHtml(pageUrl) + '">';
   const bridge = '<script id="__isaiah_browser_bridge__">(function(){' +
-    'var BASE=' + JSON.stringify(pageUrl) + ';var PREFIX=' + JSON.stringify(proxyOrigin + '/api/proxy?url=') + ';' +
+    'var BASE=' + JSON.stringify(pageUrl) + ';var PREFIX=' + JSON.stringify(proxyOrigin + '/api/proxy?url=') + ';var PROXY_ORIGIN=' + JSON.stringify(proxyOrigin) + ';' +
+    'function proxied(u){try{var v=new URL(u,BASE);if(v.origin===PROXY_ORIGIN&&v.pathname==="/api/proxy")return v.href;return PREFIX+encodeURIComponent(v.href)}catch(e){return u}}' +
     'function unproxy(u){try{var v=new URL(u,location.href);if(v.pathname==="/api/proxy"&&v.searchParams.get("url"))return v.searchParams.get("url");return new URL(u,BASE).href}catch(e){return u}}' +
     'function tell(u,blank){try{parent.postMessage({type:"PUTER_SURF_NAVIGATE",url:unproxy(u),openNewTab:!!blank},"*")}catch(e){location.href=PREFIX+encodeURIComponent(u)}}' +
     'document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a"):null;if(!a)return;var h=a.getAttribute("href")||"";' +
@@ -169,8 +170,8 @@ function rewriteBrowserHtml(html: string, pageUrl: string, proxyOrigin: string):
     'document.addEventListener("submit",function(e){var f=e.target;if(!f||!f.action||(f.method||"get").toLowerCase()!=="get")return;' +
     'e.preventDefault();var q=new URLSearchParams(new FormData(f)).toString();var u=unproxy(f.action);tell(u+(u.indexOf("?")>=0?"&":"?")+q)},true);' +
     'if(window.fetch){var old=window.fetch.bind(window);window.fetch=function(input,init){try{var u=typeof input==="string"?input:(input&&input.url)||"";' +
-    'if(u&&!/^(data:|blob:)/i.test(u)){var p=PREFIX+encodeURIComponent(new URL(u,BASE).href);return old(p,init)}}catch(e){}return old(input,init)}}' +
-    'if(window.XMLHttpRequest){var oldOpen=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u){try{if(typeof u==="string")arguments[1]=PREFIX+encodeURIComponent(new URL(u,BASE).href)}catch(e){}return oldOpen.apply(this,arguments)}}' +
+    'if(u&&!/^(data:|blob:)/i.test(u))return old(proxied(u),init)}catch(e){}return old(input,init)}}' +
+    'if(window.XMLHttpRequest){var oldOpen=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u){try{if(typeof u==="string"&&!/^(data:|blob:)/i.test(u))arguments[1]=proxied(u)}catch(e){}return oldOpen.apply(this,arguments)}}' +
     'function announce(){try{parent.postMessage({type:"PUTER_SURF_LOCATION",url:BASE,targetUrl:BASE,title:document.title||new URL(BASE).hostname},"*")}catch(e){}}' +
     'announce();window.addEventListener("load",announce);})();</script>';
   const additions = baseTag + '<meta name="referrer" content="strict-origin-when-cross-origin">' + bridge;

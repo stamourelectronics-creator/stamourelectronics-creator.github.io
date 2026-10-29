@@ -261,8 +261,9 @@ export const LiveWebProxyViewer: React.FC<LiveWebProxyViewerProps> = ({
     });
   };
 
-  const iframeSrc = mode === 'proxy' 
-    ? `/api/proxy?url=${encodeURIComponent(currentUrl)}` 
+  const apiBase = String(import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
+  const iframeSrc = mode === 'proxy'
+    ? `${apiBase}/api/proxy?url=${encodeURIComponent(currentUrl)}`
     : currentUrl;
 
   return (

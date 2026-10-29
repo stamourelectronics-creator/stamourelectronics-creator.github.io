@@ -23,12 +23,6 @@ if (typeof window !== 'undefined') {
     }) as typeof window.fetch;
   }
 }
-// Prevent pinch-to-zoom and gesture zooming on mobile
-if (typeof window !== 'undefined') {
-  document.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false });
-  document.addEventListener('gesturechange', (e) => e.preventDefault(), { passive: false });
-  document.addEventListener('gestureend', (e) => e.preventDefault(), { passive: false });
-}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

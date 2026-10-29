@@ -6,7 +6,7 @@ html, body {
   width: 100%;
   overflow-x: hidden;
   position: relative;
-  touch-action: pan-x pan-y;
+  touch-action: pan-x pan-y pinch-zoom;
   -webkit-text-size-adjust: 100%;
   overscroll-behavior-y: none;
 }
@@ -15,7 +15,7 @@ html, body {
   max-width: 100vw;
   width: 100%;
   overflow-x: hidden;
-  touch-action: pan-x pan-y;
+  touch-action: pan-x pan-y pinch-zoom;
 }
 
 @theme {
@@ -257,48 +257,4 @@ html, body {
 .animate-meridian-rotate {
   transform-origin: center;
   animation: meridianSweep 3s ease-in-out infinite;
-}
-
-
-
-
-/* IsaiahAI Studio: redesigned chat canvas and composer, scoped away from the browser. */
-.isaiah-ai-studio {
-  background:
-    radial-gradient(900px 500px at 50% -15%, rgba(56, 189, 248, 0.15), transparent 62%),
-    radial-gradient(800px 550px at 85% 105%, rgba(139, 92, 246, 0.12), transparent 60%),
-    linear-gradient(150deg, #090d17 0%, #111827 45%, #0b1020 100%) !important;
-  color: #f8fafc !important;
-}
-.isaiah-ai-studio > header {
-  background: rgba(9, 13, 23, 0.62);
-  border-bottom: 1px solid rgba(148, 163, 184, 0.13);
-  backdrop-filter: blur(22px);
-}
-.isaiah-ai-studio .isaiah-ai-transcript {
-  max-width: min(920px, calc(100% - 16px));
-  padding-top: 22px;
-  padding-bottom: 28px;
-}
-.isaiah-ai-studio .isaiah-ai-composer {
-  max-width: min(920px, 100%);
-  padding: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.24);
-  border-radius: 28px;
-  background: rgba(15, 23, 42, 0.82);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255,255,255,0.035);
-  backdrop-filter: blur(28px) saturate(140%);
-}
-.isaiah-ai-studio .isaiah-ai-composer input,
-.isaiah-ai-studio .isaiah-ai-composer textarea { font-size: 16px; color: #f8fafc; }
-.isaiah-ai-studio .isaiah-ai-composer input::placeholder,
-.isaiah-ai-studio .isaiah-ai-composer textarea::placeholder { color: #94a3b8; }
-.isaiah-ai-studio .isaiah-ai-transcript .glass-bubble-ai-dark,
-.isaiah-ai-studio .isaiah-ai-transcript .glass-bubble-ai-light {
-  border-color: rgba(148, 163, 184, 0.23);
-  border-radius: 22px;
-}
-@media (max-width: 640px) {
-  .isaiah-ai-studio .isaiah-ai-transcript { max-width: 100%; padding: 14px 0 22px; }
-  .isaiah-ai-studio .isaiah-ai-composer { border-radius: 24px; padding: 9px; }
 }

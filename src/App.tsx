@@ -2269,7 +2269,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
       )}
 
       {/* 2. MAIN CORE CONTENT FIELD (ChatGPT Dark Canvas UI representation) */}
-      <div className={`flex-1 flex flex-col h-full overflow-hidden ${currentTheme.bg} ${activeView === 'chat' ? 'isaiah-ai-studio' : ''}`}>
+      <div className={`flex-1 flex flex-col h-full overflow-hidden ${currentTheme.bg}`}>
         
         {/* Top Header Selector (Model Switcher dropdown lookalike) */}
         {activeView !== 'browser' && (
@@ -2771,7 +2771,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
               )
             ) : (
                 /* Chat Messages List */
-                <div className="isaiah-ai-transcript max-w-2xl sm:max-w-3xl mx-auto w-full py-4 space-y-6">
+                <div className="max-w-2xl sm:max-w-3xl mx-auto w-full py-4 space-y-6">
                   {activeSession.messages.map((msg) => {
                     const isAI = msg.role === 'assistant';
                     
@@ -3335,7 +3335,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
             <div className="p-4 md:px-6 flex-shrink-0 selection:bg-zinc-700 select-none">
               <form 
                 onSubmit={handleSendMessage} 
-                className={`isaiah-ai-composer mx-auto space-y-3 transition-all duration-300 ${
+                className={`mx-auto space-y-3 transition-all duration-300 ${
                   isSidebarOpen ? 'max-w-2xl' : 'max-w-4xl'
                 }`}
                 onDragOver={(e) => e.preventDefault()}
