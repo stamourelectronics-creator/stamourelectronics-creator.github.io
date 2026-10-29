@@ -2506,7 +2506,7 @@ Incorporate this fresh knowledge to describe it cleanly, answer in thorough para
     if (response.candidates?.[0]?.content?.parts) {
       for (const part of response.candidates[0].content.parts) {
         if (part.thought) {
-          thinking += part.text || '';
+          // Never pass provider-internal thought tokens to the browser.
         } else if (part.text) {
           reply += part.text;
         }
@@ -2532,11 +2532,94 @@ Incorporate this fresh knowledge to describe it cleanly, answer in thorough para
       sources = localSources;
     }
 
-    res.json({ content: reply, thinking, sources });
+    if (req.body.showThinking === true) {
+      try {
+        const summaryResult: any = await Promise.race([
+          ai.models.generateContent({
+            model: 'gemini-3.8-flash',
+            contents: 'Write a concise 1–3 sentence user-facing summary of the approach behind this answer. Do not disclose hidden chain-of-thought or private internal deliberation.\n\nQuestion: ' + String(message || '').slice(0, 4000) + '\n\nAnswer: ' + String(reply || '').slice(0, 6000),
+            config: { systemInstruction: 'Provide only a concise, user-facing reasoning summary; never reveal hidden chain-of-thought.', maxOutputTokens: 180, thinkingConfig: { thinkingLevel: 'LOW' } } as any,
+          }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Summary timed out')), 3000)),
+        ]);
+        thinking = String(summaryResult?.text || '').trim();
+      } catch (summaryError: any) {
+        console.warn('[IsaiahAI] Optional reasoning summary unavailable:', String(summaryError?.message || summaryError).slice(0, 120));
+      }
+      if (!thinking) thinking = 'I focused on the question, relevant context and constraints, then organized the most useful points into the answer. This is a brief explanation of the approach, not a transcript of private internal reasoning.';
+    } else {
+      thinking = '';
+    }
+    res.json({ content: reply, thinking, thinkingSummary: thinking, sources });
   } catch (error: any) {
     console.warn('[Chat Engine] API failed or limits reached:', error?.message || error);
-    
-    // If in coding mode, return clean technical error instead of dropping to search indices
+
+    // Gemini fallback chain failed; try the server-side OpenRouter free-model router for all
+    // model selections and chat modes before giving up or using the offline search index.
+    const openRouterApiKey = process.env.OPENROUTER_API_KEY?.trim()
+      || process.env.ISAIAH_OPENROUTER_API_KEY?.trim();
+    if (openRouterApiKey) {
+      try {
+        const fallbackMessages: any[] = [{
+          role: 'system',
+          content: typeof systemInstruction === 'string' && systemInstruction.trim()
+            ? systemInstruction + '\n\nReason carefully and answer clearly, but never expose hidden chain-of-thought.'
+            : 'You are IsaiahAI, a helpful, accurate assistant. Use strong reasoning, cite only supplied sources, and never expose hidden chain-of-thought.',
+        }];
+        if (Array.isArray(history)) {
+          for (const item of history.slice(-16)) {
+            if (!item || typeof item.content !== 'string' || !item.content.trim()) continue;
+            fallbackMessages.push({ role: item.role === 'assistant' || item.role === 'model' ? 'assistant' : 'user', content: item.content.slice(0, 24000) });
+          }
+        }
+        const imageUrls = Array.isArray(images) ? images.map((img: any) => {
+          const raw = typeof img?.data === 'string' ? img.data : '';
+          if (!raw) return null;
+          return { type: 'image_url', image_url: { url: raw.startsWith('data:') ? raw : `data:${img?.mimeType || 'image/png'};base64,${raw}` } };
+        }).filter(Boolean) : [];
+        const lastUserContent = imageUrls.length ? [{ type: 'text', text: String(message || '') }, ...imageUrls] : String(message || '');
+        fallbackMessages.push({ role: 'user', content: lastUserContent });
+
+        let openRouterReply = '';
+        let openRouterError: any = null;
+        for (const modelId of ['openrouter/free', 'nvidia/nemotron-3-ultra-550b-a55b:free']) {
+          try {
+            const result = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${openRouterApiKey}`,
+                'HTTP-Referer': process.env.APP_URL || `http://localhost:${PORT}`,
+                'X-Title': 'IsaiahAI',
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ model: modelId, messages: fallbackMessages, reasoning: { effort: 'high', exclude: true }, max_tokens: 8192 }),
+              signal: AbortSignal.timeout(10000),
+            });
+            const data: any = await result.json().catch(() => ({}));
+            if (!result.ok) throw new Error(data?.error?.message || `OpenRouter request failed (${result.status})`);
+            const rawContent = data?.choices?.[0]?.message?.content;
+            openRouterReply = typeof rawContent === 'string' ? rawContent
+              : Array.isArray(rawContent) ? rawContent.map((part: any) => typeof part?.text === 'string' ? part.text : '').join('\n') : '';
+            if (openRouterReply.trim()) break;
+            throw new Error('OpenRouter returned an empty response.');
+          } catch (fallbackError: any) {
+            openRouterError = fallbackError;
+            console.warn(`[Chat Engine] OpenRouter ${modelId} failed:`, String(fallbackError?.message || fallbackError).slice(0, 160));
+          }
+        }
+        if (openRouterReply.trim()) {
+          const summary = req.body.showThinking === true
+            ? 'I considered the request and its context, then organized the most relevant points into this answer. This is a brief approach summary, not private internal reasoning.'
+            : '';
+          return res.json({ content: openRouterReply.trim(), thinking: summary, thinkingSummary: summary, sources: [], provider: 'OpenRouter' });
+        }
+        console.warn('[Chat Engine] OpenRouter fallback exhausted:', openRouterError?.message || 'No free model available.');
+      } catch (fallbackError: any) {
+        console.warn('[Chat Engine] OpenRouter fallback failed:', String(fallbackError?.message || fallbackError).slice(0, 180));
+      }
+    }
+
+    // If both cloud providers failed in coding mode, return a clear technical error.
     if (req.body.chatMode === 'code' || req.body.chatMode === 'code_extended') {
       return res.status(500).json({
         error: error.message || 'Code PR generation was unable to complete. Please try submitting your code request again.'
