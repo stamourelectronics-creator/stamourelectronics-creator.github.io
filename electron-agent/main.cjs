@@ -74,7 +74,28 @@ function createWindow() {
   mainWindow.webContents.on('will-navigate', (event, url) => {
     if (!appOrigin || !(url === appOrigin || url.startsWith(appOrigin + '/'))) event.preventDefault();
   });
+  mainWindow.webContents.on('will-attach-webview', (event, webPreferences, params) => {
+    // Treat remote pages as untrusted content and remove any path to Node/preload APIs.
+    delete webPreferences.preload;
+    webPreferences.nodeIntegration = false;
+    webPreferences.contextIsolation = true;
+    webPreferences.sandbox = true;
+    webPreferences.webviewTag = false;
+    if (!/^https?:\/\//i.test(String(params.src || ''))) event.preventDefault();
+  });
   mainWindow.webContents.on('did-attach-webview', (_event, guestContents) => {
+    // Browser sites get camera/location/clipboard access only after an explicit native prompt.
+    guestContents.session.setPermissionRequestHandler((requestingContents, permission, callback, details) => {
+      let origin = 'this website';
+      try { origin = new URL(details.requestingUrl || requestingContents.getURL()).origin; } catch {}
+      dialog.showMessageBox(mainWindow, {
+        type: 'question',
+        title: 'Website permission request',
+        message: 'Allow this website to access ' + permission + '?',
+        detail: origin + '\n\nOnly approve permissions you expect the website to need.',
+        buttons: ['Block', 'Allow once'], defaultId: 0, cancelId: 0, noLink: true
+      }).then(result => callback(result.response === 1)).catch(() => callback(false));
+    });
     guestContents.setWindowOpenHandler(({ url }) => {
       if (/^https?:\/\//i.test(url)) shell.openExternal(url).catch(() => {});
       return { action: 'deny' };
