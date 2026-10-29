@@ -490,8 +490,14 @@ async function askOpenRouter(body: AnyRecord, systemInstruction: string, preferr
   // Try vision when an image/page screenshot is present; otherwise lead with the
   // long-context reasoning model. Every listed endpoint is currently marked free.
   let candidates: string[];
-  if (imageParts.length) {
-    // Keep the screenshot attached throughout fallback. These free endpoints accept image input.
+  if (preferredModel === models.router) {
+    // Prefer the dynamic OpenRouter free router first; it selects a currently available
+    // free model matching this request (including image support when needed).
+    candidates = imageParts.length
+      ? [models.router, models.vision, 'google/gemma-4-31b-it:free', models.fast]
+      : [models.router, models.reasoning, models.fast];
+  } else if (imageParts.length) {
+    // Keep the screenshot attached throughout fallback. These endpoints support image input.
     candidates = [
       models.vision,
       'google/gemma-4-31b-it:free',
@@ -734,11 +740,35 @@ async function generateSummary(query: string, results: SearchResult[], mode: 'br
   const prompt = 'Today is ' + today + '.\nQuestion: ' + query + '\n\nTask: ' + instructions +
     '\n\nSource material (search snippets only; do not pretend to have read full pages unless their content is included):\n' +
     (sourceText || '(No direct web sources were returned. Disclose this limitation and do not guess.)');
-  const models = mode === 'more'
-    ? ['nvidia/nemotron-3-ultra-550b-a55b:free', 'openrouter/free']
-    : ['openrouter/free', 'nvidia/nemotron-3.5-lightning:free'];
+  if (env('GEMINI_API_KEY')) {
+    const ai = new GoogleGenAI({ apiKey: env('GEMINI_API_KEY') });
+    const attempts = [
+      { model: 'gemini-4-argon', timeoutMs: 8500, highReasoning: true },
+      { model: 'gemini-3.8-flash', timeoutMs: 5500, highReasoning: true },
+    ];
+    for (const attempt of attempts) {
+      try {
+        const result = await Promise.race([
+          ai.models.generateContent({
+            model: attempt.model,
+            contents: prompt,
+            config: {
+              systemInstruction: 'You are IsaiahAI Search Assist. Be evidence-first, cite only supplied URLs, compare source dates, explain contradictions, and disclose when only search snippets were supplied.',
+              maxOutputTokens: mode === 'more' ? 6000 : 1800,
+              ...(attempt.highReasoning ? { thinkingConfig: { thinkingLevel: 'HIGH' } } : {}),
+            } as any,
+          }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Summary request timed out')), attempt.timeoutMs)),
+        ]) as any;
+        if (result?.text?.trim()) return result.text.trim();
+      } catch (error: any) {
+        console.warn(`[IsaiahAI Search Assist] Gemini ${attempt.model} failed:`, String(error?.message || error).slice(0, 140));
+      }
+    }
+  }
   if (env('OPENROUTER_API_KEY') || env('ISAIAH_OPENROUTER_API_KEY')) {
-    const started = Date.now(), budget = mode === 'more' ? 18000 : 11000;
+    const models = ['openrouter/free', 'nvidia/nemotron-3-ultra-550b-a55b:free', 'nvidia/nemotron-3.5-lightning:free'];
+    const started = Date.now(), budget = mode === 'more' ? 16000 : 10000;
     for (const model of models) {
       const remaining = budget - (Date.now() - started);
       if (remaining < 1300) break;
@@ -746,31 +776,12 @@ async function generateSummary(query: string, results: SearchResult[], mode: 'br
         const response = await openRouterChat(model, [
           { role: 'system', content: 'You are IsaiahAI Search Assist. Be an evidence-first web research assistant. Prefer precise claims over confidence, compare source dates, disclose gaps, and attach inline links to the facts they support. Never invent citations. Do not reveal hidden chain-of-thought.' },
           { role: 'user', content: prompt },
-        ], Math.max(1200, Math.min(mode === 'more' ? 8000 : 5500, remaining - 200)));
+        ], Math.max(1200, Math.min(mode === 'more' ? 8000 : 5000, remaining - 200)));
         const summary = extractOpenRouterContent(response).trim();
         if (summary) return summary;
       } catch (error: any) {
-        console.warn('[IsaiahAI Search Assist] Model attempt failed:', String(error?.message || error).slice(0, 140));
+        console.warn(`[IsaiahAI Search Assist] OpenRouter ${model} failed:`, String(error?.message || error).slice(0, 140));
       }
-    }
-  }
-  if (env('GEMINI_API_KEY')) {
-    try {
-      const ai = new GoogleGenAI({ apiKey: env('GEMINI_API_KEY') });
-      const result = await Promise.race([
-        ai.models.generateContent({
-          model: 'gemini-2.5-flash', contents: prompt,
-          config: {
-            systemInstruction: 'You are IsaiahAI Search Assist. Be evidence-first, cite only supplied URLs, compare source dates, explain contradictions, and disclose when only search snippets were supplied.',
-            temperature: 0.25,
-            maxOutputTokens: mode === 'more' ? 6000 : 1800
-          }
-        }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Summary request timeout')), 9000)),
-      ]) as any;
-      if (result?.text?.trim()) return result.text.trim();
-    } catch (error: any) {
-      console.warn('[IsaiahAI Search Assist] Backup summary failed:', String(error?.message || error).slice(0, 140));
     }
   }
   const linked = sources.slice(0, mode === 'more' ? 18 : 8)
