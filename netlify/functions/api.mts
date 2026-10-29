@@ -1,4 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
+import { lookup } from 'node:dns/promises';
+import net from 'node:net';
 
 /**
  * Netlify serverless API for the existing IsaiahAI website.
@@ -58,6 +60,198 @@ function safeUrl(raw: string): string {
     return '';
   }
 }
+
+
+/** Public-Internet-only browser proxy. Local/private targets and redirect pivots are blocked. */
+function proxyIsPublicIp(address: string): boolean {
+  const version = net.isIP(address);
+  if (version === 4) {
+    const nums = address.split('.').map(Number);
+    if (nums.length !== 4 || nums.some(n => !Number.isInteger(n) || n < 0 || n > 255)) return false;
+    const ip = nums.reduce((v, n) => v * 256 + n, 0) >>> 0;
+    const ranges: Array<[string, number]> = [
+      ['0.0.0.0', 8], ['10.0.0.0', 8], ['100.64.0.0', 10], ['127.0.0.0', 8],
+      ['169.254.0.0', 16], ['172.16.0.0', 12], ['192.0.0.0', 24], ['192.0.2.0', 24],
+      ['192.168.0.0', 16], ['198.18.0.0', 15], ['198.51.100.0', 24], ['203.0.113.0', 24],
+      ['224.0.0.0', 4], ['240.0.0.0', 4],
+    ];
+    return !ranges.some(([base, bits]) => {
+      const b = base.split('.').map(Number).reduce((v, n) => v * 256 + n, 0) >>> 0;
+      const mask = (0xffffffff << (32 - bits)) >>> 0;
+      return (ip & mask) === (b & mask);
+    });
+  }
+  if (version === 6) {
+    const ip = address.toLowerCase().split('%')[0];
+    if (ip.startsWith('::ffff:') || ip === '::' || ip === '::1') return false;
+    const first = parseInt(ip.split(':')[0] || '0', 16);
+    if (first < 0x2000 || first > 0x3fff) return false;
+    if (ip.startsWith('2001:db8:') || ip.startsWith('2001:10:') || ip.startsWith('2001:2:')) return false;
+    return true;
+  }
+  return false;
+}
+
+async function validateBrowserTarget(raw: string): Promise<URL> {
+  const target = new URL(raw);
+  if (!['http:', 'https:'].includes(target.protocol)) throw new Error('Only HTTP and HTTPS pages are supported.');
+  if (target.username || target.password) throw new Error('URLs that contain login credentials are blocked.');
+  if (target.port && !['80', '443'].includes(target.port)) throw new Error('Non-standard web ports are blocked.');
+  const host = target.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  if (!host || host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') ||
+      host.endsWith('.internal') || host === 'metadata.google.internal') {
+    throw new Error('Local and internal network addresses are blocked.');
+  }
+  if (net.isIP(host)) {
+    if (!proxyIsPublicIp(host)) throw new Error('Private or reserved IP addresses are blocked.');
+  } else {
+    const records = await lookup(host, { all: true, verbatim: true });
+    if (!records.length || records.some(record => !proxyIsPublicIp(record.address))) {
+      throw new Error('This host does not resolve exclusively to public internet addresses.');
+    }
+  }
+  return target;
+}
+
+function browserEscapeHtml(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function rewriteBrowserAsset(raw: string, pageUrl: string, proxyOrigin: string): string {
+  const value = String(raw || '').trim();
+  if (!value || /^(?:data:|blob:|javascript:|mailto:|tel:|sms:|about:|#)/i.test(value)) return raw;
+  try {
+    const url = new URL(value, pageUrl);
+    if (!['http:', 'https:'].includes(url.protocol)) return raw;
+    if (url.origin === proxyOrigin && url.pathname === '/api/proxy') return url.href;
+    return proxyOrigin + '/api/proxy?url=' + encodeURIComponent(url.href);
+  } catch {
+    return raw;
+  }
+}
+
+function rewriteBrowserCss(css: string, pageUrl: string, proxyOrigin: string): string {
+  return css
+    .replace(/url\(\s*(["']?)([^"')\s]+)\1\s*\)/gi, (_m, q, u) =>
+      'url(' + q + rewriteBrowserAsset(u, pageUrl, proxyOrigin) + q + ')')
+    .replace(/@import\s+(?:url\()?\s*(["'])([^"']+)\1\s*\)?/gi, (_m, q, u) =>
+      '@import url(' + q + rewriteBrowserAsset(u, pageUrl, proxyOrigin) + q + ')');
+}
+
+function rewriteBrowserHtml(html: string, pageUrl: string, proxyOrigin: string): string {
+  let output = html.replace(/<meta\b[^>]*http-equiv\s*=\s*["']?Content-Security-Policy["']?[^>]*>/gi, '')
+    .replace(/<base\b[^>]*>/gi, '');
+  output = output.replace(/<(?:a|link|script|img|iframe|source|video|audio|embed|input|form|track|object)\b[^>]*>/gi, tag => {
+    let next = tag.replace(/\b(href|src|action|poster|data)\s*=\s*(["'])(.*?)\2/gi,
+      (_m, attr, quote, value) => attr + '=' + quote + rewriteBrowserAsset(value, pageUrl, proxyOrigin) + quote);
+    next = next.replace(/\bsrcset\s*=\s*(["'])(.*?)\1/gi, (_m, quote, srcset) => {
+      const rewritten = srcset.split(',').map((part: string) => {
+        const items = part.trim().split(/\s+/);
+        if (items[0]) items[0] = rewriteBrowserAsset(items[0], pageUrl, proxyOrigin);
+        return items.join(' ');
+      }).join(', ');
+      return 'srcset=' + quote + rewritten + quote;
+    });
+    next = next.replace(/\bstyle\s*=\s*(["'])(.*?)\1/gi,
+      (_m, quote, style) => 'style=' + quote + rewriteBrowserCss(style, pageUrl, proxyOrigin) + quote);
+    return next;
+  });
+  output = output.replace(/(<style\b[^>]*>)([\s\S]*?)(<\/style>)/gi,
+    (_m, before, css, after) => before + rewriteBrowserCss(css, pageUrl, proxyOrigin) + after);
+  const baseTag = '<base href="' + browserEscapeHtml(pageUrl) + '">';
+  const bridge = '<script id="__isaiah_browser_bridge__">(function(){' +
+    'var BASE=' + JSON.stringify(pageUrl) + ';var PREFIX=' + JSON.stringify(proxyOrigin + '/api/proxy?url=') + ';' +
+    'function unproxy(u){try{var v=new URL(u,location.href);if(v.pathname==="/api/proxy"&&v.searchParams.get("url"))return v.searchParams.get("url");return new URL(u,BASE).href}catch(e){return u}}' +
+    'function tell(u){try{parent.postMessage({type:"PUTER_SURF_NAVIGATE",url:unproxy(u)},"*")}catch(e){location.href=PREFIX+encodeURIComponent(u)}}' +
+    'document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a"):null;if(!a)return;var h=a.getAttribute("href")||"";' +
+    'if(!h||/^(#|javascript:|mailto:|tel:|sms:|download:)/i.test(h))return;var u=unproxy(a.href||h);if(!/^https?:/i.test(u))return;' +
+    'e.preventDefault();e.stopPropagation();tell(u)},true);' +
+    'document.addEventListener("submit",function(e){var f=e.target;if(!f||!f.action||(f.method||"get").toLowerCase()!=="get")return;' +
+    'e.preventDefault();var q=new URLSearchParams(new FormData(f)).toString();var u=unproxy(f.action);tell(u+(u.indexOf("?")>=0?"&":"?")+q)},true);' +
+    'if(window.fetch){var old=window.fetch.bind(window);window.fetch=function(input,init){try{var u=typeof input==="string"?input:(input&&input.url)||"";' +
+    'if(u&&!/^(data:|blob:)/i.test(u)){var p=PREFIX+encodeURIComponent(new URL(u,BASE).href);return old(p,init)}}catch(e){}return old(input,init)}}' +
+    'if(window.XMLHttpRequest){var oldOpen=XMLHttpRequest.prototype.open;XMLHttpRequest.prototype.open=function(m,u){try{if(typeof u==="string")arguments[1]=PREFIX+encodeURIComponent(new URL(u,BASE).href)}catch(e){}return oldOpen.apply(this,arguments)}}' +
+    'function announce(){try{parent.postMessage({type:"PUTER_SURF_LOCATION",url:BASE,targetUrl:BASE,title:document.title||new URL(BASE).hostname},"*")}catch(e){}}' +
+    'announce();window.addEventListener("load",announce);})();</script>';
+  const additions = baseTag + '<meta name="referrer" content="strict-origin-when-cross-origin">' + bridge;
+  if (/<head\b[^>]*>/i.test(output)) output = output.replace(/<head\b[^>]*>/i, head => head + additions);
+  else output = '<head>' + additions + '</head>' + output;
+  return output;
+}
+
+async function fetchBrowserTarget(initialUrl: string, request: Request): Promise<{ response: Response; finalUrl: string }> {
+  let current = await validateBrowserTarget(initialUrl);
+  const method = request.method.toUpperCase();
+  if (!['GET', 'HEAD', 'POST'].includes(method)) throw new Error('The embedded browser supports GET, HEAD and POST requests.');
+  let body: ArrayBuffer | undefined;
+  if (method === 'POST') {
+    body = await request.arrayBuffer();
+    if (body.byteLength > 2_000_000) throw new Error('This form submission exceeds the 2 MB limit.');
+  }
+  for (let hop = 0; hop <= 5; hop++) {
+    await validateBrowserTarget(current.href);
+    const headers = new Headers({
+      'User-Agent': 'Mozilla/5.0 (compatible; IsaiahSearchBrowser/2.0)',
+      'Accept': request.headers.get('accept') || '*/*',
+      'Accept-Language': request.headers.get('accept-language') || 'en-US,en;q=0.9',
+    });
+    const contentType = request.headers.get('content-type');
+    if (contentType && method === 'POST') headers.set('Content-Type', contentType);
+    for (const name of ['range', 'if-range', 'if-none-match', 'if-modified-since']) {
+      const value = request.headers.get(name);
+      if (value) headers.set(name, value);
+    }
+    const response = await fetch(current.href, {
+      method, headers, body: method === 'POST' ? body : undefined,
+      redirect: 'manual', signal: AbortSignal.timeout(15000),
+    });
+    if ([301, 302, 303, 307, 308].includes(response.status)) {
+      const location = response.headers.get('location');
+      if (!location) return { response, finalUrl: current.href };
+      if (hop === 5) throw new Error('The website redirected too many times.');
+      current = new URL(location, current);
+      continue;
+    }
+    return { response, finalUrl: response.url || current.href };
+  }
+  throw new Error('The website could not be reached.');
+}
+
+async function proxyBrowserRequest(request: Request, requestUrl: URL): Promise<Response> {
+  if (!['GET', 'HEAD', 'POST'].includes(request.method)) return json({ error: 'The embedded browser supports GET, HEAD and POST requests.' }, 405);
+  const target = requestUrl.searchParams.get('url');
+  if (!target) return json({ error: 'A webpage URL is required.' }, 400);
+  try {
+    const fetched = await fetchBrowserTarget(target, request);
+    const upstream = fetched.response;
+    const contentType = upstream.headers.get('content-type') || 'application/octet-stream';
+    const headers = new Headers({ ...corsHeaders, 'Content-Type': contentType, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
+    for (const name of ['content-range', 'accept-ranges', 'last-modified', 'etag']) {
+      const value = upstream.headers.get(name);
+      if (value) headers.set(name, value);
+    }
+    if (request.method === 'HEAD' || !upstream.body || upstream.status === 204 || upstream.status === 304) {
+      return new Response(null, { status: upstream.status, headers });
+    }
+    if (contentType.toLowerCase().includes('text/html')) {
+      const html = await upstream.text();
+      return new Response(html.length <= 6_000_000 ? rewriteBrowserHtml(html, fetched.finalUrl, requestUrl.origin) : html, { status: upstream.status, headers });
+    }
+    if (contentType.toLowerCase().includes('text/css')) {
+      const css = await upstream.text();
+      return new Response(css.length <= 2_000_000 ? rewriteBrowserCss(css, fetched.finalUrl, requestUrl.origin) : css, { status: upstream.status, headers });
+    }
+    return new Response(upstream.body, { status: upstream.status, headers });
+  } catch (error: any) {
+    const detail = browserEscapeHtml(String(error?.message || 'The page could not be loaded.').slice(0, 240));
+    const dest = browserEscapeHtml(target);
+    const page = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+      '<title>Page unavailable</title><style>body{font:16px system-ui;background:#0b1020;color:#e2e8f0;min-height:100vh;display:grid;place-items:center;margin:0;padding:24px;box-sizing:border-box}main{max-width:620px;background:#111827;border:1px solid #334155;border-radius:22px;padding:28px}p{color:#94a3b8;line-height:1.55}a{display:inline-block;margin-top:8px;padding:12px 16px;border-radius:12px;background:#38bdf8;color:#082f49;text-decoration:none;font-weight:700}</style></head>' +
+      '<body><main><h2>IsaiahAI could not embed this page</h2><p>' + detail + '</p><p>This page may need a normal browser session or use features not supported by an embedded view.</p><a href="' + dest + '" target="_blank" rel="noopener noreferrer">Open original website</a></main></body></html>';
+    return new Response(page, { status: 200, headers: { ...corsHeaders, 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+  }
+}
+
 
 async function fetchText(url: string, timeoutMs = 9000): Promise<string> {
   const response = await fetch(url, {
@@ -596,6 +790,7 @@ export default async function handler(request: Request) {
     .replace(/^\/\.netlify\/functions\/api(?=\/|$)/, '')
     .replace(/^\/api(?=\/|$)/, '') || '/';
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders });
+  if (path === '/proxy') return proxyBrowserRequest(request, url);
 
   const body: AnyRecord = ['GET', 'HEAD'].includes(request.method) ? {} : await request.json().catch(() => ({}));
   const queryParam = url.searchParams.get('q') || url.searchParams.get('query') || url.searchParams.get('text') || '';
@@ -617,6 +812,19 @@ export default async function handler(request: Request) {
     if (path === '/site-assist' && request.method === 'POST') {
       const result = await handleSiteAssist(body);
       return json(result);
+    }
+    if (path === '/fetch-webpage' && request.method === 'POST') {
+      const rawTarget = String(body.url || '').trim();
+      if (!rawTarget) return json({ error: 'URL is required.' }, 400);
+      const target = rawTarget.startsWith('http://') || rawTarget.startsWith('https://') ? rawTarget : 'https://' + rawTarget;
+      const result = await fetchBrowserTarget(target, new Request(target, { method: 'GET' }));
+      if (!result.response.ok) return json({ error: 'The webpage returned an error.' }, 502);
+      const type = result.response.headers.get('content-type') || '';
+      if (!/text\/html|text\/plain/i.test(type)) return json({ error: 'This page does not contain readable text.' }, 415);
+      const html = (await result.response.text()).slice(0, 2_000_000);
+      const title = decodeHtml(html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || new URL(result.finalUrl).hostname);
+      const textContent = stripTags(html).slice(0, 12000);
+      return json({ title, markdown: '# ' + title + '\n\nSource: ' + result.finalUrl + '\n\n' + textContent, fallbackMarkdown: textContent });
     }
     if (['/quick-search-links', '/browser-search', '/more-search-links'].includes(path) && request.method === 'POST') {
       const query = String(body.query || '').trim();
