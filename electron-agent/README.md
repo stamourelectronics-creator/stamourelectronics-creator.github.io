@@ -26,6 +26,10 @@ Files are written to the release directory.
 - Commands require a chosen workspace folder and a native Windows approval prompt. Review exact custom commands before allowing them.
 - The agent does not silently scan the whole drive or run terminal commands without explicit approval.
 
-## AI routing and usage
+## AI routing, reasoning summaries, and usage
 
-Hosted IsaiahAI is attempted first. If it is unavailable, the app can sign in to Puter and try free models exposed to that account, with live IsaiahSearch snippets when the search service is reachable. Puter avoids requiring an app-owned API key by using the user's model access, but model availability and provider quotas still apply. This does not bypass usage limits.
+The desktop app sends chat requests to the hosted IsaiahAI API. The hosted server tries Google's Gemini reasoning model first, with compatible Gemini fallbacks, then uses OpenRouter's `openrouter/free` dynamic router if Gemini is unavailable. OpenRouter can route to different free models as availability changes; free endpoints can be busy or rate-limited, so no uptime or unlimited-usage guarantee is made.
+
+The header toggle **Show reasoning summary** asks the server for a short, user-facing explanation of the approach. It never asks the app to display raw private chain-of-thought. API keys belong in the hosted server's secret environment variables and must never be bundled into the Windows executable or browser HTML.
+
+There is no Puter AI sign-in or client-side Puter model fallback in the desktop chat. Browser pages continue to open in Chromium. Image generation and other server-managed tools must also keep their provider credentials server-side.
