@@ -1,0 +1,56 @@
+{
+  "name": "isaiahai-agent",
+  "productName": "IsaiahAI Agent",
+  "version": "1.0.0",
+  "description": "IsaiahAI desktop companion with Chromium browsing and user-approved computer tasks.",
+  "main": "main.cjs",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis portable"
+  },
+  "devDependencies": {
+    "electron": "^39.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.stamourelectronics.isaiahai.agent",
+    "productName": "IsaiahAI Agent",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "index.html",
+      "package.json"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "IsaiahAI-Agent-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "portable": {
+      "artifactName": "IsaiahAI-Agent-Portable-${version}-${arch}.${ext}"
+    }
+  }
+}
