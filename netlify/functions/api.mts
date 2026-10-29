@@ -742,7 +742,7 @@ async function handleWiki(query: string) {
   return { searchTerm: query, summary: results.length ? `### Wikipedia results for ${query}\n\n${results.slice(0, 5).map((item, i) => `${i + 1}. **[${item.title}](${item.url})**\n\n${item.snippet}`).join('\n\n')}` : `No Wikipedia article matches were returned for “${query}”.`, boxes };
 }
 
-async function handleDDG(query: string) {
+async function handleIsaiahWideSearch(query: string) {
   const data = await searchWeb(query, { minimum: 10 });
   const boxes = data.results.slice(0, 12).map((item: SearchResult) => {
     let domain = 'web';
@@ -853,10 +853,10 @@ export default async function handler(request: Request) {
       });
       return new Response(stream, { headers: { ...corsHeaders, 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
-    if (path === '/search-ddg' && request.method === 'POST') {
+    if ((path === '/search-wide' || path === '/search-ddg') && request.method === 'POST') {
       const query = String(body.query || '').trim();
       if (!query) return json({ error: 'Query is required.' }, 400);
-      return json(await handleDDG(query));
+      return json(await handleIsaiahWideSearch(query));
     }
     if (path === '/search-wiki' && request.method === 'POST') {
       const query = String(body.query || '').trim();

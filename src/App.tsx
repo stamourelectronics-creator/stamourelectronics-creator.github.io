@@ -28,7 +28,7 @@ import {
 
 const PREVIOUS_VERSIONS = [
   { id: 'v1', name: 'Version 1 (Classic Core)', url: 'https://classic-isaiah-ai.netlify.app/', desc: 'Sleek terminal shell with essential text processing.', releasedAt: 'Q1' },
-  { id: 'v3', name: 'Version 3 (Suite Index)', url: 'https://isaiah-ai-v3.netlify.app/', desc: 'Integrated DuckDuckGo indices and dynamic search pages.', releasedAt: 'Q2' },
+  { id: 'v3', name: 'Version 3 (Suite Index)', url: 'https://isaiah-ai-v3.netlify.app/', desc: 'IsaiahSearch web-index aggregation and dynamic search pages.', releasedAt: 'Q2' },
   { id: 'v4', name: 'Version 4 (Cognitive)', url: 'https://isaiah-ai-v9.netlify.app/', desc: 'Advanced cognitive node, multimodality & smart layouts.', releasedAt: 'Q3' },
   { id: 'v5', name: 'Version 5 (Handheld v5)', url: 'https://isaiah-mobile.netlify.app/', desc: 'Responsive handheld viewport optimization.', releasedAt: 'Q4' }
 ];
@@ -1420,7 +1420,7 @@ export default function App() {
     // Prefix & natural language commands parsing
     const lowerPrompt = rawPrompt.toLowerCase().trim();
     const isWPrefix = rawPrompt.toLowerCase().startsWith('w!') || lowerPrompt.startsWith('wikipedia ') || lowerPrompt.startsWith('wiki ') || lowerPrompt === 'wikipedia' || lowerPrompt === 'wiki';
-    const isDPrefix = rawPrompt.toLowerCase().startsWith('d!') || lowerPrompt.startsWith('duckduckgo ') || lowerPrompt.startsWith('duckduck go ') || lowerPrompt === 'duckduckgo' || lowerPrompt === 'duckduck go';
+    const isIsaiahSearchPrefix = rawPrompt.toLowerCase().startsWith('s!') || lowerPrompt.startsWith('isaiahsearch ') || lowerPrompt.startsWith('isaiah search ') || lowerPrompt === 'isaiahsearch' || lowerPrompt === 'isaiah search' || rawPrompt.toLowerCase().startsWith('d!') || lowerPrompt.startsWith('duckduckgo ') || lowerPrompt.startsWith('duckduck go ') || lowerPrompt === 'duckduckgo' || lowerPrompt === 'duckduck go';
     
     // Natural Image Generation Request detection
     const isNaturalImageQuery = lowerPrompt.startsWith('make me an image of') || 
@@ -1844,17 +1844,19 @@ export default function App() {
 
         updatedSession.messages = [...workingMessages, assistantMsg];
         speakText(assistantMsg.content);
-      } else if (isDPrefix) {
-        // DuckDuckGo command
-        let ddgQuery = rawPrompt;
-        if (rawPrompt.toLowerCase().startsWith('d!')) ddgQuery = rawPrompt.slice(2).trim();
-        else if (lowerPrompt.startsWith('duckduckgo ')) ddgQuery = rawPrompt.slice(11).trim();
-        else if (lowerPrompt.startsWith('duckduck go ')) ddgQuery = rawPrompt.slice(12).trim();
-        else ddgQuery = 'St.Amour Electronics';
+      } else if (isIsaiahSearchPrefix) {
+        // IsaiahSearch command; legacy d! aliases remain accepted.
+        let wideQuery = rawPrompt;
+        if (rawPrompt.toLowerCase().startsWith('s!') || rawPrompt.toLowerCase().startsWith('d!')) wideQuery = rawPrompt.slice(2).trim();
+        else if (lowerPrompt.startsWith('isaiahsearch ')) wideQuery = rawPrompt.slice(12).trim();
+        else if (lowerPrompt.startsWith('isaiah search ')) wideQuery = rawPrompt.slice(14).trim();
+        else if (lowerPrompt.startsWith('duckduckgo ')) wideQuery = rawPrompt.slice(11).trim();
+        else if (lowerPrompt.startsWith('duckduck go ')) wideQuery = rawPrompt.slice(12).trim();
+        else wideQuery = 'St.Amour Electronics';
 
-        setCurrentSearchPrompt(`DuckDuckGo Wide Sweep: "${ddgQuery}"`);
+        setCurrentSearchPrompt(`IsaiahSearch Wide Sweep: "${wideQuery}"`);
 
-        const response = await fetch('/api/search-ddg', {
+        const response = await fetch('/api/search-wide', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ query: ddgQuery }),
@@ -1862,7 +1864,7 @@ export default function App() {
 
         if (!response.ok) {
           const errData = await response.json().catch(() => ({}));
-          throw new Error(errData.error || 'DuckDuckGo crawler service error');
+          throw new Error(errData.error || 'IsaiahSearch wide-search service error');
         }
         
         if (response.headers.get('content-type')?.includes('text/html')) throw new Error('Received HTML error page');
@@ -2521,7 +2523,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
               
               {!hasMessages ? (
                 isMobile ? (
-                  /* DuckDuckGo Mobile Inspired Empty State */
+                  /* IsaiahAI Original Mobile Empty State */
                   <div className="h-full flex flex-col items-center justify-center text-center max-w-sm mx-auto p-4 select-none animate-fade-in pt-12">
                     <div className="w-20 h-20 mx-auto rounded-full shadow-md bg-white border border-zinc-200 flex items-center justify-center mb-4">
                       <BrandLogo size={60} includeBackground={false} className="rounded-full" />

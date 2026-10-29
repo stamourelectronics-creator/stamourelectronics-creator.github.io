@@ -173,7 +173,7 @@ export const LiveWebProxyViewer: React.FC<LiveWebProxyViewerProps> = ({
     if (isLikelyUrl) {
       navigateToUrl(queryOrUrl);
     } else {
-      // Changed default search engine from DuckDuckGo to IsaiahSearch!
+      // Search queries are handled by IsaiahSearch; direct page URLs are handled separately.
       if (onSearch) {
         onSearch(queryOrUrl);
       } else {

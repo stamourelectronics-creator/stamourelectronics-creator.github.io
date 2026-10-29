@@ -885,7 +885,7 @@ export function BrowserView({
 
     const savedUserBookmarks = localStorage.getItem(`isaiah_bookmarks_${username}`);
     setBookmarksList(savedUserBookmarks ? JSON.parse(savedUserBookmarks) : [
-      { title: 'DuckDuckGo AI Chat', query: 'duckduckgo ai chat' },
+      { title: 'IsaiahAI Chat', query: 'IsaiahAI chat' },
       { title: 'YouTube Trending', query: 'youtube trending' },
       { title: 'Wikipedia Tech News', query: 'wikipedia tech news' }
     ]);
@@ -901,7 +901,7 @@ export function BrowserView({
     setUserProfile({ username: 'Guest', loggedIn: false });
     setHistoryList([]);
     setBookmarksList([
-      { title: 'DuckDuckGo AI Chat', query: 'duckduckgo ai chat' },
+      { title: 'IsaiahAI Chat', query: 'IsaiahAI chat' },
       { title: 'YouTube Trending', query: 'youtube trending' },
       { title: 'Wikipedia Tech News', query: 'wikipedia tech news' }
     ]);
@@ -1637,7 +1637,6 @@ export function BrowserView({
                     {[
                       { id: 'Isaiah Engine (Default)', title: 'Isaiah Engine (Default)', desc: 'AI-grounded live search with multi-engine aggregation & citations', tag: 'Fastest' },
                       { id: 'Google', title: 'Google', desc: 'Global index with Google web ranking algorithms and links', tag: 'Global' },
-                      { id: 'DuckDuckGo', title: 'DuckDuckGo', desc: 'Privacy-focused zero tracker engine with direct instant answers', tag: 'Private' },
                       { id: 'Bing', title: 'Bing', desc: 'Microsoft web search with deep multimedia integration', tag: 'Microsoft' },
                       { id: 'Brave', title: 'Brave', desc: 'Independent web index focused on speed and privacy', tag: 'Shield' }
                     ].map(engine => {
@@ -3126,7 +3125,7 @@ export function BrowserView({
                   {searchEngineDropdownOpen && (
                     <div className="absolute top-full left-0 mt-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-750 rounded-xl shadow-xl z-30 py-1.5 w-56 animate-fade-in font-sans">
                       <div className="px-3 py-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Preferred Search Engine</div>
-                      {['Isaiah Engine (Default)', 'Google', 'DuckDuckGo', 'Bing', 'Brave'].map((engine) => (
+                      {['Isaiah Engine (Default)', 'Google', 'Bing', 'Brave'].map((engine) => (
                         <button
                           key={engine}
                           onClick={() => {
@@ -3869,7 +3868,7 @@ export function BrowserView({
                       <div className="flex flex-wrap gap-2 pt-1">
                         {[
                           { name: 'Wikipedia', url: `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(activeSearch)}` },
-                          { name: 'DuckDuckGo', url: `https://duckduckgo.com/?q=${encodeURIComponent(activeSearch)}` },
+                          { name: 'Bing Search', url: `https://www.bing.com/search?q=${encodeURIComponent(activeSearch)}` },
                           { name: 'Google Search', url: `https://www.google.com/search?q=${encodeURIComponent(activeSearch)}` },
                           { name: 'YouTube', url: `https://www.youtube.com/results?search_query=${encodeURIComponent(activeSearch)}` },
                         ].map((ext, sIdx) => (
