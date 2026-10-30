@@ -58,8 +58,26 @@ nav{padding:8px 16px;gap:7px}nav button{border-radius:999px;padding:9px 16px}.pa
 @media(max-width:800px){.model-picker{flex-wrap:wrap}.model-picker select{min-width:175px;flex:1}.browser-tab{min-width:95px;max-width:160px}}
 
 .unrestricted-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 11px;margin-top:8px;border:1px solid #f0a45a44;border-radius:12px;background:#f0a45a0a;color:#d4dfef;font-size:11px}.unrestricted-row label{display:flex;align-items:center;gap:8px;font-weight:800;color:#f6c58d}.unrestricted-row input{accent-color:#e9a04e;width:15px;height:15px}.unrestricted-row span{color:#9aabc1}
+
+/* Refined request state, response rhythm, and chat composer interactions. */
+.thinking{width:fit-content;max-width:min(100%,1000px);padding:9px 14px;border:1px solid #55d6ee35;border-radius:999px;background:linear-gradient(120deg,#102337e8,#171c35e8);box-shadow:0 8px 26px #0003;backdrop-filter:blur(14px);transition:opacity .22s ease,transform .22s ease}
+.thinking:not([hidden]){animation:thinking-enter .24s cubic-bezier(.2,.8,.2,1) both}
+.thinking[hidden]{display:none!important}
+.thinking .spinner{flex:none;box-shadow:0 0 14px #65dcf844}
+#thinkingText{color:#d7eafa;font-weight:650;letter-spacing:.005em;animation:status-refresh .22s ease both}
+.message.assistant{transition:opacity .24s ease,transform .24s ease}
+.message.assistant .markdown-body{max-width:920px}
+.message.assistant .answer-text{font-size:14.5px;line-height:1.88}
+.message.assistant .markdown-body pre{box-shadow:0 10px 28px #0002}
+.message-actions{opacity:.8;transition:opacity .18s ease}
+.message.assistant:hover .message-actions{opacity:1}
+.composer form:focus-within{border-color:#64dff0aa;box-shadow:0 0 0 3px #65dcf81b,0 18px 48px #0004}
+.composer textarea{transition:height .12s ease}
+.status{transition:background .2s ease,border-color .2s ease}
+@keyframes thinking-enter{from{opacity:0;transform:translateY(7px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes status-refresh{from{opacity:.35;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
 </style></head><body>
-<header><div class="brand"><img class="brand-icon" src="/assets/isaiahai-icon.svg" alt="IsaiahAI logo"><div>IsaiahAI Agent<small>Desktop intelligence · Windows</small></div></div><div class="header-actions"><button id="agentModeToggle" class="sign-in" type="button" aria-pressed="true">Agent mode on</button><button id="showThinkingToggle" class="sign-in" type="button" aria-pressed="false">Show reasoning summary</button><div class="status"><span class="dot"></span><span id="apiStatus">Checking AI connection…</span></div></div></header>
+<header><div class="brand"><img class="brand-icon" src="/assets/isaiahai-icon.svg" alt="IsaiahAI logo"><div>IsaiahAI Agent<small>Desktop intelligence · Windows</small></div></div><div class="header-actions"><button id="agentModeToggle" class="sign-in" type="button" aria-pressed="true">Agent mode on</button><button id="showThinkingToggle" class="sign-in" type="button" aria-pressed="false">Show reasoning summary</button><div class="status"><span class="dot"></span><span id="apiStatus">Checking service…</span></div></div></header>
 <nav><button class="active" data-panel="chat">✦ AI Chat</button><button data-panel="browser">🌐 IsaiahSearch Browser</button></nav>
 <main>
 <section id="panel-chat" class="panel active"><div class="chat">
@@ -137,7 +155,7 @@ async function initializeApi(){
   if(!response.ok||data.ok!==true)throw new Error(data.error||'The hosted AI service did not return a valid readiness response ('+response.status+').');
   apiHealth=data;updateModelStatus();return data;
  }catch(error){
-  apiHealth=null;setApiStatus('AI service unavailable',false);$('modelHint').textContent='Check your internet connection and retry.';
+  apiHealth=null;setApiStatus('Offline',false);$('modelHint').textContent='Connection failed · send a message to retry.';
   console.warn('[IsaiahAI] Health check failed:',safeError(error));return null;
  }
 }
@@ -149,7 +167,7 @@ function modelConfigured(model,health){
 function updateModelStatus(){
  const model=$('modelSelect').value,name=modelLabel(model),configured=modelConfigured(model,apiHealth);
  $('modelHint').textContent=name+(configured?' · ready':(model==='breakaway_1_0'?' · Gemini key missing':' · OpenRouter key missing'));
- setApiStatus(apiHealth?(configured?'Ready · '+name:'Selected model is not configured'):'AI service unavailable',!!apiHealth&&configured);
+ setApiStatus(apiHealth?(configured?'Online':'Model not configured'):'Offline',!!apiHealth&&configured);
 }
 $('modelSelect').addEventListener('change',updateModelStatus);
 apiReady=initializeApi();
@@ -172,7 +190,7 @@ function appendMessage(role,content,sources,thinkingSummary,provider,modelName){
      run.disabled=true;actions.append(run);
      (async function autoRunProposal(){
       try{
-       $('agentTools').open;setToolStatus('IsaiahAI is automatically running its proposed '+proposal.shell.toUpperCase()+' command as Administrator…');
+       $('agentTools').open=true;setToolStatus('IsaiahAI is automatically running its proposed '+proposal.shell.toUpperCase()+' command as Administrator…');
        const result=await window.isaiahDesktop.runShellCommand(proposal);
        showTerminalResult(result,proposal.shell+' · automatic AI execution');
       }catch(error){setToolStatus('Automatic command failed: '+safeError(error));}
@@ -181,7 +199,7 @@ function appendMessage(role,content,sources,thinkingSummary,provider,modelName){
     }else{
      run.addEventListener('click',async function(){
       run.disabled=true;run.textContent='Waiting for approval…';
-      try{const result=await window.isaiahDesktop.runShellCommand(proposal);showTerminalResult(result,proposal.shell+' · AI proposal');$('agentTools').open;}
+      try{const result=await window.isaiahDesktop.runShellCommand(proposal);showTerminalResult(result,proposal.shell+' · AI proposal');$('agentTools').open=true;}
       catch(error){setToolStatus('Suggested command failed: '+safeError(error));}
       finally{run.disabled=false;run.textContent='Review & run command';}
      });
@@ -189,7 +207,7 @@ function appendMessage(role,content,sources,thinkingSummary,provider,modelName){
     }
    }
    article.append(actions);}
-  transcript.append(article);transcript.scrollTop=transcript.scrollHeight;return article;
+  transcript.append(article);transcript.scrollTo({top:transcript.scrollHeight,behavior:'smooth'});return article;
 }
 function setThinking(text){$('thinkingBar').hidden=false;$('thinkingText').textContent=text;}
 function startThinking(){const stages=['Preparing your request…','Searching the web for useful sources…','Comparing evidence and reasoning…','Writing your answer…'];let idx=0;setThinking(stages[0]);if(thinkingTimer)clearInterval(thinkingTimer);thinkingTimer=setInterval(function(){idx=Math.min(idx+1,stages.length-1);setThinking(stages[idx]);},1700);}
@@ -224,7 +242,7 @@ function extractCommandProposal(content){
 async function sendChat(prompt){
   prompt=String(prompt||'').trim();if(!prompt)return;
   const selectedModel=$('modelSelect').value,selectedLabel=modelLabel(selectedModel);
-  appendMessage('user',prompt);$('chatInput').value='';$('sendBtn').disabled=true;messages.push({role:'user',content:prompt});
+  appendMessage('user',prompt);$('chatInput').value='';$('chatInput').style.height='auto';$('sendBtn').disabled=true;messages.push({role:'user',content:prompt});
   startThinking();let answer='',sources=[],provider='Unavailable',thinkingSummary='';
   try{
     await workspaceReady;
@@ -237,7 +255,8 @@ async function sendChat(prompt){
     }
     const agentInstructions=agentMode?(unrestrictedAgentMode?'Unrestricted system agent mode is ON. You have access to elevated Windows PowerShell or Command Prompt through the desktop agent. When a task needs computer actions, provide one concise actionable command in a fenced code block labelled powershell or cmd; the app will execute that command automatically with Administrator permissions and return its output. Do not claim success until the output is returned. Use the computer to complete the requested task rather than only giving manual instructions.':'Desktop agent mode is enabled but unrestricted auto-run is OFF. You may propose a concise Windows PowerShell or Command Prompt command in a fenced code block labelled powershell or cmd; the user must review and run it. Never claim a command has run without output.'):'Desktop agent mode is off. Give guidance but do not propose commands for execution.';
     const contextualPrompt=agentInstructions+'\\n\\n'+(contextParts.length?prompt+'\\n\\n'+contextParts.join('\\n\\n'):prompt);
-    const health=await apiReady;
+    let health=await apiReady;
+     if(!health){apiReady=initializeApi();health=await apiReady;}
     if(!health||health.ok!==true)throw new Error('The IsaiahAI server is unreachable. Check your internet connection and retry.');
     if(!modelConfigured(selectedModel,health))throw new Error(selectedModel==='breakaway_1_0'?'Breakaway 1.0 needs the Gemini API key configured on the server.':'IsaiahAI 7.0 SUPER needs the OpenRouter API key configured on the server.');
     const response=await fetch(API+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:contextualPrompt,history:messages.slice(0,-1).slice(-18),model:selectedModel,selectedModel:selectedModel,chatMode:'general',searchWebEnabled:true,showThinking:showThinking}),signal:AbortSignal.timeout(55000)});
@@ -245,12 +264,13 @@ async function sendChat(prompt){
     if(!response.ok)throw new Error((data.error||selectedLabel+' is temporarily unavailable.')+' (HTTP '+response.status+')');
     answer=String(data.content||'').trim();if(!answer)throw new Error('The selected model returned an empty answer.');
     sources=Array.isArray(data.sources)?data.sources:[];provider=data.selectedProvider||selectedLabel;thinkingSummary=String(data.thinkingSummary||data.thinking||'');
-    setApiStatus(selectedLabel+' ready',true);
+    setApiStatus('Online',true);
   }catch(cloudError){
     answer=selectedLabel+' could not complete this request.\\n\\n'+safeError(cloudError);
     provider='Unavailable';updateModelStatus();
+  }finally{
+    stopThinking();
   }
-  stopThinking();
   setToolStatus(provider==='Unavailable'?'Request failed for '+selectedLabel+'.':('Response generated with '+selectedLabel+'.'));
   lastAssistantContent=answer;messages.push({role:'assistant',content:answer});
   appendMessage('assistant',answer,sources,thinkingSummary,provider,selectedLabel);
@@ -258,7 +278,9 @@ async function sendChat(prompt){
 }
 $('chatForm').addEventListener('submit',function(event){event.preventDefault();sendChat($('chatInput').value).catch(function(error){stopThinking();appendMessage('assistant','Something went wrong: '+safeError(error));$('sendBtn').disabled=false;});});
 document.querySelectorAll('[data-prompt]').forEach(function(button){button.addEventListener('click',function(){sendChat(button.dataset.prompt).catch(function(error){stopThinking();appendMessage('assistant','Something went wrong: '+safeError(error));$('sendBtn').disabled=false;});});});
-$('chatInput').addEventListener('keydown',function(event){if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();$('chatForm').requestSubmit();}});
+function resizeChatInput(){const input=$('chatInput');input.style.height='auto';input.style.height=Math.min(input.scrollHeight,180)+'px';}
+ $('chatInput').addEventListener('input',resizeChatInput);
+ $('chatInput').addEventListener('keydown',function(event){if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();$('chatForm').requestSubmit();}});
 /* API configuration and health are loaded before the first chat request. */
 async function renderWorkspaceOptions(){
  const select=$('agentFileSelect'),filter=$('fileFilter').value.trim().toLowerCase(),selected=new Set(Array.from(select.selectedOptions).map(option=>option.value));
