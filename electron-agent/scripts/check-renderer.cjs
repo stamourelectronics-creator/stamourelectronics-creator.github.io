@@ -17,6 +17,12 @@ for (const required of [
   'unrestrictedModeToggle',
   'autoRunProposal',
   'function createBrowserTab',
+  'createBrowserView',
+  'WebContentsView',
+  'onBrowserEvent',
+  'browserCanvas',
+  'Writing your answer',
+  'setBrowserViewBounds',
   'stamourelectronics-creator.github.io/'
 ]) {
   if (!html.includes(required)) throw new Error('Desktop renderer validation missing: ' + required);
