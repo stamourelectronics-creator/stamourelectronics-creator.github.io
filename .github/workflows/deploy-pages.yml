@@ -104,3 +104,37 @@ jobs:
           }
           console.warn('IsaiahAI API did not pass its post-deploy health check: ' + lastStatus);
           NODE
+      - name: Smoke test hosted AI chat
+        continue-on-error: true
+        run: |
+          node --input-type=module <<'NODE'
+          const endpoint = 'https://isaiahsearch.netlify.app/api/chat';
+          try {
+            const response = await fetch(endpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+              body: JSON.stringify({
+                message: 'Reply with the single word OK.',
+                model: 'isaiahai_7_super',
+                selectedModel: 'isaiahai_7_super',
+                chatMode: 'general',
+                disableWebSearch: true,
+                searchWebEnabled: false
+              }),
+              signal: AbortSignal.timeout(55000),
+              cache: 'no-store'
+            });
+            const data = await response.json().catch(() => ({}));
+            const answer = String(data.content || '').trim();
+            if (!response.ok || !answer) {
+              console.warn('Hosted AI chat smoke test failed: HTTP ' + response.status +
+                ' | ' + String(data.error || 'The API did not return an answer.').slice(0, 240));
+              process.exit(0);
+            }
+            console.log('Hosted AI chat returned a response successfully. Provider: ' +
+              String(data.selectedProvider || data.provider || 'not specified') +
+              ' | answer length: ' + answer.length + ' characters.');
+          } catch (error) {
+            console.warn('Hosted AI chat smoke test could not complete: ' + String(error?.message || error));
+          }
+          NODE
