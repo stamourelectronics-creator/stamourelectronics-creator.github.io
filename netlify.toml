@@ -8,12 +8,9 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
-# Route API calls to the dynamic Netlify function before the SPA fallback.
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/api/:splat"
-  status = 200
-  force = true
+# The Netlify function declares config.path = '/api/*' directly.
+# Do not rewrite /api/* to /.netlify/functions/api/:splat: custom-path
+# functions are only served at config.path, not the default function URL.
 
 # Keep website paths working after a refresh.
 [[redirects]]
