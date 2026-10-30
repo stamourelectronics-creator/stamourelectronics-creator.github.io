@@ -13,10 +13,24 @@ contextBridge.exposeInMainWorld('isaiahDesktop', {
   runShellCommand: payload => ipcRenderer.invoke('workspace:run-custom-command', payload),
   getUnrestrictedMode: () => ipcRenderer.invoke('agent:unrestricted:get'),
   setUnrestrictedMode: enabled => ipcRenderer.invoke('agent:unrestricted:set', enabled),
-  onBrowserOpenTab: callback => {
+  createBrowserView: payload => ipcRenderer.invoke('browser:create', payload),
+  navigateBrowserView: (tabId, url) => ipcRenderer.invoke('browser:navigate', { tabId, url }),
+  setBrowserViewActive: (tabId, visible) => ipcRenderer.invoke('browser:set-active', { tabId, visible }),
+  setBrowserViewBounds: bounds => ipcRenderer.send('browser:set-bounds', bounds),
+  browserBack: tabId => ipcRenderer.invoke('browser:back', tabId),
+  browserForward: tabId => ipcRenderer.invoke('browser:forward', tabId),
+  browserReload: tabId => ipcRenderer.invoke('browser:reload', tabId),
+  closeBrowserView: tabId => ipcRenderer.invoke('browser:close', tabId),
+  onBrowserEvent: callback => {
     if (typeof callback !== 'function') return () => {};
-    const listener = (_event, url) => callback(String(url || ''));
-    ipcRenderer.on('browser:open-tab', listener);
-    return () => ipcRenderer.removeListener('browser:open-tab', listener);
+    const listener = (_event, payload) => callback(payload || {});
+    ipcRenderer.on('browser:event', listener);
+    return () => ipcRenderer.removeListener('browser:event', listener);
+  },
+  onBrowserBoundsRefresh: callback => {
+    if (typeof callback !== 'function') return () => {};
+    const listener = () => callback();
+    ipcRenderer.on('browser:bounds-refresh', listener);
+    return () => ipcRenderer.removeListener('browser:bounds-refresh', listener);
   }
 });
