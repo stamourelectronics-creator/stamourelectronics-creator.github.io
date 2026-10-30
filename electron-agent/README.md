@@ -28,8 +28,20 @@ Files are written to the release directory.
 
 ## AI routing, reasoning summaries, and usage
 
-The desktop app sends chat requests to the hosted IsaiahAI API. The hosted server tries Google's Gemini reasoning model first, with compatible Gemini fallbacks, then uses OpenRouter's `openrouter/free` dynamic router if Gemini is unavailable. OpenRouter can route to different free models as availability changes; free endpoints can be busy or rate-limited, so no uptime or unlimited-usage guarantee is made.
+The desktop app calls the hosted IsaiahAI API over HTTPS. The server uses Gemini first, with compatible Gemini fallbacks, then OpenRouter's `openrouter/free` dynamic router. Free endpoints can be busy or rate-limited; no unlimited-usage or uninterrupted-availability guarantee is made.
 
-The header toggle **Show reasoning summary** asks the server for a short, user-facing explanation of the approach. It never asks the app to display raw private chain-of-thought. API keys belong in the hosted server's secret environment variables and must never be bundled into the Windows executable or browser HTML.
+The **Show reasoning summary** toggle asks the server for a short, user-facing explanation of the approach. It never requests raw private chain-of-thought. Provider API keys stay in Netlify/server environment secrets and are never embedded in the EXE, preload, or browser HTML.
 
-There is no Puter AI sign-in or client-side Puter model fallback in the desktop chat. Browser pages continue to open in Chromium. Image generation and other server-managed tools must also keep their provider credentials server-side.
+There is no Puter AI sign-in or client-side Puter model fallback in the desktop chat. The API endpoint can be overridden with `ISAIAH_API_BASE_URL` at app launch; otherwise the app uses `https://isaiahsearch.netlify.app/api`.
+
+## Workspace and terminal permissions
+
+- The app remembers the folder you explicitly select and restores that same folder on later launches. You can remove saved access from the Local workspace controls.
+- The file picker can attach up to six supported project files to one chat request. File access remains inside the selected workspace and is read-only until you explicitly use **Review & save AI code**.
+- PowerShell and Command Prompt are available from the Terminal panel. Every custom command displays the exact command and working directory in a native Windows approval dialog. Commands run with your Windows user permissions and can affect files outside the selected workspace; review every command before approving it.
+- File writes create a dated backup first and also require a native Windows approval. Terminal commands have a two-minute safety timeout and output is bounded.
+- This is not unattended or unrestricted PC control. The selected workspace is persistent, while command execution and file writes remain explicitly approved.
+
+## Build checks
+
+Run `npm run check` before `npm run dist`. The check validates the Electron main/preload scripts and compiles the renderer's inline JavaScript before the Windows installer is packaged.
