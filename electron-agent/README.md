@@ -7,42 +7,44 @@ IsaiahAI Agent is a Windows desktop assistant built with Electron and Chromium.
 Install Node.js 22 and run:
 
     npm install
+    npm run check
     npm run dist
 
 Files are written to the release directory.
 
 ## Browser
 
-- The Browser tab opens on IsaiahSearch's own search screen, not DuckDuckGo.
-- Results are fetched through IsaiahSearch and open inside Chromium.
-- Direct URLs are validated as HTTP/HTTPS before navigation.
-- Use the explicit Open outside control for pages that block embedded browser sessions.
+- New tabs open `https://stamourelectronics-creator.github.io/`, the IsaiahSearch/IsaiahAI website.
+- Search queries open the site with its `?q=` parameter.
+- Each tab has its own Chromium view, navigation history, title and close button.
+- Webpage links that request a new tab are opened as new tabs inside IsaiahAI.
 
-## Chat as a computer agent
+## AI models
 
-- Choose a workspace folder from the Connect computer folder control inside chat; there is no separate Computer workspace tab.
-- The chat only reads a supported text/code file when you select and attach it.
-- Review & save AI code writes a complete code block from the last AI answer to your selected file only after a native Windows approval prompt. A dated backup is created first under .isaiahai-backups.
-- Commands require a chosen workspace folder and a native Windows approval prompt. Review exact custom commands before allowing them.
-- The agent does not silently scan the whole drive or run terminal commands without explicit approval.
+- **IsaiahAI 7.0 SUPER** is routed to OpenRouter.
+- **Breakaway 1.0** is routed to the server-side Gemini API key.
+- The two model routes are separate. The server does not silently substitute one provider for the other.
+- API keys remain in Netlify/server environment secrets; they are not packaged into the EXE.
+- Hosted model usage and availability depend on the provider's terms, quotas and service status.
 
-## AI routing, reasoning summaries, and usage
+## Computer agent and unrestricted mode
 
-The desktop app calls the hosted IsaiahAI API over HTTPS. The server uses Gemini first, with compatible Gemini fallbacks, then OpenRouter's `openrouter/free` dynamic router. Free endpoints can be busy or rate-limited; no unlimited-usage or uninterrupted-availability guarantee is made.
+- The app automatically prepares the Documents/IsaiahAI Workspace folder; no folder-picker step is required.
+- The **Unrestricted system agent · auto-run as Administrator** toggle is off by default. Enabling it requires a native Windows confirmation.
+- When enabled and Agent mode is on, a PowerShell or Command Prompt code block proposed by the selected AI model is run automatically. Its output is shown in the app and included as context for the next prompt.
+- In unrestricted mode, command execution does not show a separate Windows approval dialog for every command. Commands run with the privileges granted to the app, which requests Windows Administrator elevation at launch.
+- Windows UAC remains in control: the user must approve the UAC prompt when starting the application. IsaiahAI does not bypass UAC or other Windows security controls.
+- Unrestricted commands can access the entire computer, modify or delete files, install or remove software, change registry values and services, or change system settings. Web content and downloaded files may contain malicious instructions that try to manipulate an AI agent. Enable this mode only on a computer you own and when you understand these risks. Turn it off at any time to restore the per-command review dialog.
+- AI-generated file writes through the file editor still use a native confirmation dialog and create dated backups when replacing a file.
 
-The **Show reasoning summary** toggle asks the server for a short, user-facing explanation of the approach. It never requests raw private chain-of-thought. Provider API keys stay in Netlify/server environment secrets and are never embedded in the EXE, preload, or browser HTML.
+## AI routing and readiness
+
+The desktop app calls the hosted IsaiahAI API over HTTPS. Its health endpoint reports credential readiness separately for the OpenRouter and Gemini models. The app uses a bounded health request and displays which selected model is ready. API credentials are never embedded in the EXE, preload, or renderer HTML.
+
+The **Show reasoning summary** setting asks for a short, user-facing description of the approach. It does not request private internal reasoning.
 
 There is no Puter AI sign-in or client-side Puter model fallback in the desktop chat. The API endpoint can be overridden with `ISAIAH_API_BASE_URL` at app launch; otherwise the app uses `https://isaiahsearch.netlify.app/api`.
 
-## Workspace and terminal permissions
-
-- The app remembers the folder you explicitly select and restores that same folder on later launches. You can remove saved access from the Local workspace controls.
-- The file picker can attach up to six supported project files to one chat request. File access remains inside the selected workspace and is read-only until you explicitly use **Review & save AI code** or **Create file from AI code**. Existing files are backed up before replacement; new files must be created inside an existing folder within the workspace.
-- With Agent mode enabled, IsaiahAI can propose a PowerShell or Command Prompt command in its answer. The **Review & run command** button sends that exact proposal to the native Windows approval dialog; the AI never launches it silently.
-- PowerShell and Command Prompt are available from the Terminal panel. Every custom command displays the exact command and working directory in a native Windows approval dialog. Commands run with your Windows user permissions and can affect files outside the selected workspace; review every command before approving it.
-- File writes create a dated backup first and also require a native Windows approval. Terminal commands have a two-minute safety timeout and output is bounded.
-- This is not unattended or unrestricted PC control. The selected workspace is persistent, while command execution and file writes remain explicitly approved.
-
 ## Build checks
 
-Run `npm run check` before `npm run dist`. The check validates the Electron main/preload scripts and compiles the renderer's inline JavaScript before the Windows installer is packaged.
+`npm run check` validates the Electron main/preload scripts and compiles the renderer's inline JavaScript before the Windows installer is packaged.
