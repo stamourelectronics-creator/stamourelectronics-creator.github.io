@@ -24,6 +24,10 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Validate hosted server and Netlify function source
+        run: |
+          npx esbuild server.ts --bundle --platform=node --format=cjs --packages=external --outfile=/tmp/isaiah-server-check.cjs
+          npx esbuild netlify/functions/api.mts --bundle --platform=node --format=esm --packages=external --outfile=/tmp/isaiah-netlify-api-check.mjs
       - name: Build the GitHub Pages website
         run: npm run build:pages
         env:
