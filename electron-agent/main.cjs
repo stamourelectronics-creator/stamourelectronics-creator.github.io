@@ -8,6 +8,24 @@ let mainWindow;
 let appServer = null;
 let appOrigin = null;
 let workspaceRoot = null;
+const settingsFile = path.join(app.getPath('userData'), 'agent-settings.json');
+const DEFAULT_API_BASE_URL = 'https://isaiahsearch.netlify.app/api';
+async function loadSavedWorkspace() {
+  try {
+    const saved = JSON.parse(await fs.readFile(settingsFile, 'utf8'));
+    const candidate = typeof saved.workspaceRoot === 'string' ? saved.workspaceRoot : '';
+    if (!candidate) return;
+    const real = await fs.realpath(candidate);
+    const stat = await fs.stat(real);
+    if (stat.isDirectory()) workspaceRoot = real;
+  } catch {
+    workspaceRoot = null;
+  }
+}
+async function persistWorkspace() {
+  await fs.mkdir(path.dirname(settingsFile), { recursive: true });
+  await fs.writeFile(settingsFile, JSON.stringify({ workspaceRoot }, null, 2), { encoding: 'utf8', mode: 0o600 });
+}
 const skippedDirs = new Set(['.git', 'node_modules', 'dist', 'build', 'release', '.next', '.cache', '.idea', '.vscode']);
 const textExtensions = new Set(['.txt', '.md', '.json', '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.css', '.html', '.htm', '.py', '.rs', '.go', '.java', '.cs', '.xml', '.yml', '.yaml', '.toml', '.ini', '.sh', '.bat', '.ps1', '.sql', '.svg', '.env.example']);
 const presets = {
@@ -32,17 +50,31 @@ function createWindow() {
   // loopback-only ephemeral port so its sign-in callback has an origin to return to.
   appServer = http.createServer(async (request, response) => {
     const pathname = new URL(request.url || '/', 'http://localhost').pathname;
-    if (pathname !== '/' && pathname !== '/index.html') {
-      response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-      response.end('Not found');
-      return;
-    }
+    const assetPaths = {
+      '/assets/isaiahai-icon.svg': path.join(__dirname, 'assets', 'isaiahai-icon.svg'),
+    };
     try {
+      if (assetPaths[pathname]) {
+        const asset = await fs.readFile(assetPaths[pathname]);
+        response.writeHead(200, {
+          'Content-Type': 'image/svg+xml; charset=utf-8',
+          'Cache-Control': 'public, max-age=3600',
+          'X-Content-Type-Options': 'nosniff'
+        });
+        response.end(asset);
+        return;
+      }
+      if (pathname !== '/' && pathname !== '/index.html') {
+        response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+        response.end('Not found');
+        return;
+      }
       const page = await fs.readFile(path.join(__dirname, 'index.html'));
       response.writeHead(200, {
         'Content-Type': 'text/html; charset=utf-8',
         'Cache-Control': 'no-store',
-        'X-Content-Type-Options': 'nosniff'
+        'X-Content-Type-Options': 'nosniff',
+        'Referrer-Policy': 'no-referrer'
       });
       response.end(page);
     } catch {
@@ -102,7 +134,8 @@ function createWindow() {
     });
   });
 }
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  await loadSavedWorkspace();
   createWindow();
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
@@ -111,6 +144,17 @@ app.on('before-quit', () => {
   if (appServer) {
     try { appServer.close(); } catch { /* app is exiting */ }
     appServer = null;
+  }
+});
+
+ipcMain.handle('app:config', () => {
+  const configured = String(process.env.ISAIAH_API_BASE_URL || DEFAULT_API_BASE_URL).trim();
+  try {
+    const parsed = new URL(configured);
+    if (parsed.protocol !== 'https:') throw new Error('The AI API must use HTTPS.');
+    return { apiBaseUrl: parsed.href.replace(/\/$/, '') };
+  } catch {
+    return { apiBaseUrl: DEFAULT_API_BASE_URL };
   }
 });
 
@@ -147,18 +191,24 @@ ipcMain.handle('workspace:choose', async () => {
   const picked = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
   if (picked.canceled || !picked.filePaths[0]) return { canceled: true };
   workspaceRoot = await fs.realpath(picked.filePaths[0]);
+  await persistWorkspace();
   return { canceled: false, path: workspaceRoot };
+});
+ipcMain.handle('workspace:clear', async () => {
+  workspaceRoot = null;
+  try { await fs.unlink(settingsFile); } catch {}
+  return { cleared: true };
 });
 ipcMain.handle('workspace:path', () => workspaceRoot);
 ipcMain.handle('workspace:list', async () => {
   const root = requireWorkspace();
   const output = [];
   async function walk(folder, relative, depth) {
-    if (output.length >= 500 || depth > 12) return;
+    if (output.length >= 1200 || depth > 16) return;
     let entries;
     try { entries = await fs.readdir(folder, { withFileTypes: true }); } catch { return; }
     for (const entry of entries) {
-      if (output.length >= 500) break;
+      if (output.length >= 1200) break;
       if (entry.name.startsWith('.') && entry.name !== '.env.example') continue;
       if (entry.isDirectory()) {
         if (!skippedDirs.has(entry.name)) await walk(path.join(folder, entry.name), relative ? path.join(relative, entry.name) : entry.name, depth + 1);
@@ -192,15 +242,36 @@ ipcMain.handle('workspace:write', async (_event, payload) => {
   await fs.writeFile(item.file, content, 'utf8');
   return { saved: true, backup: path.join('.isaiahai-backups', backupName) };
 });
-function runProcess(bin, args, cwd) {
+function runProcess(bin, args, cwd, timeoutMs = 120000) {
   return new Promise(resolve => {
-    const child = spawn(bin, args, { cwd, shell: false, windowsHide: true });
     let output = '';
-    const append = chunk => { output = (output + String(chunk)).slice(-24000); };
-    child.stdout.on('data', append);
-    child.stderr.on('data', append);
-    child.on('error', err => resolve({ exitCode: -1, output: err.message }));
-    child.on('close', code => resolve({ exitCode: code, output: output || '(No output)' }));
+    let settled = false;
+    let timedOut = false;
+    let child;
+    const finish = result => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(result);
+    };
+    const append = chunk => { output = (output + String(chunk)).slice(-48000); };
+    const timer = setTimeout(() => {
+      timedOut = true;
+      try { child?.kill(); } catch {}
+      finish({ exitCode: -2, timedOut: true, output: (output || '') + '\n\nCommand stopped after the 120-second safety limit.' });
+    }, timeoutMs);
+    try {
+      child = spawn(bin, args, { cwd, shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+      child.stdout.on('data', append);
+      child.stderr.on('data', append);
+      child.on('error', err => finish({ exitCode: -1, output: err.message }));
+      child.on('close', code => {
+        if (timedOut) return;
+        finish({ exitCode: code, output: output || '(No output)' });
+      });
+    } catch (error) {
+      finish({ exitCode: -1, output: error?.message || 'Could not start command.' });
+    }
   });
 }
 ipcMain.handle('workspace:run-preset', async (_event, presetKey) => {
@@ -212,12 +283,21 @@ ipcMain.handle('workspace:run-preset', async (_event, presetKey) => {
   }
   return runProcess(preset.bin, preset.args, root);
 });
-ipcMain.handle('workspace:run-custom-command', async (_event, rawCommand) => {
+ipcMain.handle('workspace:run-custom-command', async (_event, payload) => {
   const root = requireWorkspace();
-  const command = String(rawCommand || '').trim();
-  if (!command || command.length > 1600) throw new Error('Enter a command up to 1,600 characters.');
-  if (!await confirmAction('Approve custom command?', 'IsaiahAI Agent is requesting permission to run this exact command.', command + '\nWorking directory: ' + root + '\n\nOnly approve commands you understand. Commands can change or delete data.', 'Run this command')) {
-    return { canceled: true, exitCode: null, output: 'Command canceled.' };
+  const command = String(payload?.command || '').trim();
+  const selectedShell = String(payload?.shell || 'powershell').toLowerCase();
+  if (!command || command.length > 2000) throw new Error('Enter a command up to 2,000 characters.');
+  if (!['powershell', 'cmd'].includes(selectedShell)) throw new Error('Choose PowerShell or Command Prompt.');
+  const shellLabel = selectedShell === 'powershell' ? 'Windows PowerShell' : 'Command Prompt';
+  const preview = command.length > 1200 ? command.slice(0, 1200) + '\n…(truncated in approval dialog)' : command;
+  const detail = preview + '\n\nWorking directory: ' + root +
+    '\n\nThis command runs with your Windows user permissions and may access files outside the selected folder. Review it carefully. No command runs until you approve this exact request.';
+  if (!await confirmAction('Approve terminal command?', 'IsaiahAI Agent is requesting permission to run this command in ' + shellLabel + '.', detail, 'Run this command')) {
+    return { canceled: true, exitCode: null, output: 'Command canceled by user.' };
   }
-  return runProcess(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', command], root);
+  if (selectedShell === 'cmd') {
+    return runProcess(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', command], root);
+  }
+  return runProcess('powershell.exe', ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'RemoteSigned', '-Command', command], root);
 });
