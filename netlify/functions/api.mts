@@ -428,7 +428,8 @@ function personaFor(body: AnyRecord, activeModel: string): string {
   if (typeof body.systemInstruction === 'string' && body.systemInstruction.trim()) return body.systemInstruction;
   if (body.chatMode === 'school') return 'You are IsaiahAI School Mode by St.Amour Electronics. Teach with patient, step-by-step guidance and a short knowledge check. Use clear mathematical notation and encourage the learner to think through each step.';
   if (body.chatMode === 'code' || body.chatMode === 'code_extended') return 'You are IsaiahAI Code PR by St.Amour Electronics, a senior software engineer. Provide complete runnable code, preserve existing functionality, explain important changes, and never omit required code with placeholders.';
-  if (activeModel === 'isaiahai_7_super') return 'You are IsaiahAI 7.0 SUPER, an advanced AI assistant made by St.Amour Electronics. The CEO is Isaiah John St.Amour. Be accurate, helpful, thoughtful, and clear. Identify as IsaiahAI 7.0 SUPER.';
+  if (activeModel === 'isaiahai_7_super') return 'You are IsaiahAI 7.0 SUPER, the flagship assistant from St.Amour Electronics. Be accurate, deeply capable, helpful, thoughtful, and clear. Identify as IsaiahAI 7.0 SUPER.';
+  if (activeModel === 'breakaway_1_0') return 'You are Breakaway 1.0, an independent Gemini-powered assistant from St.Amour Electronics. Be precise, thoughtful, technically capable, and clear. Identify as Breakaway 1.0.';
   if (activeModel === 'maw_ai') return 'You are Maw AI, a warm, witty, capable hybrid AI assistant. Be accurate, personable, and useful without unnecessary filler.';
   if (activeModel === 'isaiah_5_3') return 'You are Isaiah AI 5.3 by St.Amour Electronics. Be fast, concise, accurate, clear, and helpful.';
   return 'You are Isaiah Max 6.0 by St.Amour Electronics. Give substantive, analytically rigorous, well-structured answers and be direct.';
@@ -620,7 +621,8 @@ async function makeThinkingSummary(question: string, answer: string, provider: '
   return 'I focused on the question, relevant context and constraints, then organized the most useful points into the answer. This is a brief explanation of the approach, not a transcript of private internal reasoning.';
 }
 async function handleChat(body: AnyRecord) {
-  const activeModel = body.model || body.selectedModel || 'isaiah_5_3';
+  const activeModel = String(body.model || body.selectedModel || 'isaiahai_7_super');
+  if (!['isaiahai_7_super', 'breakaway_1_0'].includes(activeModel)) throw new Error('Choose IsaiahAI 7.0 SUPER or Breakaway 1.0 before sending a message.');
   const systemInstruction = personaFor(body, activeModel);
   const query = String(body.message || '').trim();
   if (!query) throw new Error('Type a message to start chatting.');
@@ -635,38 +637,57 @@ RESPONSE QUALITY: Answer directly first. For complex tasks, analyze important co
 Live web findings follow. Use them as evidence and cite useful URLs in Markdown. Distinguish source-backed claims from inference. Some results may be search portals rather than individual article pages.
 ` + webSearch.results.slice(0, 12).map((item: SearchResult) => `- ${item.title} (${item.url}): ${item.snippet}`).join('\\n');
   }
-  const sources = webSearch?.results?.slice(0, 12).map((item: SearchResult) => ({ title: item.title, uri: item.url })) || [];
+  const sources: any[] = webSearch?.results?.slice(0, 12).map((item: SearchResult) => ({ title: item.title, uri: item.url })) || [];
   const hasImages = Array.isArray(body.images) && body.images.length > 0;
   let content = '';
   let thinking = '';
-  let provider: 'Gemini' | 'OpenRouter' = 'Gemini';
-  let geminiSources: any[] = [];
-  if (env('GEMINI_API_KEY')) {
+  let provider: 'Gemini' | 'OpenRouter';
+  let modelUsed = '';
+  let modelError: any = null;
+
+  // Keep the two selectable models on their assigned providers. Never silently
+  // answer as a different model if the selected provider is unavailable.
+  if (activeModel === 'breakaway_1_0') {
+    provider = 'Gemini';
+    if (!env('GEMINI_API_KEY')) throw new Error('Breakaway 1.0 is not configured: GEMINI_API_KEY is missing from the Netlify Functions environment.');
     try {
-      const primary = await askGemini({ ...body, message: query, disableWebSearch: true }, system, webSearch);
-      content = String(primary.content || '').trim();
-      geminiSources = Array.isArray(primary.sources) ? primary.sources : [];
+      const result = await askGemini({ ...body, message: query, disableWebSearch: true }, system, webSearch);
+      content = String(result.content || '').trim();
+      modelUsed = String(result.model || 'Gemini');
+      if (Array.isArray(result.sources)) {
+        for (const item of result.sources) if (item?.uri && !sources.some(source => source.uri === item.uri)) sources.push(item);
+      }
     } catch (error: any) {
-      console.warn('[IsaiahAI] Gemini primary failed; routing to OpenRouter free fallback:', String(error?.message || error).slice(0, 180));
+      modelError = error;
+      console.warn('[Breakaway 1.0] Gemini request failed:', String(error?.message || error).slice(0, 180));
     }
-  }
-  if (!content && (env('OPENROUTER_API_KEY') || env('ISAIAH_OPENROUTER_API_KEY'))) {
+  } else {
     provider = 'OpenRouter';
+    if (!(env('OPENROUTER_API_KEY') || env('ISAIAH_OPENROUTER_API_KEY'))) throw new Error('IsaiahAI 7.0 SUPER is not configured: OPENROUTER_API_KEY is missing from the Netlify Functions environment.');
     try {
       const response = await askOpenRouter({ ...body, message: query }, system, 'openrouter/free');
       content = extractOpenRouterContent(response).trim();
+      modelUsed = String(response?.model || 'OpenRouter free model');
     } catch (error: any) {
-      console.warn('[IsaiahAI] OpenRouter fallback failed:', String(error?.message || error).slice(0, 180));
+      modelError = error;
+      console.warn('[IsaiahAI 7.0 SUPER] OpenRouter request failed:', String(error?.message || error).slice(0, 180));
     }
   }
-  if (!content) throw new Error('IsaiahAI could not reach Gemini or the OpenRouter free-model router. Please retry shortly.');
-  const mergedSources = [...geminiSources];
+  if (!content) {
+    const label = activeModel === 'breakaway_1_0' ? 'Breakaway 1.0 (Gemini)' : 'IsaiahAI 7.0 SUPER (OpenRouter)';
+    throw new Error(label + ' could not complete this request. ' + String(modelError?.message || 'The selected provider returned an empty answer.'));
+  }
+  const mergedSources: any[] = [];
   for (const source of sources) {
     if (mergedSources.length >= 12) break;
-    if (!mergedSources.some((item: any) => item.uri === source.uri)) mergedSources.push(source);
+    if (source?.uri && !mergedSources.some((item: any) => item.uri === source.uri)) mergedSources.push(source);
   }
   if (body.showThinking === true) thinking = await makeThinkingSummary(query, content, provider);
-  return { content, thinking, thinkingSummary: thinking, sources: mergedSources, provider: 'IsaiahAI', selectedProvider: provider, model: provider === 'Gemini' ? 'Gemini 4 Argon (fallback chain)' : 'OpenRouter Free Router', hasImages };
+  return {
+    content, thinking, thinkingSummary: thinking, sources: mergedSources,
+    provider: activeModel === 'breakaway_1_0' ? 'Breakaway 1.0' : 'IsaiahAI 7.0 SUPER',
+    selectedProvider: provider, selectedModel: activeModel, model: modelUsed, hasImages,
+  };
 }
 
 async function handleSiteAssist(body: AnyRecord) {
@@ -850,8 +871,12 @@ export default async function handler(request: Request) {
 
   try {
     if (path === '/health' && request.method === 'GET') {
-      const aiConfigured = Boolean(env('OPENROUTER_API_KEY') || env('ISAIAH_OPENROUTER_API_KEY') || env('GEMINI_API_KEY'));
-      return json({ ok: true, service: 'IsaiahAI', aiConfigured });
+      const models = {
+        isaiahai_7_super: Boolean(env('OPENROUTER_API_KEY') || env('ISAIAH_OPENROUTER_API_KEY')),
+        breakaway_1_0: Boolean(env('GEMINI_API_KEY')),
+      };
+      const aiConfigured = Object.values(models).some(Boolean);
+      return json({ ok: true, service: 'IsaiahAI', aiConfigured, models });
     }
     if (path === '/opensearch.xml' && request.method === 'GET') {
       const origin = url.origin.replace(/&/g, '&amp;').replace(/\"/g, '&quot;');
