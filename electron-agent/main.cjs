@@ -11,15 +11,24 @@ let workspaceRoot = null;
 const settingsFile = path.join(app.getPath('userData'), 'agent-settings.json');
 const DEFAULT_API_BASE_URL = 'https://isaiahsearch.netlify.app/api';
 async function loadSavedWorkspace() {
+  let candidate = '';
   try {
     const saved = JSON.parse(await fs.readFile(settingsFile, 'utf8'));
-    const candidate = typeof saved.workspaceRoot === 'string' ? saved.workspaceRoot : '';
-    if (!candidate) return;
-    const real = await fs.realpath(candidate);
-    const stat = await fs.stat(real);
-    if (stat.isDirectory()) workspaceRoot = real;
-  } catch {
-    workspaceRoot = null;
+    candidate = typeof saved.workspaceRoot === 'string' ? saved.workspaceRoot : '';
+  } catch { /* first launch or reset: use the private default workspace */ }
+  if (candidate) {
+    try {
+      const real = await fs.realpath(candidate);
+      const stat = await fs.stat(real);
+      if (stat.isDirectory()) workspaceRoot = real;
+    } catch { /* fall through to the default workspace */ }
+  }
+  if (!workspaceRoot) {
+    const documents = app.getPath('documents') || app.getPath('home');
+    const defaultFolder = path.join(documents, 'IsaiahAI Workspace');
+    await fs.mkdir(defaultFolder, { recursive: true });
+    workspaceRoot = await fs.realpath(defaultFolder);
+    await persistWorkspace();
   }
 }
 async function persistWorkspace() {
@@ -129,7 +138,7 @@ function createWindow() {
       }).then(result => callback(result.response === 1)).catch(() => callback(false));
     });
     guestContents.setWindowOpenHandler(({ url }) => {
-      if (/^https?:\/\//i.test(url)) shell.openExternal(url).catch(() => {});
+      if (/^https?:\/\//i.test(url) && mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('browser:open-tab', url);
       return { action: 'deny' };
     });
   });
@@ -159,7 +168,7 @@ ipcMain.handle('app:config', () => {
 });
 
 function requireWorkspace() {
-  if (!workspaceRoot) throw new Error('Choose a workspace folder first.');
+  if (!workspaceRoot) throw new Error('The automatic IsaiahAI workspace has not finished initializing. Restart the app and try again.');
   return workspaceRoot;
 }
 function isInsideWorkspace(root, candidate) {
@@ -168,23 +177,26 @@ function isInsideWorkspace(root, candidate) {
 }
 async function safeWorkspaceFile(relativePath, options = {}) {
   const root = await fs.realpath(requireWorkspace());
-  const relative = String(relativePath || '').trim();
-  if (!relative || path.isAbsolute(relative)) throw new Error('Use a relative path inside the selected workspace.');
-  const candidate = path.resolve(root, relative);
-  if (!isInsideWorkspace(root, candidate)) throw new Error('That path is outside the selected workspace.');
+  const requested = String(relativePath || '').trim();
+  if (!requested) throw new Error('Enter a file path.');
+  const absolute = path.isAbsolute(requested);
+  if (absolute && !options.allowOutsideWorkspace) throw new Error('Use a relative path inside the automatic workspace.');
+  const candidate = absolute ? path.resolve(requested) : path.resolve(root, requested);
+  const insideWorkspace = isInsideWorkspace(root, candidate);
+  if (!insideWorkspace && !(absolute && options.allowOutsideWorkspace)) throw new Error('That path is outside the automatic workspace.');
   if (!textExtensions.has(path.extname(candidate).toLowerCase())) throw new Error('This file type is not enabled for text editing.');
   try {
     const real = await fs.realpath(candidate);
-    if (!isInsideWorkspace(root, real)) throw new Error('Links outside the selected workspace are blocked.');
+    if (insideWorkspace && !isInsideWorkspace(root, real)) throw new Error('Links outside the automatic workspace are blocked.');
     const stat = await fs.stat(real);
     if (!stat.isFile()) throw new Error('Only files can be opened.');
     if (stat.size > 2000000) throw new Error('Files over 2 MB are not opened in the editor.');
-    return { root, file: real, exists: true };
+    return { root, file: real, exists: true, insideWorkspace };
   } catch (error) {
     if (error.code !== 'ENOENT' || !options.allowCreate) throw error;
     const parent = await fs.realpath(path.dirname(candidate));
-    if (parent !== root && !isInsideWorkspace(root, parent)) throw new Error('The destination folder is outside the selected workspace.');
-    return { root, file: path.join(parent, path.basename(candidate)), exists: false };
+    if (insideWorkspace && parent !== root && !isInsideWorkspace(root, parent)) throw new Error('The destination folder is outside the automatic workspace.');
+    return { root, file: path.join(parent, path.basename(candidate)), exists: false, insideWorkspace };
   }
 }
 async function confirmAction(title, message, detail, confirmLabel) {
@@ -244,11 +256,11 @@ ipcMain.handle('workspace:read', async (_event, relativePath) => {
 ipcMain.handle('workspace:write', async (_event, payload) => {
   const relativePath = String(payload && payload.path || '');
   const content = String(payload && payload.content !== undefined ? payload.content : '');
-  const item = await safeWorkspaceFile(relativePath, { allowCreate: true });
+  const item = await safeWorkspaceFile(relativePath, { allowCreate: true, allowOutsideWorkspace: true });
   const action = item.exists ? 'replace this file' : 'create this file';
   const detail = item.exists
-    ? item.file + '\n\nA dated backup will be saved inside .isaiahai-backups first.'
-    : item.file + '\n\nThis path does not exist yet. IsaiahAI Agent will create it inside the selected workspace.';
+    ? item.file + '\n\nA dated backup will be saved inside .isaiahai-backups first.' + (item.insideWorkspace ? '' : '\n\nThis file is outside the default workspace. Check the full path carefully.')
+    : item.file + '\n\nThis path does not exist yet. IsaiahAI Agent will create it only after your approval.' + (item.insideWorkspace ? '' : '\n\nThis file is outside the default workspace. Check the full path carefully.');
   if (!await confirmAction('Approve file change?', 'Allow IsaiahAI Agent to ' + action + '?', detail, item.exists ? 'Back up and save' : 'Create file')) {
     return { saved: false, canceled: true };
   }
