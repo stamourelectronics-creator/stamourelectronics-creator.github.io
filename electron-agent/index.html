@@ -247,24 +247,12 @@ async function refreshWorkspace(){
  if(!workspacePath)return;
  workspaceFiles=await window.isaiahDesktop.listWorkspaceFiles();
  await renderWorkspaceOptions();
- $('workspaceStatus').textContent=workspacePath+' · '+workspaceFiles.length+' supported files · access remembered';
+ $('workspaceStatus').textContent='Automatic workspace: '+workspacePath+' · '+workspaceFiles.length+' supported files';
 }
-$('connectWorkspace').addEventListener('click',async function(){
- try{
-  const result=await window.isaiahDesktop.chooseWorkspace();if(result.canceled)return;
-  workspacePath=result.path;selectedWorkspaceFile='';pinnedFileContexts=[];lastCommandOutput='';
-  $('saveAiCode').disabled=true;await refreshWorkspace();
-  setToolStatus('Connected to the folder you selected. Files and subfolders are available while this workspace is selected. Terminal commands and writes still require Windows approval.');
- }catch(error){setToolStatus('Folder access failed: '+safeError(error));}
-});
-$('clearWorkspace').addEventListener('click',async function(){
- try{await window.isaiahDesktop.clearWorkspace();workspacePath='';workspaceFiles=[];selectedWorkspaceFile='';pinnedFileContexts=[];lastCommandOutput='';$('agentFileSelect').replaceChildren();$('workspaceStatus').textContent='Workspace access removed.';$('saveAiCode').disabled=true;$('terminalOutput').hidden=true;setToolStatus('Saved workspace access removed. Choose a folder again to re-enable local tools.');}
- catch(error){setToolStatus('Could not remove workspace access: '+safeError(error));}
-});
-$('fileFilter').addEventListener('input',renderWorkspaceOptions);
+remove manual connect and clear handlers$('fileFilter').addEventListener('input',renderWorkspaceOptions);
 $('agentFileSelect').addEventListener('change',function(){const selected=Array.from($('agentFileSelect').selectedOptions).map(option=>option.value).filter(Boolean);selectedWorkspaceFile=selected[0]||'';$('saveAiCode').disabled=!selectedWorkspaceFile||!hasCodeBlock(lastAssistantContent);});
 $('attachFileContext').addEventListener('click',async function(){
- if(!workspacePath){setToolStatus('Connect a workspace folder first.');return;}
+ if(!workspacePath){setToolStatus('The automatic workspace is still initializing. Try again in a moment.');return;}
  const selected=Array.from($('agentFileSelect').selectedOptions).map(option=>option.value).filter(Boolean).slice(0,6);
  if(!selected.length){setToolStatus('Select one or more files first.');return;}
  try{
@@ -282,9 +270,9 @@ $('attachFileContext').addEventListener('click',async function(){
 });
 $('clearFileContext').addEventListener('click',function(){pinnedFileContexts=[];lastCommandOutput='';setToolStatus('Attached file and terminal context cleared.');});
 $('createAiCodeFile').addEventListener('click',async function(){
- if(!workspacePath){setToolStatus('Connect a workspace folder first.');return;}
+ if(!workspacePath){setToolStatus('The automatic workspace is still initializing. Try again in a moment.');return;}
  const relativePath=$('newFilePath').value.trim();
- if(!relativePath){setToolStatus('Enter a relative path for the new file, such as src/new-module.ts.');return;}
+ if(!relativePath){setToolStatus('Enter a path such as src/new-module.ts or a full Windows path.');return;}
  const source=String(lastAssistantContent||''),start=source.indexOf(fence);
  if(start<0){setToolStatus('The last AI answer has no complete code block.');return;}
  const lineEnd=source.indexOf('\n',start+fence.length),end=source.indexOf(fence,lineEnd<0?start+fence.length:lineEnd+1);
@@ -314,20 +302,28 @@ function showTerminalResult(result,label){
  setToolStatus(result.canceled?'Command canceled.':result.timedOut?'Command stopped at the safety timeout.':'Command finished with exit code '+result.exitCode+'. Its output will be available to IsaiahAI in your next message.');
 }
 $('runPreset').addEventListener('click',async function(){
- if(!workspacePath){setToolStatus('Connect a workspace folder first.');return;}
+ if(!workspacePath){setToolStatus('The automatic workspace is still initializing. Try again in a moment.');return;}
  try{setToolStatus('Waiting for Windows approval…');const key=$('commandPreset').value;const result=await window.isaiahDesktop.runApprovedPreset(key);showTerminalResult(result,key);}
  catch(error){setToolStatus('Command failed: '+safeError(error));}
 });
 $('runCustomCommand').addEventListener('click',async function(){
- if(!workspacePath){setToolStatus('Connect a workspace folder first.');return;}
+ if(!workspacePath){setToolStatus('The automatic workspace is still initializing. Try again in a moment.');return;}
  const command=$('customCommand').value.trim();if(!command){setToolStatus('Enter a PowerShell or Command Prompt command first.');return;}
  const shell=$('shellType').value;
  try{setToolStatus('Waiting for Windows approval…');const result=await window.isaiahDesktop.runShellCommand({shell,command});showTerminalResult(result,shell+' · '+command);}
  catch(error){setToolStatus('Terminal command failed: '+safeError(error));}
 });
-(async function restoreWorkspace(){
- try{workspacePath=await window.isaiahDesktop.getWorkspacePath();if(workspacePath){await refreshWorkspace();setToolStatus('Restored your previously selected workspace folder. Terminal and file writes still request Windows approval.');}}
- catch(error){console.warn('[Workspace] Could not restore the saved folder:',safeError(error));}
+workspaceReady=(async function restoreWorkspace(){
+ try{
+  workspacePath=await window.isaiahDesktop.getWorkspacePath();
+  if(workspacePath){
+   await refreshWorkspace();
+   setToolStatus('Computer tools ready. IsaiahAI can inspect files in this automatic workspace. Approved commands can operate elsewhere on your computer; file changes always need your approval.');
+  }
+ }catch(error){
+  console.warn('[Workspace] Could not initialize the automatic workspace:',safeError(error));
+  setToolStatus('Automatic workspace unavailable: '+safeError(error));
+ }
 })();
 const webview=$('browserView');
 function activatePanel(name){
