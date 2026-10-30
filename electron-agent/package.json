@@ -1,13 +1,14 @@
 {
   "name": "isaiahai-agent",
   "productName": "IsaiahAI Agent",
-  "version": "1.0.1",
-  "description": "IsaiahAI desktop companion with Chromium browsing and user-approved computer tasks.",
+  "version": "1.0.2",
+  "description": "IsaiahAI desktop agent with Chromium browsing, persistent scoped workspaces, multi-file context and approval-gated terminal tools.",
   "main": "main.cjs",
   "license": "UNLICENSED",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --win nsis portable"
+    "dist": "electron-builder --win nsis portable",
+    "check": "node --check main.cjs && node --check preload.cjs && node scripts/check-renderer.cjs"
   },
   "devDependencies": {
     "electron": "^39.0.0",
@@ -17,12 +18,14 @@
     "appId": "com.stamourelectronics.isaiahai.agent",
     "productName": "IsaiahAI Agent",
     "directories": {
-      "output": "release"
+      "output": "release",
+      "buildResources": "build"
     },
     "files": [
       "main.cjs",
       "preload.cjs",
       "index.html",
+      "assets/**",
       "package.json"
     ],
     "asar": true,
@@ -41,13 +44,16 @@
           ]
         }
       ],
-      "artifactName": "IsaiahAI-Agent-${version}-${arch}.${ext}"
+      "artifactName": "IsaiahAI-Agent-${version}-${arch}.${ext}",
+      "icon": "build/icon.svg"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "installerIcon": "build/icon.svg",
+      "uninstallerIcon": "build/icon.svg"
     },
     "portable": {
       "artifactName": "IsaiahAI-Agent-Portable-${version}-${arch}.${ext}"
