@@ -51,9 +51,7 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "installerIcon": "build/icon.svg",
-      "uninstallerIcon": "build/icon.svg"
+      "createStartMenuShortcut": true
     },
     "portable": {
       "artifactName": "IsaiahAI-Agent-Portable-${version}-${arch}.${ext}"
