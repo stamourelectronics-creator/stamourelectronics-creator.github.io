@@ -38,16 +38,18 @@ jobs:
             'https://isaiah-ai-acel.netlify.app'
           ];
           for (const host of hosts) {
-            try {
-              const response = await fetch(host + '/api/health', { signal: AbortSignal.timeout(10000) });
-              const body = await response.text();
-              let health = null;
-              try { health = JSON.parse(body); } catch {}
-              console.log(host + ' -> HTTP ' + response.status +
-                (health ? ' | aiConfigured=' + Boolean(health.aiConfigured) : ' | non-JSON response'));
-              if (health) console.log('  service=' + String(health.service || 'unknown'));
-            } catch (error) {
-              console.log(host + ' -> unavailable: ' + String(error?.message || error));
+            for (const route of ['/api/health', '/.netlify/functions/api/health']) {
+              try {
+                const response = await fetch(host + route, { signal: AbortSignal.timeout(10000) });
+                const body = await response.text();
+                let health = null;
+                try { health = JSON.parse(body); } catch {}
+                console.log(host + route + ' -> HTTP ' + response.status +
+                  (health ? ' | aiConfigured=' + Boolean(health.aiConfigured) : ' | non-JSON response'));
+                if (health) console.log('  service=' + String(health.service || 'unknown'));
+              } catch (error) {
+                console.log(host + route + ' -> unavailable: ' + String(error?.message || error));
+              }
             }
           }
           NODE
