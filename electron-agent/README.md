@@ -37,7 +37,8 @@ There is no Puter AI sign-in or client-side Puter model fallback in the desktop 
 ## Workspace and terminal permissions
 
 - The app remembers the folder you explicitly select and restores that same folder on later launches. You can remove saved access from the Local workspace controls.
-- The file picker can attach up to six supported project files to one chat request. File access remains inside the selected workspace and is read-only until you explicitly use **Review & save AI code**.
+- The file picker can attach up to six supported project files to one chat request. File access remains inside the selected workspace and is read-only until you explicitly use **Review & save AI code** or **Create file from AI code**. Existing files are backed up before replacement; new files must be created inside an existing folder within the workspace.
+- With Agent mode enabled, IsaiahAI can propose a PowerShell or Command Prompt command in its answer. The **Review & run command** button sends that exact proposal to the native Windows approval dialog; the AI never launches it silently.
 - PowerShell and Command Prompt are available from the Terminal panel. Every custom command displays the exact command and working directory in a native Windows approval dialog. Commands run with your Windows user permissions and can affect files outside the selected workspace; review every command before approving it.
 - File writes create a dated backup first and also require a native Windows approval. Terminal commands have a two-minute safety timeout and output is bounded.
 - This is not unattended or unrestricted PC control. The selected workspace is persistent, while command execution and file writes remain explicitly approved.
