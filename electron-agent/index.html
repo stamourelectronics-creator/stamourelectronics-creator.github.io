@@ -86,7 +86,7 @@ nav{padding:8px 16px;gap:7px}nav button{border-radius:999px;padding:9px 16px}.pa
 'use strict';
 let API='https://isaiahsearch.netlify.app/api';
 const $=function(id){return document.getElementById(id);};
-let messages=[],lastAssistantContent='',workspacePath='',selectedWorkspaceFile='',pinnedFileContexts=[],workspaceFiles=[],lastCommandOutput='',thinkingTimer=null,showThinking=false,agentMode=true,apiReady=null;
+let messages=[],lastAssistantContent='',workspacePath='',selectedWorkspaceFile='',pinnedFileContexts=[],workspaceFiles=[],lastCommandOutput='',thinkingTimer=null,showThinking=false,agentMode=true,apiReady=null,apiHealth=null,workspaceReady=Promise.resolve();
 const fence=String.fromCharCode(96).repeat(3);
 function isHttpUrl(value){try{const u=new URL(value);return u.protocol==='http:'||u.protocol==='https:';}catch{return false;}}
 function setToolStatus(message){$('agentToolStatus').textContent=message;}
@@ -130,43 +130,55 @@ function setApiStatus(text,online){$('apiStatus').textContent=text;$('apiStatus'
 async function initializeApi(){
  try{const config=await window.isaiahDesktop.getAppConfig();if(config&&typeof config.apiBaseUrl==='string'&&isHttpUrl(config.apiBaseUrl))API=config.apiBaseUrl.replace(/\/$/,'');}catch(error){console.warn('[IsaiahAI] Using default hosted API endpoint:',safeError(error));}
  try{
-   const response=await fetch(API+'/health',{method:'GET',headers:{'Accept':'application/json'},signal:AbortSignal.timeout(9000)});
-   const data=await response.json().catch(()=>({}));
-   if(!response.ok)throw new Error(data.error||'AI service health check failed ('+response.status+').');
-   setApiStatus(data.aiConfigured?'Hosted AI connected':'Backend online · API secrets missing',!!data.aiConfigured);
- }catch(error){setApiStatus('AI connection unavailable',false);console.warn('[IsaiahAI] Health check failed:',safeError(error));}
- return API;
+  const response=await fetch(API+'/health',{method:'GET',headers:{'Accept':'application/json'},cache:'no-store',signal:AbortSignal.timeout(5000)});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||data.ok!==true)throw new Error(data.error||'The hosted AI service did not return a valid readiness response ('+response.status+').');
+  apiHealth=data;updateModelStatus();return data;
+ }catch(error){
+  apiHealth=null;setApiStatus('AI service unavailable',false);$('modelHint').textContent='Check your internet connection and retry.';
+  console.warn('[IsaiahAI] Health check failed:',safeError(error));return null;
+ }
 }
-apiReady=initializeApi();
-function appendMessage(role,content,sources,thinkingSummary,provider){
- const transcript=$('transcript'),welcome=transcript.querySelector('.welcome');if(welcome)welcome.remove();
- const article=document.createElement('article');article.className='message '+role;
- const label=document.createElement('div');label.className='label';label.textContent=role==='assistant'?'IsaiahAI 7.0 SUPER':'You';
- if(role==='assistant'&&provider){const tag=document.createElement('span');tag.className='provider-tag';tag.textContent=String(provider).slice(0,50);label.append(tag);}
- article.append(label);
- const body=document.createElement('div');body.className='answer-text'+(role==='assistant'?' markdown-body':'');
- if(role==='assistant')body.innerHTML=renderMarkdown(content);else body.textContent=content;
- article.append(body);
- if(role==='assistant'&&thinkingSummary){const details=document.createElement('details');details.className='reasoning-summary';const summary=document.createElement('summary');summary.textContent='Reasoning summary';const p=document.createElement('p');p.textContent=thinkingSummary;const note=document.createElement('small');note.textContent='A concise explanation of the approach — not private internal reasoning.';details.append(summary,p,note);article.append(details);}
- if(role==='assistant'&&Array.isArray(sources)&&sources.length){const area=document.createElement('div');area.className='source-area';const title=document.createElement('div');title.className='source-label';title.textContent='Sources';area.append(title);const row=document.createElement('div');row.className='sources';
- sources.slice(0,10).forEach(function(source){const uri=String(source.uri||source.url||'');if(!isHttpUrl(uri))return;const chip=document.createElement('button');chip.className='source-chip';chip.textContent=String(source.title||source.siteName||new URL(uri).hostname).slice(0,90)+' ↗';chip.title=uri;chip.addEventListener('click',function(){switchToBrowser(uri);});row.append(chip);});area.append(row);article.append(area);}
- if(role==='assistant'){const actions=document.createElement('div');actions.className='message-actions';const copy=document.createElement('button');copy.type='button';copy.textContent='Copy answer';copy.addEventListener('click',function(){navigator.clipboard.writeText(String(content||'')).then(()=>{copy.textContent='Copied';setTimeout(()=>copy.textContent='Copy answer',1200);}).catch(()=>{copy.textContent='Copy unavailable';});});actions.append(copy);
-  const proposal=extractCommandProposal(content);
-  if(proposal&&workspacePath){
-   const run=document.createElement('button');run.type='button';run.textContent='Review & run command';
-   run.addEventListener('click',async function(){
-    run.disabled=true;run.textContent='Waiting for approval…';
-    try{const result=await window.isaiahDesktop.runShellCommand(proposal);showTerminalResult(result,proposal.shell+' · AI proposal');$('agentTools').open;}
-    catch(error){setToolStatus('Suggested command failed: '+safeError(error));}
-    finally{run.disabled=false;run.textContent='Review & run command';}
-   });
-   actions.append(run);
-  }
-  article.append(actions);}
- transcript.append(article);transcript.scrollTop=transcript.scrollHeight;return article;
+function modelLabel(model){return model==='breakaway_1_0'?'Breakaway 1.0':'IsaiahAI 7.0 SUPER';}
+function modelConfigured(model,health){
+ if(health&&health.models&&typeof health.models[model]==='boolean')return health.models[model];
+ return Boolean(health&&health.aiConfigured);
+}
+function updateModelStatus(){
+ const model=$('modelSelect').value,name=modelLabel(model),configured=modelConfigured(model,apiHealth);
+ $('modelHint').textContent=name+(configured?' · ready':(model==='breakaway_1_0'?' · Gemini key missing':' · OpenRouter key missing'));
+ setApiStatus(apiHealth?(configured?'Ready · '+name:'Selected model is not configured'):'AI service unavailable',!!apiHealth&&configured);
+}
+$('modelSelect').addEventListener('change',updateModelStatus);
+apiReady=initializeApi();apiReady=initializeApi();
+function appendMessage(role,content,sources,thinkingSummary,provider,modelName){
+  const transcript=$('transcript'),welcome=transcript.querySelector('.welcome');if(welcome)welcome.remove();
+  const article=document.createElement('article');article.className='message '+role;
+  const label=document.createElement('div');label.className='label';label.textContent=role==='assistant'?(modelName||modelLabel($('modelSelect').value)):'You';
+  article.append(label);
+  const body=document.createElement('div');body.className='answer-text'+(role==='assistant'?' markdown-body':'');
+  if(role==='assistant')body.innerHTML=renderMarkdown(content);else body.textContent=content;
+  article.append(body);
+  if(role==='assistant'&&thinkingSummary){const details=document.createElement('details');details.className='reasoning-summary';const summary=document.createElement('summary');summary.textContent='Reasoning summary';const p=document.createElement('p');p.textContent=thinkingSummary;const note=document.createElement('small');note.textContent='A concise explanation of the approach — not private internal reasoning.';details.append(summary,p,note);article.append(details);}
+  if(role==='assistant'&&Array.isArray(sources)&&sources.length){const area=document.createElement('div');area.className='source-area';const title=document.createElement('div');title.className='source-label';title.textContent='Sources';area.append(title);const row=document.createElement('div');row.className='sources';
+  sources.slice(0,10).forEach(function(source){const uri=String(source.uri||source.url||'');if(!isHttpUrl(uri))return;const chip=document.createElement('button');chip.className='source-chip';chip.textContent=String(source.title||source.siteName||new URL(uri).hostname).slice(0,90)+' ↗';chip.title=uri;chip.addEventListener('click',function(){switchToBrowser(uri);});row.append(chip);});area.append(row);article.append(area);}
+  if(role==='assistant'){const actions=document.createElement('div');actions.className='message-actions';const copy=document.createElement('button');copy.type='button';copy.textContent='Copy answer';copy.addEventListener('click',function(){navigator.clipboard.writeText(String(content||'')).then(()=>{copy.textContent='Copied';setTimeout(()=>copy.textContent='Copy answer',1200);}).catch(()=>{copy.textContent='Copy unavailable';});});actions.append(copy);
+   const proposal=extractCommandProposal(content);
+   if(proposal&&workspacePath){
+    const run=document.createElement('button');run.type='button';run.textContent='Review & run command';
+    run.addEventListener('click',async function(){
+     run.disabled=true;run.textContent='Waiting for approval…';
+     try{const result=await window.isaiahDesktop.runShellCommand(proposal);showTerminalResult(result,proposal.shell+' · AI proposal');$('agentTools').open;}
+     catch(error){setToolStatus('Suggested command failed: '+safeError(error));}
+     finally{run.disabled=false;run.textContent='Review & run command';}
+    });
+    actions.append(run);
+   }
+   article.append(actions);}
+  transcript.append(article);transcript.scrollTop=transcript.scrollHeight;return article;
 }
 function setThinking(text){$('thinkingBar').hidden=false;$('thinkingText').textContent=text;}
-function startThinking(){const stages=['Connecting to IsaiahAI…','Searching the web for useful sources…','Comparing evidence and reasoning…','Writing a clear answer…'];let idx=0;setThinking(stages[0]);if(thinkingTimer)clearInterval(thinkingTimer);thinkingTimer=setInterval(function(){idx=Math.min(idx+1,stages.length-1);setThinking(stages[idx]);},1700);}
+function startThinking(){const stages=['Preparing your request…','Searching the web for useful sources…','Comparing evidence and reasoning…','Writing a clear answer…'];let idx=0;setThinking(stages[0]);if(thinkingTimer)clearInterval(thinkingTimer);thinkingTimer=setInterval(function(){idx=Math.min(idx+1,stages.length-1);setThinking(stages[idx]);},1700);}
 function stopThinking(){if(thinkingTimer)clearInterval(thinkingTimer);thinkingTimer=null;$('thinkingBar').hidden=true;}
 $('showThinkingToggle').addEventListener('click',function(){showThinking=!showThinking;$('showThinkingToggle').setAttribute('aria-pressed',String(showThinking));$('showThinkingToggle').textContent=showThinking?'Reasoning summaries on':'Show reasoning summary';});
 $('agentModeToggle').addEventListener('click',function(){agentMode=!agentMode;$('agentModeToggle').setAttribute('aria-pressed',String(agentMode));$('agentModeToggle').textContent=agentMode?'Agent mode on':'Agent mode off';});
@@ -186,33 +198,39 @@ function extractCommandProposal(content){
  return {shell:/^(cmd|bat)$/i.test(match[1])?'cmd':'powershell',command:command};
 }
 async function sendChat(prompt){
- prompt=String(prompt||'').trim();if(!prompt)return;
- appendMessage('user',prompt);$('chatInput').value='';$('sendBtn').disabled=true;messages.push({role:'user',content:prompt});
- const contextParts=[];
- if(pinnedFileContexts.length){
-   contextParts.push('Selected local project files (read-only context from the chosen workspace):\n'+pinnedFileContexts.map(function(file,index){return 'FILE '+(index+1)+': '+file.path+'\n'+fence+'\n'+file.content+'\n'+fence;}).join('\n\n'));
- }
- if(lastCommandOutput){
-   contextParts.push('Most recent approved terminal result (use it as evidence; do not assume the command succeeded):\n'+fence+'\n'+lastCommandOutput.slice(0,14000)+'\n'+fence);
- }
- const agentInstructions=agentMode?'Desktop agent mode is enabled. You may use the attached project files and the latest approved terminal output. If a task needs a terminal command, propose one concise Windows PowerShell or Command Prompt command in a fenced code block labelled powershell or cmd, explain its effect, and wait for the app user to approve it. You cannot execute commands yourself and must not claim a command has run unless a later message includes its output. Avoid destructive commands unless they are clearly necessary and explicitly requested.':'Desktop agent mode is off. Give instructions but do not propose commands for execution.';
- const contextualPrompt=agentInstructions+'\n\n'+(contextParts.length?prompt+'\n\n'+contextParts.join('\n\n'):prompt);
- startThinking();let answer='',sources=[],provider='Unavailable',thinkingSummary='';
- try{
-   await apiReady;
-   const response=await fetch(API+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:contextualPrompt,history:messages.slice(0,-1).slice(-18),model:'isaiahai_7_super',selectedModel:'isaiahai_7_super',chatMode:'general',searchWebEnabled:true,showThinking:showThinking}),signal:AbortSignal.timeout(55000)});
-   const data=await response.json().catch(function(){return {};});
-   if(!response.ok)throw new Error((data.error||'Hosted IsaiahAI is temporarily unavailable.')+' (HTTP '+response.status+')');
-   answer=String(data.content||'').trim();if(!answer)throw new Error('The hosted AI returned an empty answer.');
-   sources=Array.isArray(data.sources)?data.sources:[];provider=data.selectedProvider||data.provider||'Gemini';thinkingSummary=String(data.thinkingSummary||data.thinking||'');
- }catch(cloudError){
-   answer='IsaiahAI could not complete the request. The hosted Gemini/OpenRouter service did not return a usable response.\n\n'+safeError(cloudError)+'\n\nCheck the server-side API keys and try again.';
-   provider='Connection issue';
- }
- stopThinking();setToolStatus(provider==='Connection issue'?'AI connection issue: '+safeError(new Error(answer)):('Reply generated through '+provider+'. Provider limits still apply.'));
- lastAssistantContent=answer;messages.push({role:'assistant',content:answer});
- appendMessage('assistant',answer,sources,thinkingSummary,provider);
- $('saveAiCode').disabled=!hasCodeBlock(answer)||!selectedWorkspaceFile;$('sendBtn').disabled=false;$('chatInput').focus();
+  prompt=String(prompt||'').trim();if(!prompt)return;
+  const selectedModel=$('modelSelect').value,selectedLabel=modelLabel(selectedModel);
+  appendMessage('user',prompt);$('chatInput').value='';$('sendBtn').disabled=true;messages.push({role:'user',content:prompt});
+  startThinking();let answer='',sources=[],provider='Unavailable',thinkingSummary='';
+  try{
+    await workspaceReady;
+    const contextParts=[];
+    if(pinnedFileContexts.length){
+      contextParts.push('Files attached from the automatic computer workspace (read-only context):\\n'+pinnedFileContexts.map(function(file,index){return 'FILE '+(index+1)+': '+file.path+'\\n'+fence+'\\n'+file.content+'\\n'+fence;}).join('\\n\\n'));
+    }
+    if(lastCommandOutput){
+      contextParts.push('Most recent approved terminal result (use it as evidence; do not assume the command succeeded):\\n'+fence+'\\n'+lastCommandOutput.slice(0,14000)+'\\n'+fence);
+    }
+    const agentInstructions=agentMode?'Desktop agent mode is enabled. You can use attached project files and the latest approved terminal output. If a task needs PowerShell or Command Prompt, propose one concise command in a fenced code block labelled powershell or cmd, explain what it does, and wait for the user to approve it in the Windows dialog. Never claim a command ran until a later message includes its output. Be especially careful with deletion, registry, security, startup, and system settings; explain risks and ask before proposing them.':'Desktop agent mode is off. Give guidance but do not propose commands for execution.';
+    const contextualPrompt=agentInstructions+'\\n\\n'+(contextParts.length?prompt+'\\n\\n'+contextParts.join('\\n\\n'):prompt);
+    const health=await apiReady;
+    if(!health||health.ok!==true)throw new Error('The IsaiahAI server is unreachable. Check your internet connection and retry.');
+    if(!modelConfigured(selectedModel,health))throw new Error(selectedModel==='breakaway_1_0'?'Breakaway 1.0 needs the Gemini API key configured on the server.':'IsaiahAI 7.0 SUPER needs the OpenRouter API key configured on the server.');
+    const response=await fetch(API+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:contextualPrompt,history:messages.slice(0,-1).slice(-18),model:selectedModel,selectedModel:selectedModel,chatMode:'general',searchWebEnabled:true,showThinking:showThinking}),signal:AbortSignal.timeout(55000)});
+    const data=await response.json().catch(function(){return {};});
+    if(!response.ok)throw new Error((data.error||selectedLabel+' is temporarily unavailable.')+' (HTTP '+response.status+')');
+    answer=String(data.content||'').trim();if(!answer)throw new Error('The selected model returned an empty answer.');
+    sources=Array.isArray(data.sources)?data.sources:[];provider=data.selectedProvider||selectedLabel;thinkingSummary=String(data.thinkingSummary||data.thinking||'');
+    setApiStatus(selectedLabel+' ready',true);
+  }catch(cloudError){
+    answer=selectedLabel+' could not complete this request.\\n\\n'+safeError(cloudError);
+    provider='Unavailable';updateModelStatus();
+  }
+  stopThinking();
+  setToolStatus(provider==='Unavailable'?'Request failed for '+selectedLabel+'.':('Response generated with '+selectedLabel+'.'));
+  lastAssistantContent=answer;messages.push({role:'assistant',content:answer});
+  appendMessage('assistant',answer,sources,thinkingSummary,provider,selectedLabel);
+  $('saveAiCode').disabled=!hasCodeBlock(answer)||!selectedWorkspaceFile;$('sendBtn').disabled=false;$('chatInput').focus();
 }
 $('chatForm').addEventListener('submit',function(event){event.preventDefault();sendChat($('chatInput').value).catch(function(error){stopThinking();appendMessage('assistant','Something went wrong: '+safeError(error));$('sendBtn').disabled=false;});});
 document.querySelectorAll('[data-prompt]').forEach(function(button){button.addEventListener('click',function(){sendChat(button.dataset.prompt).catch(function(error){stopThinking();appendMessage('assistant','Something went wrong: '+safeError(error));$('sendBtn').disabled=false;});});});
