@@ -308,11 +308,10 @@ ipcMain.handle('workspace:run-custom-command', async (_event, payload) => {
   const root = requireWorkspace();
   const command = String(payload?.command || '').trim();
   const selectedShell = String(payload?.shell || 'powershell').toLowerCase();
-  if (!command || command.length > 2000) throw new Error('Enter a command up to 2,000 characters.');
+  if (!command || command.length > 1200) throw new Error('Enter a command up to 1,200 characters so the full command fits in the Windows approval dialog.');
   if (!['powershell', 'cmd'].includes(selectedShell)) throw new Error('Choose PowerShell or Command Prompt.');
   const shellLabel = selectedShell === 'powershell' ? 'Windows PowerShell' : 'Command Prompt';
-  const preview = command.length > 1200 ? command.slice(0, 1200) + '\n…(truncated in approval dialog)' : command;
-  const detail = preview + '\n\nWorking directory: ' + root +
+  const detail = command + '\n\nWorking directory: ' + root +
     '\n\nThis command runs with your Windows user permissions and may access files outside the selected folder. Review it carefully. No command runs until you approve this exact request.';
   if (!await confirmAction('Approve terminal command?', 'IsaiahAI Agent is requesting permission to run this command in ' + shellLabel + '.', detail, 'Run this command')) {
     return { canceled: true, exitCode: null, output: 'Command canceled by user.' };
