@@ -44,83 +44,283 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .browser-results { margin-top: 16px; }
   .result { padding: 12px; }
 }
+
+/* IsaiahAI desktop refinement */
+.brand-icon,.hero-icon{display:block;object-fit:contain;filter:drop-shadow(0 5px 16px #5edfff30)}.brand-icon{width:39px;height:39px;flex:none}.hero-icon{width:76px;height:76px;margin:0 auto 18px;border-radius:22px}.brand{gap:12px}.brand small{font-size:9px}.header-actions{gap:12px}.status{padding:7px 10px;border:1px solid #ffffff16;border-radius:999px;background:#ffffff06}.status .dot{flex:none}.status.offline{color:#ffb7b7}.status.offline .dot{background:#ff6a6a;box-shadow:0 0 10px #ff6a6a77}.status.online .dot{background:#42d5a1}
+nav{padding:8px 16px;gap:7px}nav button{border-radius:999px;padding:9px 16px}.panel.active{min-height:0}.chat{min-height:0}.agent-tools{max-width:1120px}.agent-tools details{background:linear-gradient(120deg,#111c2b99,#131a2a66);border-color:#ffffff1a}.tool-content{align-items:center}.tool-content select[multiple]{min-width:230px;max-width:330px;min-height:112px;height:112px;flex:1}.tool-content input{min-width:160px}.tool-state{font-size:11px;line-height:1.55}.terminal-output{width:100%;max-height:190px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid #ffffff15;border-radius:12px;padding:11px 12px;background:#050a12;color:#b8d6e9;font:11px/1.6 ui-monospace,Consolas,monospace}.terminal-output[hidden]{display:none!important}
+.transcript{max-width:1180px;width:100%;margin:0 auto;padding:24px clamp(18px,4vw,52px) 28px;gap:21px}.welcome{max-width:820px;padding:clamp(24px,5vh,64px) 12px}.welcome h1{font-size:clamp(34px,5vw,58px);letter-spacing:-.06em}.welcome p{max-width:650px;font-size:14.5px}.prompt-grid{max-width:820px;gap:11px}.prompt-grid button{border:1px solid #ffffff19;background:linear-gradient(145deg,#17253a9c,#0d1523bd);padding:16px;border-radius:17px;min-height:94px}.prompt-grid button:hover{background:linear-gradient(145deg,#1b304b,#141f31);border-color:#63dff25c}.prompt-grid strong{font-size:13px}.prompt-grid span{line-height:1.6}
+.message{max-width:100%;min-width:0;border:0;border-radius:0;padding:0;white-space:normal;line-height:1.78;background:transparent;box-shadow:none;animation:message-enter .2s ease-out both}.message.user{align-self:flex-end;max-width:min(78%,820px);padding:12px 17px;border:1px solid #6186a83d;border-radius:20px 20px 6px 20px;background:linear-gradient(145deg,#203a57,#1b2b43);box-shadow:0 8px 24px #0002}.message.assistant{align-self:stretch;max-width:100%;padding:2px 0 16px;border-bottom:1px solid #ffffff13}.message .label{display:flex;align-items:center;gap:9px;font-size:11px;letter-spacing:.08em;text-transform:none;color:#c8d8ed;font-weight:800;margin-bottom:9px}.message.assistant .label:before{content:"";width:20px;height:20px;display:inline-block;background:url('/assets/isaiahai-icon.svg') center/contain no-repeat;filter:drop-shadow(0 2px 8px #64d7ff55)}.provider-tag{font-size:9px;letter-spacing:.06em;color:#9aacbf;border:1px solid #ffffff19;border-radius:999px;padding:3px 7px;background:#ffffff07;font-weight:700}.answer-text{white-space:normal;overflow-wrap:anywhere;color:#e2eaf5;font-size:14px;line-height:1.82}.markdown-body p{margin:0 0 12px}.markdown-body h1,.markdown-body h2,.markdown-body h3{color:#f6f9ff;letter-spacing:-.025em;line-height:1.3;margin:18px 0 9px}.markdown-body h1{font-size:22px}.markdown-body h2{font-size:19px}.markdown-body h3{font-size:16px}.markdown-body ul,.markdown-body ol{padding-left:23px;margin:9px 0 14px}.markdown-body li{padding-left:3px;margin:4px 0}.markdown-body strong{color:#fff;font-weight:750}.markdown-body a{color:#82dcff;text-decoration:underline;text-decoration-color:#82dcff66;text-underline-offset:3px}.markdown-body blockquote{margin:12px 0;padding:8px 14px;border-left:3px solid #5bd8f3;background:#ffffff07;color:#bdcde0;border-radius:0 10px 10px 0}.markdown-body pre{margin:13px 0;padding:14px 15px;overflow:auto;border-radius:14px;border:1px solid #ffffff19;background:#070c15;color:#d6e9ff;font:12px/1.65 ui-monospace,Consolas,monospace;white-space:pre}.markdown-body code:not(pre code){padding:2px 5px;border:1px solid #ffffff15;border-radius:5px;background:#ffffff0b;color:#a7e8ff;font:12px ui-monospace,Consolas,monospace}.message-actions{display:flex;gap:7px;align-items:center;margin-top:10px}.message-actions button{font-size:10px;padding:5px 9px;border-color:#ffffff18;color:#9fb3cb;background:#ffffff05}.message-actions button:hover{color:#e7f5ff;border-color:#68d8ee66}.reasoning-summary{margin-top:13px;max-width:860px}.source-area{margin-top:15px;padding-top:12px;border-top:1px solid #ffffff13}.source-chip{border-radius:999px;padding:7px 10px}.thinking{max-width:1000px;width:calc(100% - 32px);margin:0 auto;padding:8px 0;color:#aac4dd}.composer{padding:12px 18px max(15px,env(safe-area-inset-bottom));background:linear-gradient(180deg,#080d18e8,#080d18f7);border-top:1px solid #ffffff12}.composer form{max-width:1000px;padding:9px 10px 9px 14px;border:1px solid #48617e;background:linear-gradient(145deg,#142238,#0d1726);border-radius:23px;box-shadow:0 16px 44px #0004}.composer textarea{min-height:50px;max-height:190px;font-size:15px}.send{border-radius:15px;padding:12px 18px;min-width:85px}.notice{font-size:10px;color:#8293aa;margin-top:9px}
+.browser{background:#080d18}.toolbar{gap:7px;padding:10px 14px;background:#0c1422;border-bottom:1px solid #ffffff16}.toolbar button{min-width:37px;border-radius:10px}.toolbar input{border-radius:12px;background:#0a111d;border-color:#33465f}.browser-home{padding-top:clamp(35px,8vh,90px)}.search-home{max-width:830px}.search-home .hero-icon{margin-bottom:15px}.search-home h1{letter-spacing:-.06em}.search-form{max-width:780px;margin:0 auto;border-radius:18px;background:#111d2d;padding:7px}.search-form input{font-size:15px}.result{border-radius:15px;background:#ffffff05;border-color:#ffffff15;padding:14px 16px}.result b{color:#dff7ff}.result:hover{background:#14243a}.browser-note{display:flex;align-items:center;gap:8px}
+@keyframes message-enter{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:800px){.header-actions{gap:6px}.sign-in{max-width:156px;font-size:10px}.status{font-size:9px;padding:6px 7px}.transcript{padding:17px 14px 22px}.message.user{max-width:92%}.tool-content select[multiple]{min-width:100%;max-width:100%}.prompt-grid{grid-template-columns:1fr}.prompt-grid button{min-height:0}.composer{padding:9px 10px max(10px,env(safe-area-inset-bottom))}.toolbar{flex-wrap:wrap}.toolbar input{order:0;flex:1;min-width:110px}}
 </style></head><body>
-<header><div class="brand"><div class="mark">✦</div><div>IsaiahAI Agent<small>Desktop intelligence · Windows</small></div></div><div class="header-actions"><button id="showThinkingToggle" class="sign-in" type="button" aria-pressed="false">Show reasoning summary</button><div class="status"><span class="dot"></span><span id="apiStatus">Checking AI connection…</span></div></div></header>
+<header><div class="brand"><img class="brand-icon" src="/assets/isaiahai-icon.svg" alt="IsaiahAI logo"><div>IsaiahAI Agent<small>Desktop intelligence · Windows</small></div></div><div class="header-actions"><button id="showThinkingToggle" class="sign-in" type="button" aria-pressed="false">Show reasoning summary</button><div class="status"><span class="dot"></span><span id="apiStatus">Checking AI connection…</span></div></div></header>
 <nav><button class="active" data-panel="chat">✦ AI Chat</button><button data-panel="browser">🌐 IsaiahSearch Browser</button></nav>
 <main>
 <section id="panel-chat" class="panel active"><div class="chat">
-<div class="agent-tools"><div class="tool-top"><button id="connectWorkspace" class="connect">▣ Connect computer folder</button><span id="workspaceStatus" class="workspace-indicator">Computer access is off until you choose a folder.</span></div>
-<details id="agentTools"><summary>Computer tools · attach a file, save AI code, or run a command</summary><div class="tool-content">
-<select id="agentFileSelect" aria-label="Choose a workspace file"><option value="">Choose a supported file…</option></select><button id="attachFileContext">Attach file to chat</button><button id="clearFileContext">Clear file context</button><button id="saveAiCode" disabled>Review & save AI code</button>
-<select id="commandPreset" aria-label="Approved command"><option value="git-status">git status --short</option><option value="npm-test">npm test</option><option value="npm-build">npm run build</option><option value="node-version">node --version</option><option value="python-version">python --version</option></select><button id="runPreset">Run with approval</button><input id="customCommand" placeholder="Custom command (optional)" aria-label="Custom command"><button id="runCustomCommand">Run command</button><div id="agentToolStatus" class="tool-state" aria-live="polite">Each file save or command asks for approval in a native Windows dialog.</div>
+<div class="agent-tools"><div class="tool-top"><button id="connectWorkspace" class="connect">▣ Connect workspace folder</button><button id="clearWorkspace" type="button">Remove access</button><span id="workspaceStatus" class="workspace-indicator">No workspace selected. Folder access is remembered only after you choose it.</span></div>
+<details id="agentTools"><summary>Project files & terminal · attach multiple files, run PowerShell or Command Prompt</summary><div class="tool-content">
+<input id="fileFilter" placeholder="Filter project files…" aria-label="Filter project files">
+<select id="agentFileSelect" multiple size="4" aria-label="Choose multiple workspace files"><option value="">Choose a supported file…</option></select>
+<button id="attachFileContext">Attach selected files</button><button id="clearFileContext">Clear attachments</button><button id="saveAiCode" disabled>Review & save AI code</button>
+<select id="commandPreset" aria-label="Approved command"><option value="git-status">git status --short</option><option value="npm-test">npm test</option><option value="npm-build">npm run build</option><option value="node-version">node --version</option><option value="python-version">python --version</option></select><button id="runPreset">Run preset · approve</button>
+<select id="shellType" aria-label="Choose terminal"><option value="powershell">PowerShell</option><option value="cmd">Command Prompt</option></select><input id="customCommand" placeholder="Enter a PowerShell or CMD command…" aria-label="Terminal command"><button id="runCustomCommand">Run command · approve</button>
+<div id="agentToolStatus" class="tool-state" aria-live="polite">Workspace access persists after you choose a folder. Each terminal command and file write still requires a Windows approval dialog.</div>
+<pre id="terminalOutput" class="terminal-output" hidden></pre>
 </div></details></div>
-<div id="transcript" class="transcript"><div class="welcome"><div class="mark">✦</div><div class="eyebrow">IsaiahAI 7.0 SUPER · Search + Reasoning + Agent Tools</div><h1>What can we get done?</h1><p>Ask a question, research a topic, debug a project, or connect a folder so IsaiahAI can inspect the file you select. It will ask before writing files or running commands.</p><div class="prompt-grid"><button data-prompt="Research this topic using current web sources. Compare source quality and dates, then summarize the evidence."><strong>↗ Research a topic</strong><span>Search live sources and compare evidence</span></button><button data-prompt="Help me debug a project. Ask me to connect its folder, then inspect a relevant file and propose a safe fix."><strong>⌘ Debug my project</strong><span>Read selected files and suggest code edits</span></button><button data-prompt="Explain a difficult topic step by step, with examples and a concise takeaway."><strong>✧ Learn something</strong><span>Clear answers with useful examples</span></button></div></div></div>
+<div id="transcript" class="transcript"><div class="welcome"><img class="hero-icon" src="/assets/isaiahai-icon.svg" alt="IsaiahAI"><div class="eyebrow">ISAIAH AI · RESEARCH · REASONING · DESKTOP AGENT</div><h1>What can we get done?</h1><p>Ask a question, research a topic, debug a project, or connect a folder so IsaiahAI can inspect the file you select. It will ask before writing files or running commands.</p><div class="prompt-grid"><button data-prompt="Research this topic using current web sources. Compare source quality and dates, then summarize the evidence."><strong>↗ Research a topic</strong><span>Search live sources and compare evidence</span></button><button data-prompt="Help me debug a project. Ask me to connect its folder, then inspect a relevant file and propose a safe fix."><strong>⌘ Debug my project</strong><span>Read selected files and suggest code edits</span></button><button data-prompt="Explain a difficult topic step by step, with examples and a concise takeaway."><strong>✧ Learn something</strong><span>Clear answers with useful examples</span></button></div></div></div>
 <div id="thinkingBar" class="thinking" hidden role="status" aria-live="polite"><span class="spinner"></span><span id="thinkingText">Connecting to IsaiahAI…</span><span class="pips"><i></i><i></i><i></i></span></div>
-<div class="composer"><form id="chatForm"><textarea id="chatInput" aria-label="Message IsaiahAI" placeholder="Message IsaiahAI Agent…" rows="2"></textarea><button id="sendBtn" class="send" type="submit">Send ↑</button></form><p class="notice">Gemini is primary; OpenRouter’s free-model router is the fallback. Turn on reasoning summaries when you want a brief explanation. Provider limits still apply.</p></div>
+<div class="composer"><form id="chatForm"><textarea id="chatInput" aria-label="Message IsaiahAI" placeholder="Message IsaiahAI Agent…" rows="2"></textarea><button id="sendBtn" class="send" type="submit">Send ↑</button></form><p class="notice">Secure hosted AI · Gemini first · OpenRouter free-model backup · your API secrets are never stored in this executable.</p></div>
 </div></section>
 <section id="panel-browser" class="panel"><div class="browser">
 <form id="browserForm" class="toolbar"><button type="button" id="homeBtn" aria-label="IsaiahSearch home">⌂</button><button type="button" id="backBtn" aria-label="Back">←</button><button type="button" id="forwardBtn" aria-label="Forward">→</button><button type="button" id="reloadBtn" aria-label="Reload">↻</button><input id="address" aria-label="Search IsaiahSearch or enter website address" placeholder="Search IsaiahSearch or enter website address"><button class="go" type="submit">Go</button><button type="button" id="newWindowBtn">Open outside</button></form>
-<div id="browserNote" class="browser-note" hidden></div><div id="browserHome" class="browser-home"><div class="search-home"><div class="mark">✦</div><div class="eyebrow">The IsaiahSearch engine</div><h1>Search the web.<br><span style="background:linear-gradient(100deg,#68e4ff,#c4a8ff);color:transparent;background-clip:text">Stay curious.</span></h1><p>Search results are powered by IsaiahSearch, and pages open in the app’s real Chromium browser. No DuckDuckGo new-tab default.</p><form id="browserSearchForm" class="search-form"><input id="browserSearchInput" aria-label="Search the web" placeholder="What do you want to find?" autocomplete="off"><button type="submit">Search ↗</button></form><div id="browserSearchStatus" class="muted" style="margin-top:12px;font-size:11px" aria-live="polite"></div><div id="browserResults" class="browser-results"></div></div></div>
+<div id="browserNote" class="browser-note" hidden></div><div id="browserHome" class="browser-home"><div class="search-home"><img class="hero-icon" src="/assets/isaiahai-icon.svg" alt="IsaiahSearch"><div class="eyebrow">THE ISAIAHSEARCH ENGINE</div><h1>Search the web.<br><span style="background:linear-gradient(100deg,#68e4ff,#c4a8ff);color:transparent;background-clip:text">Stay curious.</span></h1><p>Search results are powered by IsaiahSearch, and pages open in the app’s real Chromium browser. No DuckDuckGo new-tab default.</p><form id="browserSearchForm" class="search-form"><input id="browserSearchInput" aria-label="Search the web" placeholder="What do you want to find?" autocomplete="off"><button type="submit">Search ↗</button></form><div id="browserSearchStatus" class="muted" style="margin-top:12px;font-size:11px" aria-live="polite"></div><div id="browserResults" class="browser-results"></div></div></div>
 <webview id="browserView" src="https://stamourelectronics-creator.github.io/" partition="persist:isaiahai-browser" allowpopups hidden></webview></div></section>
 </main>
 <script>
 (function(){
 'use strict';
 const API='https://isaiahsearch.netlify.app/api', $=function(id){return document.getElementById(id);};
-let messages=[],lastAssistantContent='',workspacePath='',selectedWorkspaceFile='',pinnedFileContext=null,thinkingTimer=null,showThinking=false;
+let messages=[],lastAssistantContent='',workspacePath='',selectedWorkspaceFile='',pinnedFileContexts=[],workspaceFiles=[],lastCommandOutput='',thinkingTimer=null,showThinking=false,apiReady=null;
 const fence=String.fromCharCode(96).repeat(3);
 function isHttpUrl(value){try{const u=new URL(value);return u.protocol==='http:'||u.protocol==='https:';}catch{return false;}}
 function setToolStatus(message){$('agentToolStatus').textContent=message;}
-function safeError(error){return String(error&&error.message||error||'Unknown error').slice(0,400);}
+function safeError(error){return String(error&&error.message||error||'Unknown error').slice(0,500);}
+function escapeHtml(value){return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function inlineMarkdown(value){
+ let text=escapeHtml(value);
+ const code=[];
+ text=text.replace(/`([^`]+)`/g,(_,content)=>{const token='@@INLINECODE'+code.length+'@@';code.push('<code>'+content+'</code>');return token;});
+ text=text.replace(/[([^]]+)]((https?:\/\/[^\s)]+))/g,(_,label,rawUrl)=>{
+   const url=rawUrl.replace(/&amp;/g,'&');
+   try{const parsed=new URL(url);if(!['http:','https:'].includes(parsed.protocol))return label;return '<a href="'+escapeHtml(parsed.href)+'" target="_blank" rel="noopener noreferrer">'+label+'</a>';}catch{return label;}
+ });
+ text=text.replace(/**(.+?)**/g,'<strong>$1</strong>').replace(/__(.+?)__/g,'<strong>$1</strong>');
+ text=text.replace(/~~(.+?)~~/g,'<del>$1</del>').replace(/(^|[^*])*([^*]+)*/g,'$1<em>$2</em>');
+ code.forEach((html,index)=>{text=text.replace('@@INLINECODE'+index+'@@',html);});
+ return text;
+}
+function renderMarkdown(markdown){
+ const rows=String(markdown||'').replace(/\r/g,'').split('\n'),out=[];
+ let paragraph=[],listType='',listItems=[],inCode=false,codeLines=[],codeLang='';
+ function flushParagraph(){if(paragraph.length){out.push('<p>'+inlineMarkdown(paragraph.join(' '))+'</p>');paragraph=[];}}
+ function flushList(){if(!listType)return;out.push('<'+listType+'>'+listItems.map(item=>'<li>'+inlineMarkdown(item)+'</li>').join('')+'</'+listType+'>');listType='';listItems=[];}
+ for(const line of rows){
+   if(inCode){if(line.startsWith(fence)){out.push('<pre><code>'+escapeHtml(codeLines.join('\n'))+'</code></pre>');inCode=false;codeLines=[];codeLang='';}else codeLines.push(line);continue;}
+   if(line.startsWith(fence)){flushParagraph();flushList();inCode=true;codeLang=line.slice(fence.length).trim();continue;}
+   if(!line.trim()){flushParagraph();flushList();continue;}
+   const heading=line.match(/^(#{1,3})\s+(.+)$/);if(heading){flushParagraph();flushList();const level=heading[1].length;out.push('<h'+level+'>'+inlineMarkdown(heading[2])+'</h'+level+'>');continue;}
+   const bullet=line.match(/^\s*[-*+]\s+(.+)$/);const numbered=line.match(/^\s*\d+[.)]\s+(.+)$/);
+   if(bullet||numbered){flushParagraph();const target=bullet?'ul':'ol';if(listType&&listType!==target)flushList();if(!listType)listType=target;listItems.push((bullet||numbered)[1]);continue;}
+   const quote=line.match(/^>\s?(.*)$/);if(quote){flushParagraph();flushList();out.push('<blockquote>'+inlineMarkdown(quote[1])+'</blockquote>');continue;}
+   paragraph.push(line);
+ }
+ if(inCode)out.push('<pre><code>'+escapeHtml(codeLines.join('\n'))+'</code></pre>');
+ flushParagraph();flushList();return out.join('');
+}
 function parseText(result){if(typeof result==='string')return result;if(typeof result?.message?.content==='string')return result.message.content;if(Array.isArray(result?.message?.content))return result.message.content.map(function(p){return p?.text||'';}).join('\n');return typeof result?.text==='string'?result.text:'';}
-function appendMessage(role,content,sources,thinkingSummary){
+function setApiStatus(text,online){$('apiStatus').textContent=text;$('apiStatus').parentElement.classList.toggle('online',!!online);$('apiStatus').parentElement.classList.toggle('offline',!online);}
+async function initializeApi(){
+ try{const config=await window.isaiahDesktop.getAppConfig();if(config&&typeof config.apiBaseUrl==='string'&&isHttpUrl(config.apiBaseUrl))API=config.apiBaseUrl.replace(/\/$/,'');}catch(error){console.warn('[IsaiahAI] Using default hosted API endpoint:',safeError(error));}
+ try{
+   const response=await fetch(API+'/health',{method:'GET',headers:{'Accept':'application/json'},signal:AbortSignal.timeout(9000)});
+   const data=await response.json().catch(()=>({}));
+   if(!response.ok)throw new Error(data.error||'AI service health check failed ('+response.status+').');
+   setApiStatus(data.aiConfigured?'Hosted AI connected':'Backend online · API secrets missing',!!data.aiConfigured);
+ }catch(error){setApiStatus('AI connection unavailable',false);console.warn('[IsaiahAI] Health check failed:',safeError(error));}
+ return API;
+}
+apiReady=initializeApi();
+function appendMessage(role,content,sources,thinkingSummary,provider){
  const transcript=$('transcript'),welcome=transcript.querySelector('.welcome');if(welcome)welcome.remove();
- const article=document.createElement('article');article.className='message '+role;const label=document.createElement('div');label.className='label';label.textContent=role==='assistant'?'IsaiahAI 7.0 SUPER':'You';article.append(label);
- const body=document.createElement('div');body.className='answer-text';body.textContent=content;article.append(body);
+ const article=document.createElement('article');article.className='message '+role;
+ const label=document.createElement('div');label.className='label';label.textContent=role==='assistant'?'IsaiahAI 7.0 SUPER':'You';
+ if(role==='assistant'&&provider){const tag=document.createElement('span');tag.className='provider-tag';tag.textContent=String(provider).slice(0,50);label.append(tag);}
+ article.append(label);
+ const body=document.createElement('div');body.className='answer-text'+(role==='assistant'?' markdown-body':'');
+ if(role==='assistant')body.innerHTML=renderMarkdown(content);else body.textContent=content;
+ article.append(body);
  if(role==='assistant'&&thinkingSummary){const details=document.createElement('details');details.className='reasoning-summary';const summary=document.createElement('summary');summary.textContent='Reasoning summary';const p=document.createElement('p');p.textContent=thinkingSummary;const note=document.createElement('small');note.textContent='A concise explanation of the approach — not private internal reasoning.';details.append(summary,p,note);article.append(details);}
- if(role==='assistant'&&Array.isArray(sources)&&sources.length){const area=document.createElement('div');area.className='source-area';const title=document.createElement('div');title.className='source-label';title.textContent='Sources used';area.append(title);const row=document.createElement('div');row.className='sources';
- sources.slice(0,8).forEach(function(source){const uri=String(source.uri||source.url||'');if(!isHttpUrl(uri))return;const chip=document.createElement('button');chip.className='source-chip';chip.textContent=String(source.title||source.siteName||new URL(uri).hostname).slice(0,90)+' ↗';chip.title=uri;chip.addEventListener('click',function(){switchToBrowser(uri);});row.append(chip);});area.append(row);article.append(area);}
+ if(role==='assistant'&&Array.isArray(sources)&&sources.length){const area=document.createElement('div');area.className='source-area';const title=document.createElement('div');title.className='source-label';title.textContent='Sources';area.append(title);const row=document.createElement('div');row.className='sources';
+ sources.slice(0,10).forEach(function(source){const uri=String(source.uri||source.url||'');if(!isHttpUrl(uri))return;const chip=document.createElement('button');chip.className='source-chip';chip.textContent=String(source.title||source.siteName||new URL(uri).hostname).slice(0,90)+' ↗';chip.title=uri;chip.addEventListener('click',function(){switchToBrowser(uri);});row.append(chip);});area.append(row);article.append(area);}
+ if(role==='assistant'){const actions=document.createElement('div');actions.className='message-actions';const copy=document.createElement('button');copy.type='button';copy.textContent='Copy answer';copy.addEventListener('click',function(){navigator.clipboard.writeText(String(content||'')).then(()=>{copy.textContent='Copied';setTimeout(()=>copy.textContent='Copy answer',1200);}).catch(()=>{copy.textContent='Copy unavailable';});});actions.append(copy);article.append(actions);}
  transcript.append(article);transcript.scrollTop=transcript.scrollHeight;return article;
 }
-function setThinking(text){$('thinkingBar').hidden=false;$('thinkingText').textContent=text;}
+function setThinking(function setThinking(text){$('thinkingBar').hidden=false;$('thinkingText').textContent=text;}
 function startThinking(){const stages=['Connecting to IsaiahAI…','Searching the web for useful sources…','Comparing evidence and reasoning…','Writing a clear answer…'];let idx=0;setThinking(stages[0]);if(thinkingTimer)clearInterval(thinkingTimer);thinkingTimer=setInterval(function(){idx=Math.min(idx+1,stages.length-1);setThinking(stages[idx]);},1700);}
 function stopThinking(){if(thinkingTimer)clearInterval(thinkingTimer);thinkingTimer=null;$('thinkingBar').hidden=true;}
 $('showThinkingToggle').addEventListener('click',function(){showThinking=!showThinking;$('showThinkingToggle').setAttribute('aria-pressed',String(showThinking));$('showThinkingToggle').textContent=showThinking?'Reasoning summaries on':'Show reasoning summary';});
-async function fetchIsaiahSearch(query){const response=await fetch(API+'/quick-search-links',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:query,engine:'isaiah',safeSearch:'Moderate'})});const data=await response.json().catch(function(){return {};});if(!response.ok)throw new Error(data.error||'IsaiahSearch could not retrieve results.');return (Array.isArray(data.results)?data.results:[]).filter(function(item){return isHttpUrl(String(item.url||''));}).slice(0,12);}
+async function fetchIsaiahSearch(query){
+ await apiReady;
+ const response=await fetch(API+'/quick-search-links',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:query,engine:'isaiah',safeSearch:'Moderate'}),signal:AbortSignal.timeout(18000)});
+ const data=await response.json().catch(function(){return {};});
+ if(!response.ok)throw new Error(data.error||'IsaiahSearch could not retrieve results ('+response.status+').');
+ return (Array.isArray(data.results)?data.results:[]).filter(function(item){return isHttpUrl(String(item.url||''));}).slice(0,12);
+}
 function formatSourcesForPrompt(results){return results.map(function(item,i){return (i+1)+'. '+String(item.title||item.siteName||'Web page')+' ('+item.url+')\nSnippet: '+String(item.snippet||'').slice(0,1000);}).join('\n\n');}
 function hasCodeBlock(content){const start=String(content||'').indexOf(fence);return start>=0&&String(content||'').indexOf(fence,start+fence.length)>=0;}
 async function sendChat(prompt){
- prompt=String(prompt||'').trim();if(!prompt)return;appendMessage('user',prompt);$('chatInput').value='';$('sendBtn').disabled=true;messages.push({role:'user',content:prompt});
- const contextualPrompt=pinnedFileContext?prompt+'\n\n[Selected computer file: '+pinnedFileContext.path+']\nRead-only file context follows:\n'+fence+'\n'+pinnedFileContext.content.slice(0,32000)+'\n'+fence:prompt;
- startThinking();let answer='',sources=[],provider='IsaiahAI',thinkingSummary='';
- try{const response=await fetch(API+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:contextualPrompt,history:messages.slice(0,-1),model:'isaiahai_7_super',selectedModel:'isaiahai_7_super',chatMode:'general',searchWebEnabled:true,showThinking:showThinking})});const data=await response.json().catch(function(){return {};});if(!response.ok)throw new Error(data.error||'Hosted IsaiahAI is temporarily unavailable.');answer=String(data.content||'').trim();if(!answer)throw new Error('The hosted AI returned an empty response.');sources=Array.isArray(data.sources)?data.sources:[];provider=data.provider||'Gemini';thinkingSummary=String(data.thinkingSummary||data.thinking||'');}
- catch(cloudError){answer='IsaiahAI could not complete the request. Gemini and OpenRouter are currently unavailable. '+safeError(cloudError);provider='Unavailable';}
- stopThinking();if(provider&&provider!=='IsaiahAI')setToolStatus('Reply completed through '+provider+'. Provider limits and account rules still apply.');lastAssistantContent=answer;messages.push({role:'assistant',content:answer});appendMessage('assistant',answer,sources,thinkingSummary);$('saveAiCode').disabled=!hasCodeBlock(answer)||!selectedWorkspaceFile;$('sendBtn').disabled=false;$('chatInput').focus();
+ prompt=String(prompt||'').trim();if(!prompt)return;
+ appendMessage('user',prompt);$('chatInput').value='';$('sendBtn').disabled=true;messages.push({role:'user',content:prompt});
+ const contextParts=[];
+ if(pinnedFileContexts.length){
+   contextParts.push('Selected local project files (read-only context from the chosen workspace):\n'+pinnedFileContexts.map(function(file,index){return 'FILE '+(index+1)+': '+file.path+'\n'+fence+'\n'+file.content+'\n'+fence;}).join('\n\n'));
+ }
+ if(lastCommandOutput){
+   contextParts.push('Most recent approved terminal result (use it as evidence; do not assume the command succeeded):\n'+fence+'\n'+lastCommandOutput.slice(0,14000)+'\n'+fence);
+ }
+ const contextualPrompt=contextParts.length?prompt+'\n\n'+contextParts.join('\n\n'):prompt;
+ startThinking();let answer='',sources=[],provider='Unavailable',thinkingSummary='';
+ try{
+   await apiReady;
+   const response=await fetch(API+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:contextualPrompt,history:messages.slice(0,-1).slice(-18),model:'isaiahai_7_super',selectedModel:'isaiahai_7_super',chatMode:'general',searchWebEnabled:true,showThinking:showThinking}),signal:AbortSignal.timeout(55000)});
+   const data=await response.json().catch(function(){return {};});
+   if(!response.ok)throw new Error((data.error||'Hosted IsaiahAI is temporarily unavailable.')+' (HTTP '+response.status+')');
+   answer=String(data.content||'').trim();if(!answer)throw new Error('The hosted AI returned an empty answer.');
+   sources=Array.isArray(data.sources)?data.sources:[];provider=data.selectedProvider||data.provider||'Gemini';thinkingSummary=String(data.thinkingSummary||data.thinking||'');
+ }catch(cloudError){
+   answer='IsaiahAI could not complete the request. The hosted Gemini/OpenRouter service did not return a usable response.\n\n'+safeError(cloudError)+'\n\nCheck the server-side API keys and try again.';
+   provider='Connection issue';
+ }
+ stopThinking();setToolStatus(provider==='Connection issue'?'AI connection issue: '+safeError(new Error(answer)):('Reply generated through '+provider+'. Provider limits still apply.'));
+ lastAssistantContent=answer;messages.push({role:'assistant',content:answer});
+ appendMessage('assistant',answer,sources,thinkingSummary,provider);
+ $('saveAiCode').disabled=!hasCodeBlock(answer)||!selectedWorkspaceFile;$('sendBtn').disabled=false;$('chatInput').focus();
 }
-$('chatForm').addEventListener('submit',function(event){event.preventDefault();sendChat($('chatInput').value).catch(function(error){stopThinking();appendMessage('assistant','Something went wrong: '+safeError(error));$('sendBtn').disabled=false;});});
+$('chatForm').addEventListener$('chatForm').addEventListener('submit',function(event){event.preventDefault();sendChat($('chatInput').value).catch(function(error){stopThinking();appendMessage('assistant','Something went wrong: '+safeError(error));$('sendBtn').disabled=false;});});
 document.querySelectorAll('[data-prompt]').forEach(function(button){button.addEventListener('click',function(){sendChat(button.dataset.prompt).catch(function(error){stopThinking();appendMessage('assistant','Something went wrong: '+safeError(error));$('sendBtn').disabled=false;});});});
 $('chatInput').addEventListener('keydown',function(event){if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();$('chatForm').requestSubmit();}});
-fetch(API+'/health').then(function(response){return response.json();}).then(function(data){$('apiStatus').textContent=data.aiConfigured?'AI service available':'AI service needs setup';}).catch(function(){$('apiStatus').textContent='AI service unavailable';});
-async function refreshWorkspace(){if(!workspacePath)return;const list=await window.isaiahDesktop.listWorkspaceFiles();const select=$('agentFileSelect');select.replaceChildren();const opt=document.createElement('option');opt.value='';opt.textContent='Choose a supported file…';select.append(opt);list.forEach(function(file){const option=document.createElement('option');option.value=file.path;option.textContent=file.path+' ('+Math.max(1,Math.round(file.size/1024))+' KB)';select.append(option);});$('workspaceStatus').textContent=workspacePath+' · '+list.length+' text/code files';}
-$('connectWorkspace').addEventListener('click',async function(){try{const result=await window.isaiahDesktop.chooseWorkspace();if(result.canceled)return;workspacePath=result.path;selectedWorkspaceFile='';pinnedFileContext=null;$('saveAiCode').disabled=true;await refreshWorkspace();setToolStatus('Connected only to the folder you chose. Select a file and attach it to let IsaiahAI read its contents.');}catch(error){setToolStatus('Folder access: '+safeError(error));}});
-$('agentFileSelect').addEventListener('change',function(){selectedWorkspaceFile=$('agentFileSelect').value;$('saveAiCode').disabled=!selectedWorkspaceFile||!hasCodeBlock(lastAssistantContent);});
-$('attachFileContext').addEventListener('click',async function(){if(!selectedWorkspaceFile){setToolStatus('Choose a file first.');return;}try{const file=await window.isaiahDesktop.readWorkspaceFile(selectedWorkspaceFile);pinnedFileContext={path:file.path,content:file.content};setToolStatus('Attached '+file.path+' as context until you clear it.');}catch(error){setToolStatus('Could not read that file: '+safeError(error));}});
-$('clearFileContext').addEventListener('click',function(){pinnedFileContext=null;setToolStatus('Local file context cleared.');});
-$('saveAiCode').addEventListener('click',async function(){if(!selectedWorkspaceFile){setToolStatus('Choose the file you want the AI code to replace.');return;}const source=String(lastAssistantContent||''),start=source.indexOf(fence);if(start<0){setToolStatus('The last answer has no complete code block.');return;}const lineEnd=source.indexOf('\n',start+fence.length),end=source.indexOf(fence,lineEnd<0?start+fence.length:lineEnd+1);if(lineEnd<0||end<0){setToolStatus('The AI code block is incomplete.');return;}const code=source.slice(lineEnd+1,end).replace(/\n$/,'');try{const result=await window.isaiahDesktop.writeWorkspaceFile({path:selectedWorkspaceFile,content:code});setToolStatus(result.saved?'Saved '+selectedWorkspaceFile+'. Backup: '+result.backup:(result.canceled?'No change made.':'Save canceled.'));}catch(error){setToolStatus('Save failed: '+safeError(error));}});
-$('runPreset').addEventListener('click',async function(){if(!workspacePath){setToolStatus('Connect a folder first.');return;}try{setToolStatus('Waiting for Windows approval…');const result=await window.isaiahDesktop.runApprovedPreset($('commandPreset').value);setToolStatus('Exit code: '+result.exitCode+'\n'+result.output);}catch(error){setToolStatus('Command failed: '+safeError(error));}});
-$('runCustomCommand').addEventListener('click',async function(){if(!workspacePath){setToolStatus('Connect a folder first.');return;}try{setToolStatus('Waiting for Windows approval…');const result=await window.isaiahDesktop.runCustomCommand($('customCommand').value);setToolStatus('Exit code: '+result.exitCode+'\n'+result.output);}catch(error){setToolStatus('Command failed: '+safeError(error));}});
+/* API configuration and health are loaded before the first chat request. */
+async function renderWorkspaceOptions(){
+ const select=$('agentFileSelect'),filter=$('fileFilter').value.trim().toLowerCase(),selected=new Set(Array.from(select.selectedOptions).map(option=>option.value));
+ select.replaceChildren();
+ const filtered=workspaceFiles.filter(file=>!filter||file.path.toLowerCase().includes(filter));
+ filtered.forEach(function(file){const option=document.createElement('option');option.value=file.path;option.textContent=file.path+' ('+Math.max(1,Math.round(file.size/1024))+' KB)';option.selected=selected.has(file.path);select.append(option);});
+ if(!filtered.length){const opt=document.createElement('option');opt.disabled=true;opt.textContent=workspaceFiles.length?'No files match this filter.':'No supported text/code files found.';select.append(opt);}
+}
+async function refreshWorkspace(){
+ if(!workspacePath)return;
+ workspaceFiles=await window.isaiahDesktop.listWorkspaceFiles();
+ await renderWorkspaceOptions();
+ $('workspaceStatus').textContent=workspacePath+' · '+workspaceFiles.length+' supported files · access remembered';
+}
+$('connectWorkspace').addEventListener('click',async function(){
+ try{
+  const result=await window.isaiahDesktop.chooseWorkspace();if(result.canceled)return;
+  workspacePath=result.path;selectedWorkspaceFile='';pinnedFileContexts=[];lastCommandOutput='';
+  $('saveAiCode').disabled=true;await refreshWorkspace();
+  setToolStatus('Connected to the folder you selected. Files and subfolders are available while this workspace is selected. Terminal commands and writes still require Windows approval.');
+ }catch(error){setToolStatus('Folder access failed: '+safeError(error));}
+});
+$('clearWorkspace').addEventListener('click',async function(){
+ try{await window.isaiahDesktop.clearWorkspace();workspacePath='';workspaceFiles=[];selectedWorkspaceFile='';pinnedFileContexts=[];lastCommandOutput='';$('agentFileSelect').replaceChildren();$('workspaceStatus').textContent='Workspace access removed.';$('saveAiCode').disabled=true;$('terminalOutput').hidden=true;setToolStatus('Saved workspace access removed. Choose a folder again to re-enable local tools.');}
+ catch(error){setToolStatus('Could not remove workspace access: '+safeError(error));}
+});
+$('fileFilter').addEventListener('input',renderWorkspaceOptions);
+$('agentFileSelect').addEventListener('change',function(){const selected=Array.from($('agentFileSelect').selectedOptions).map(option=>option.value).filter(Boolean);selectedWorkspaceFile=selected[0]||'';$('saveAiCode').disabled=!selectedWorkspaceFile||!hasCodeBlock(lastAssistantContent);});
+$('attachFileContext').addEventListener('click',async function(){
+ if(!workspacePath){setToolStatus('Connect a workspace folder first.');return;}
+ const selected=Array.from($('agentFileSelect').selectedOptions).map(option=>option.value).filter(Boolean).slice(0,6);
+ if(!selected.length){setToolStatus('Select one or more files first.');return;}
+ try{
+  const attached=[];let remaining=36000;
+  for(const relativePath of selected){
+   if(remaining<=0)break;
+   const file=await window.isaiahDesktop.readWorkspaceFile(relativePath);
+   const content=String(file.content||'').slice(0,Math.min(14000,remaining));
+   if(content){attached.push({path:file.path,content});remaining-=content.length;}
+  }
+  pinnedFileContexts=attached;selectedWorkspaceFile=attached[0]?.path||'';
+  $('saveAiCode').disabled=!selectedWorkspaceFile||!hasCodeBlock(lastAssistantContent);
+  setToolStatus('Attached '+attached.length+' project file(s). Their contents will be included with your next chat message.');
+ }catch(error){setToolStatus('Could not attach the selected files: '+safeError(error));}
+});
+$('clearFileContext').addEventListener('click',function(){pinnedFileContexts=[];lastCommandOutput='';setToolStatus('Attached file and terminal context cleared.');});
+$('saveAiCode').addEventListener('click',async function(){
+ if(!selectedWorkspaceFile){setToolStatus('Choose the destination file first.');return;}
+ const source=String(lastAssistantContent||''),start=source.indexOf(fence);
+ if(start<0){setToolStatus('The last answer has no complete code block.');return;}
+ const lineEnd=source.indexOf('\n',start+fence.length),end=source.indexOf(fence,lineEnd<0?start+fence.length:lineEnd+1);
+ if(lineEnd<0||end<0){setToolStatus('The AI code block is incomplete.');return;}
+ const code=source.slice(lineEnd+1,end).replace(/\n$/,'');
+ try{const result=await window.isaiahDesktop.writeWorkspaceFile({path:selectedWorkspaceFile,content:code});setToolStatus(result.saved?'Saved '+selectedWorkspaceFile+'. Backup: '+result.backup:(result.canceled?'No change made.':'Save canceled.'));}
+ catch(error){setToolStatus('Save failed: '+safeError(error));}
+});
+function showTerminalResult(result,label){
+ const output='Terminal: '+label+'\nExit code: '+result.exitCode+(result.timedOut?' · timed out':'')+'\n\n'+String(result.output||'(No output)');
+ $('terminalOutput').textContent=output;$('terminalOutput').hidden=false;lastCommandOutput=output;
+ setToolStatus(result.canceled?'Command canceled.':result.timedOut?'Command stopped at the safety timeout.':'Command finished with exit code '+result.exitCode+'. Its output will be available to IsaiahAI in your next message.');
+}
+$('runPreset').addEventListener('click',async function(){
+ if(!workspacePath){setToolStatus('Connect a workspace folder first.');return;}
+ try{setToolStatus('Waiting for Windows approval…');const key=$('commandPreset').value;const result=await window.isaiahDesktop.runApprovedPreset(key);showTerminalResult(result,key);}
+ catch(error){setToolStatus('Command failed: '+safeError(error));}
+});
+$('runCustomCommand').addEventListener('click',async function(){
+ if(!workspacePath){setToolStatus('Connect a workspace folder first.');return;}
+ const command=$('customCommand').value.trim();if(!command){setToolStatus('Enter a PowerShell or Command Prompt command first.');return;}
+ const shell=$('shellType').value;
+ try{setToolStatus('Waiting for Windows approval…');const result=await window.isaiahDesktop.runShellCommand({shell,command});showTerminalResult(result,shell+' · '+command);}
+ catch(error){setToolStatus('Terminal command failed: '+safeError(error));}
+});
+(async function restoreWorkspace(){
+ try{workspacePath=await window.isaiahDesktop.getWorkspacePath();if(workspacePath){await refreshWorkspace();setToolStatus('Restored your previously selected workspace folder. Terminal and file writes still request Windows approval.');}}
+ catch(error){console.warn('[Workspace] Could not restore the saved folder:',safeError(error));}
+})();
 const webview=$('browserView');
+function activatePanel(name){
+ document.querySelectorAll('nav button[data-panel]').forEach(function(button){button.classList.toggle('active',button.dataset.panel===name);});
+ document.querySelectorAll('.panel').forEach(function(panel){panel.classList.toggle('active',panel.id==='panel-'+name);});
+ if(name==='browser'){
+   if($('browserHome').hidden&&webview.hidden)showBrowserHome();
+   setTimeout(function(){($('browserHome').hidden?$('address'):$('browserSearchInput')).focus();},30);
+ }else if(name==='chat'){setTimeout(()=>$('chatInput').focus(),30);}
+}
+document.querySelectorAll('nav button[data-panel]').forEach(function(button){button.addEventListener('click',function(){activatePanel(button.dataset.panel);});});
 function showBrowserHome(){$('browserHome').hidden=false;webview.hidden=true;$('address').value='';$('browserNote').hidden=true;$('browserSearchInput').focus();}
 function normalizeAddress(value){const v=String(value||'').trim();if(!v)return '';if(/^(https?:\/\/|about:blank)/i.test(v))return v;if(/^[^\s]+\.[^\s]+$/.test(v))return 'https://'+v;return '';}
-async function navigateBrowser(raw){let url;try{url=new URL(raw);if(!['http:','https:'].includes(url.protocol))throw new Error('Only HTTP and HTTPS websites can be opened.');}catch(error){$('browserNote').hidden=false;$('browserNote').textContent=safeError(error);return;}$('address').value=url.href;$('browserHome').hidden=true;webview.hidden=false;$('browserNote').hidden=true;try{await webview.loadURL(url.href);}catch(error){$('browserNote').hidden=false;$('browserNote').textContent='This page did not load inside Chromium. Try Open outside. '+safeError(error);}}
-function renderBrowserResults(results){const root=$('browserResults');root.replaceChildren();if(!results.length){const empty=document.createElement('p');empty.className='muted';empty.textContent='No direct links returned. Try a different search.';root.append(empty);return;}results.forEach(function(item){const button=document.createElement('button');button.className='result';const title=document.createElement('b');title.textContent=String(item.title||'Web result');button.append(title);const url=document.createElement('small');url.textContent=String(item.url||'');button.append(url);const snippet=document.createElement('span');snippet.textContent=String(item.snippet||'');button.append(snippet);button.addEventListener('click',function(){navigateBrowser(item.url);});root.append(button);});}
-async function searchBrowser(query){query=String(query||'').trim();if(!query)return;$('browserSearchInput').value=query;$('browserSearchStatus').textContent='Searching the IsaiahSearch index…';$('browserResults').replaceChildren();try{const results=await fetchIsaiahSearch(query);$('browserSearchStatus').textContent=results.length+' results · click any result to open it in Chromium';renderBrowserResults(results);}catch(error){$('browserSearchStatus').textContent='IsaiahSearch could not search right now: '+safeError(error);}}
-$('browserForm').addEventListener('submit',function(event){event.preventDefault();const raw=$('address').value.trim();if(!raw)return;const url=normalizeAddress(raw);if(url){navigateBrowser(url);return;}$('browserHome').hidden=false;webview.hidden=true;searchBrowser(raw);});
+async function navigateBrowser(raw){
+ let url;try{url=new URL(raw);if(!['http:','https:'].includes(url.protocol))throw new Error('Only HTTP and HTTPS websites can be opened.');}
+ catch(error){$('browserNote').hidden=false;$('browserNote').textContent=safeError(error);return;}
+ if(typeof webview.loadURL!=='function'){
+   $('browserNote').hidden=false;$('browserNote').textContent='The Chromium page view could not start. Use Open outside to open this page in your default browser.';
+   $('address').value=url.href;return;
+ }
+ $('address').value=url.href;$('browserHome').hidden=true;webview.hidden=false;$('browserNote').hidden=true;
+ try{await webview.loadURL(url.href);}
+ catch(error){$('browserNote').hidden=false;$('browserNote').textContent='This page did not load inside Chromium. Use Open outside to continue. '+safeError(error);}
+}
+function renderBrowserResults(results){
+ const root=$('browserResults');root.replaceChildren();
+ if(!results.length){const empty=document.createElement('p');empty.className='muted';empty.textContent='No direct links returned. Try a different search.';root.append(empty);return;}
+ results.forEach(function(item){const button=document.createElement('button');button.className='result';const title=document.createElement('b');title.textContent=String(item.title||'Web result');button.append(title);const url=document.createElement('small');url.textContent=String(item.url||'');button.append(url);const snippet=document.createElement('span');snippet.textContent=String(item.snippet||'');button.append(snippet);button.addEventListener('click',function(){navigateBrowser(item.url);});root.append(button);});
+}
+async function searchBrowser(query){
+ query=String(query||'').trim();if(!query)return;
+ $('browserSearchInput').value=query;$('browserSearchStatus').textContent='Searching the IsaiahSearch index…';$('browserResults').replaceChildren();
+ try{const results=await fetchIsaiahSearch(query);$('browserSearchStatus').textContent=results.length+' results · select a result to open it in Chromium';renderBrowserResults(results);}
+ catch(error){$('browserSearchStatus').textContent='IsaiahSearch could not search right now: '+safeError(error);}
+}
+$('browserForm').addEventListener('submit',function(event){
+ event.preventDefault();const raw=$('address').value.trim();if(!raw)return;
+ const url=normalizeAddress(raw);if(url){activatePanel('browser');navigateBrowser(url);return;}
+ $('browserHome').hidden=false;webview.hidden=true;searchBrowser(raw);
+});
 $('browserSearchForm').addEventListener('submit',function(event){event.preventDefault();searchBrowser($('browserSearchInput').value);});
-$('homeBtn').addEventListener('click',showBrowserHome);$('backBtn').addEventListener('click',function(){if(!webview.hidden&&webview.canGoBack())webview.goBack();});$('forwardBtn').addEventListener('click',function(){if(!webview.hidden&&webview.canGoForward())webview.goForward();});$('reloadBtn').addEventListener('click',function(){if(!webview.hidden)webview.reload();else searchBrowser($('browserSearchInput').value);});$('newWindowBtn').addEventListener('click',function(){const url=$('address').value;if(!isHttpUrl(url))return;window.isaiahDesktop.openExternal(url).catch(function(error){$('browserNote').hidden=false;$('browserNote').textContent=safeError(error);});});
-webview.addEventListener('did-navigate',function(event){$('address').value=event.url;$('browserNote').hidden=true;});webview.addEventListener('did-navigate-in-page',function(event){$('address').value=event.url;});webview.addEventListener('did-fail-load',function(event){if(event.errorCode!==-3){$('browserNote').hidden=false;$('browserNote').textContent='The page did not finish loading. Try Open outside. '+event.errorDescription;}});
-function switchToBrowser(url){document.querySelectorAll('nav button').forEach(function(btn){btn.classList.toggle('active',btn.dataset.panel==='browser');});document.querySelectorAll('.panel').forEach(function(panel){panel.classList.toggle('active',panel.id==='panel-browser');});navigateBrowser(url);}
+$('homeBtn').addEventListener('click',showBrowserHome);
+$('backBtn').addEventListener('click',function(){if(!webview.hidden&&webview.canGoBack())webview.goBack();});
+$('forwardBtn').addEventListener('click',function(){if(!webview.hidden&&webview.canGoForward())webview.goForward();});
+$('reloadBtn').addEventListener('click',function(){if(!webview.hidden)webview.reload();else searchBrowser($('browserSearchInput').value);});
+$('newWindowBtn').addEventListener('click',function(){const url=$('address').value;if(!isHttpUrl(url))return;window.isaiahDesktop.openExternal(url).catch(function(error){$('browserNote').hidden=false;$('browserNote').textContent=safeError(error);});});
+webview.addEventListener('dom-ready',function(){$('browserNote').hidden=true;});
+webview.addEventListener('did-navigate',function(event){$('address').value=event.url;$('browserNote').hidden=true;});
+webview.addEventListener('did-navigate-in-page',function(event){$('address').value=event.url;});
+webview.addEventListener('did-fail-load',function(event){
+ if(event.errorCode!==-3){$('browserNote').hidden=false;$('browserNote').textContent='This site blocked or failed the embedded page view. Use Open outside to continue. '+event.errorDescription;}
+});
+function switchToBrowser(url){activatePanel('browser');if(url)navigateBrowser(url);}
 showBrowserHome();
+})();showBrowserHome();
 })();
 </script>
 </body></html>
