@@ -240,7 +240,7 @@ ipcMain.handle('workspace:read', async (_event, relativePath) => {
 ipcMain.handle('workspace:write', async (_event, payload) => {
   const relativePath = String(payload && payload.path || '');
   const content = String(payload && payload.content !== undefined ? payload.content : '');
-  const item = await safeWorkspaceFile(relativePath);
+  const item = await safeWorkspaceFile(relativePath, { allowCreate: true });
   const action = item.exists ? 'replace this file' : 'create this file';
   const detail = item.exists
     ? item.file + '\n\nA dated backup will be saved inside .isaiahai-backups first.'
