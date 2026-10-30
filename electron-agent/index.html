@@ -92,7 +92,7 @@ nav{padding:8px 16px;gap:7px}nav button{border-radius:999px;padding:9px 16px}.pa
 <pre id="terminalOutput" class="terminal-output" hidden></pre>
 </div></details></div>
 <div id="transcript" class="transcript"><div class="welcome"><img class="hero-icon" src="/assets/isaiahai-icon.svg" alt="IsaiahAI"><div class="eyebrow">ISAIAH AI · RESEARCH · REASONING · DESKTOP AGENT</div><h1>What can we get done?</h1><p>Ask a question, research a topic, or let IsaiahAI work with your computer. A private workspace is prepared automatically; commands and file changes are shown for your approval before they happen.</p><div class="prompt-grid"><button data-prompt="Research this topic using current web sources. Compare source quality and dates, then summarize the evidence."><strong>↗ Research a topic</strong><span>Search live sources and compare evidence</span></button><button data-prompt="Help me debug a project. Ask me to connect its folder, then inspect a relevant file and propose a safe fix."><strong>⌘ Debug my project</strong><span>Read selected files and suggest code edits</span></button><button data-prompt="Explain a difficult topic step by step, with examples and a concise takeaway."><strong>✧ Learn something</strong><span>Clear answers with useful examples</span></button></div></div></div>
-<div id="thinkingBar" class="thinking" hidden role="status" aria-live="polite"><span class="spinner"></span><span id="thinkingText">Connecting to IsaiahAI…</span><span class="pips"><i></i><i></i><i></i></span></div>
+<div id="thinkingBar" class="thinking" hidden role="status" aria-live="polite"><span class="spinner"></span><span id="thinkingText">Preparing your request…</span><span class="pips"><i></i><i></i><i></i></span></div>
 <div class="composer"><div class="model-picker"><label for="modelSelect">Model</label><select id="modelSelect" aria-label="Choose IsaiahAI model"><option value="isaiahai_7_super">IsaiahAI 7.0 SUPER</option><option value="breakaway_1_0">Breakaway 1.0</option></select><span id="modelHint">IsaiahAI 7.0 SUPER · OpenRouter</span></div><form id="chatForm"><textarea id="chatInput" aria-label="Message IsaiahAI" placeholder="Message IsaiahAI Agent…" rows="2"></textarea><button id="sendBtn" class="send" type="submit">Send ↑</button></form><p class="notice">Your API keys stay on the hosted server. Unrestricted command mode starts only after you accept the Windows first-run warning; you can switch it off at any time.</p></div>
 </div></section>
 <section id="panel-browser" class="panel"><div class="browser">
@@ -376,7 +376,6 @@ workspaceReady=(async function restoreWorkspace(){
  }
 })();
 const SEARCH_ENGINE_HOME='https://stamourelectronics-creator.github.io/';
-const browserViews=$('browserViews');
 let browserTabs=[],activeBrowserTabId='',browserTabSequence=0;
 function activeBrowserTab(){return browserTabs.find(function(tab){return tab.id===activeBrowserTabId;})||null;}
 function renderBrowserTabs(){
@@ -499,7 +498,7 @@ if(typeof window.isaiahDesktop.onBrowserEvent==='function'){
   if(event.type==='navigate'){
    tab.url=event.url||tab.url;tab.canGoBack=!!event.canGoBack;tab.canGoForward=!!event.canGoForward;
    try{tab.title=new URL(tab.url).hostname.replace(/^www\./,'');}catch{}
-   if(activeBrowserTabId===tab.id){$('address').value=tab.url;$('browserHome').hidden=false;$('browserCanvas').hidden=false;$('browserNote').hidden=true;}
+   if(activeBrowserTabId===tab.id){$('address').value=tab.url;$('browserHome').hidden=true;$('browserCanvas').hidden=false;$('browserNote').hidden=true;}
    renderBrowserTabs();
   }else if(event.type==='title'){
    if(event.title)tab.title=String(event.title).slice(0,70);renderBrowserTabs();
