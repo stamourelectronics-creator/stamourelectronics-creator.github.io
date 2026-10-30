@@ -72,6 +72,9 @@ jobs:
     needs: build
     steps:
       # One-time owner setup: Settings → Pages → Build and deployment → Source = GitHub Actions.
+      - name: Publish the site
+        id: deployment
+        uses: actions/deploy-pages@v4
       - name: Verify deployed IsaiahAI API
         continue-on-error: true
         run: |
@@ -101,6 +104,3 @@ jobs:
           }
           console.warn('IsaiahAI API did not pass its post-deploy health check: ' + lastStatus);
           NODE
-      - name: Publish the site
-        id: deployment
-        uses: actions/deploy-pages@v4
