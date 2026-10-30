@@ -273,7 +273,7 @@ async function refreshWorkspace(){
  await renderWorkspaceOptions();
  $('workspaceStatus').textContent='Automatic workspace: '+workspacePath+' · '+workspaceFiles.length+' supported files';
 }
-remove manual connect and clear handlers$('fileFilter').addEventListener('input',renderWorkspaceOptions);
+$('fileFilter').addEventListener('input',renderWorkspaceOptions);
 $('agentFileSelect').addEventListener('change',function(){const selected=Array.from($('agentFileSelect').selectedOptions).map(option=>option.value).filter(Boolean);selectedWorkspaceFile=selected[0]||'';$('saveAiCode').disabled=!selectedWorkspaceFile||!hasCodeBlock(lastAssistantContent);});
 $('attachFileContext').addEventListener('click',async function(){
  if(!workspacePath){setToolStatus('The automatic workspace is still initializing. Try again in a moment.');return;}
