@@ -45,7 +45,7 @@
         }
       ],
       "artifactName": "IsaiahAI-Agent-${version}-${arch}.${ext}",
-      "icon": "build/icon.ico"
+      "icon": "build/icon.svg"
     },
     "nsis": {
       "oneClick": false,
