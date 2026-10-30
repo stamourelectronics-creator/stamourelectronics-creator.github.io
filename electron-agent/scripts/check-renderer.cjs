@@ -21,6 +21,10 @@ for (const required of [
 ]) {
   if (!html.includes(required)) throw new Error('Desktop renderer validation missing: ' + required);
 }
+const mainSource = fs.readFileSync(require('node:path').join(__dirname, '..', 'main.cjs'), 'utf8');
+if (/<webview\b/i.test(html) || /webviewTag:\s*true/.test(mainSource)) {
+  throw new Error('IsaiahAI Agent must use native WebContentsView rather than the legacy webview tag.');
+}
 if (/puter\.ai\.(chat|txt2img)|js\.puter\.com\/v2/i.test(html)) {
   throw new Error('Puter AI client routes must not be included in IsaiahAI Agent.');
 }
