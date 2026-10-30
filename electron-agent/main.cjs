@@ -162,17 +162,26 @@ function requireWorkspace() {
   if (!workspaceRoot) throw new Error('Choose a workspace folder first.');
   return workspaceRoot;
 }
-async function safeWorkspaceFile(relativePath) {
+async function safeWorkspaceFile(relativePath, options = {}) {
   const root = await fs.realpath(requireWorkspace());
-  const candidate = path.resolve(root, String(relativePath || ''));
-  if (candidate !== root && !candidate.startsWith(root + path.sep)) throw new Error('That path is outside the selected workspace.');
-  const real = await fs.realpath(candidate);
-  if (real !== root && !real.startsWith(root + path.sep)) throw new Error('Links outside the selected workspace are blocked.');
-  const stat = await fs.stat(real);
-  if (!stat.isFile()) throw new Error('Only files can be opened.');
-  if (!textExtensions.has(path.extname(real).toLowerCase())) throw new Error('This file type is not enabled for text editing.');
-  if (stat.size > 2000000) throw new Error('Files over 2 MB are not opened in the editor.');
-  return { root, file: real };
+  const relative = String(relativePath || '').trim();
+  if (!relative || path.isAbsolute(relative)) throw new Error('Use a relative path inside the selected workspace.');
+  const candidate = path.resolve(root, relative);
+  if (candidate === root || !candidate.startsWith(root + path.sep)) throw new Error('That path is outside the selected workspace.');
+  if (!textExtensions.has(path.extname(candidate).toLowerCase())) throw new Error('This file type is not enabled for text editing.');
+  try {
+    const real = await fs.realpath(candidate);
+    if (!real.startsWith(root + path.sep)) throw new Error('Links outside the selected workspace are blocked.');
+    const stat = await fs.stat(real);
+    if (!stat.isFile()) throw new Error('Only files can be opened.');
+    if (stat.size > 2000000) throw new Error('Files over 2 MB are not opened in the editor.');
+    return { root, file: real, exists: true };
+  } catch (error) {
+    if (error.code !== 'ENOENT' || !options.allowCreate) throw error;
+    const parent = await fs.realpath(path.dirname(candidate));
+    if (parent !== root && !parent.startsWith(root + path.sep)) throw new Error('The destination folder is outside the selected workspace.');
+    return { root, file: path.join(parent, path.basename(candidate)), exists: false };
+  }
 }
 async function confirmAction(title, message, detail, confirmLabel) {
   const result = await dialog.showMessageBox(mainWindow, {
@@ -232,15 +241,23 @@ ipcMain.handle('workspace:write', async (_event, payload) => {
   const relativePath = String(payload && payload.path || '');
   const content = String(payload && payload.content !== undefined ? payload.content : '');
   const item = await safeWorkspaceFile(relativePath);
-  if (!await confirmAction('Approve file change?', 'Allow IsaiahAI Agent to replace this file?', item.file + '\n\nA dated backup will be saved inside .isaiahai-backups first.', 'Back up and save')) {
+  const action = item.exists ? 'replace this file' : 'create this file';
+  const detail = item.exists
+    ? item.file + '\n\nA dated backup will be saved inside .isaiahai-backups first.'
+    : item.file + '\n\nThis path does not exist yet. IsaiahAI Agent will create it inside the selected workspace.';
+  if (!await confirmAction('Approve file change?', 'Allow IsaiahAI Agent to ' + action + '?', detail, item.exists ? 'Back up and save' : 'Create file')) {
     return { saved: false, canceled: true };
   }
-  const backupDir = path.join(item.root, '.isaiahai-backups');
-  await fs.mkdir(backupDir, { recursive: true });
-  const backupName = path.basename(item.file) + '.' + new Date().toISOString().replace(/[:.]/g, '-') + '.bak';
-  await fs.copyFile(item.file, path.join(backupDir, backupName));
-  await fs.writeFile(item.file, content, 'utf8');
-  return { saved: true, backup: path.join('.isaiahai-backups', backupName) };
+  if (item.exists) {
+    const backupDir = path.join(item.root, '.isaiahai-backups');
+    await fs.mkdir(backupDir, { recursive: true });
+    const backupName = path.basename(item.file) + '.' + new Date().toISOString().replace(/[:.]/g, '-') + '.bak';
+    await fs.copyFile(item.file, path.join(backupDir, backupName));
+    await fs.writeFile(item.file, content, 'utf8');
+    return { saved: true, created: false, backup: path.join('.isaiahai-backups', backupName) };
+  }
+  await fs.writeFile(item.file, content, { encoding: 'utf8', flag: 'wx' });
+  return { saved: true, created: true, backup: null };
 });
 function runProcess(bin, args, cwd, timeoutMs = 120000) {
   return new Promise(resolve => {
