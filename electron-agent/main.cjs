@@ -175,7 +175,7 @@ ipcMain.handle('browser:create', async (_event, payload) => {
   });
   mainWindow.contentView.addChildView(view);
   browserViews.set(tabId, view);
-  const userAgent = view.webContents.getUserAgent().replace(/\\sElectron\\/[^\\s]+/g, '');
+  const userAgent = view.webContents.getUserAgent().replace(/\sElectron\/[^\s]+/g, '');
   view.webContents.setUserAgent(userAgent);
   view.webContents.setWindowOpenHandler(({ url }) => {
     if (isAllowedBrowserUrl(url)) sendBrowserEvent(tabId, 'new-tab', { url });
@@ -217,7 +217,7 @@ ipcMain.handle('browser:create', async (_event, payload) => {
       type: 'question',
       title: 'Website permission request',
       message: 'Allow this website to access ' + permission + '?',
-      detail: origin + '\\n\\nOnly approve permissions you expect the website to need.',
+      detail: origin + '\n\nOnly approve permissions you expect the website to need.',
       buttons: ['Block', 'Allow once'], defaultId: 0, cancelId: 0, noLink: true
     }).then(result => callback(result.response === 1)).catch(() => callback(false));
   });
