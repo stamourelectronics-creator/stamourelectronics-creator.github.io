@@ -11,7 +11,13 @@ for (const required of [
   "document.querySelectorAll('nav button[data-panel]')",
   'runShellCommand({shell,command})',
   'showThinkingToggle',
-  'isaiahai-icon.svg'
+  'isaiahai-icon.svg',
+  'value="isaiahai_7_super"',
+  'value="breakaway_1_0"',
+  'unrestrictedModeToggle',
+  'autoRunProposal',
+  'function createBrowserTab',
+  'stamourelectronics-creator.github.io/'
 ]) {
   if (!html.includes(required)) throw new Error('Desktop renderer validation missing: ' + required);
 }
