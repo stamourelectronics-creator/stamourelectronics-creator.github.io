@@ -1,8 +1,8 @@
 {
   "name": "isaiahai-agent",
   "productName": "IsaiahAI Agent",
-  "version": "1.0.4",
-  "description": "IsaiahAI desktop agent with administrator-powered unrestricted command automation, selectable AI models and Chromium tabs.",
+  "version": "1.0.5",
+  "description": "IsaiahAI desktop agent with native Chromium browsing, selectable AI models and consent-enabled system command automation.",
   "main": "main.cjs",
   "license": "UNLICENSED",
   "scripts": {
