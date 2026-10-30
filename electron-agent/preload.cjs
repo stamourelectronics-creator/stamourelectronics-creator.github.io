@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld('isaiahDesktop', {
   writeWorkspaceFile: payload => ipcRenderer.invoke('workspace:write', payload),
   runApprovedPreset: key => ipcRenderer.invoke('workspace:run-preset', key),
   runShellCommand: payload => ipcRenderer.invoke('workspace:run-custom-command', payload),
+  getUnrestrictedMode: () => ipcRenderer.invoke('agent:unrestricted:get'),
+  setUnrestrictedMode: enabled => ipcRenderer.invoke('agent:unrestricted:set', enabled),
   onBrowserOpenTab: callback => {
     if (typeof callback !== 'function') return () => {};
     const listener = (_event, url) => callback(String(url || ''));
