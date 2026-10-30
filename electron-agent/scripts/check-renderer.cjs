@@ -18,7 +18,6 @@ for (const required of [
   'autoRunProposal',
   'function createBrowserTab',
   'createBrowserView',
-  'WebContentsView',
   'onBrowserEvent',
   'browserCanvas',
   'Writing your answer',
@@ -28,6 +27,9 @@ for (const required of [
   if (!html.includes(required)) throw new Error('Desktop renderer validation missing: ' + required);
 }
 const mainSource = fs.readFileSync(require('node:path').join(__dirname, '..', 'main.cjs'), 'utf8');
+if (!mainSource.includes('WebContentsView')) {
+  throw new Error('Desktop browser must use Electron WebContentsView.');
+}
 if (/<webview\b/i.test(html) || /webviewTag:\s*true/.test(mainSource)) {
   throw new Error('IsaiahAI Agent must use native WebContentsView rather than the legacy webview tag.');
 }
