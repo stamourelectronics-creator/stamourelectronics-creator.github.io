@@ -1,7 +1,7 @@
 {
   "name": "isaiahai-agent",
   "productName": "IsaiahAI Agent",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "IsaiahAI desktop agent with Chromium browsing, persistent scoped workspaces, multi-file context and approval-gated terminal tools.",
   "main": "main.cjs",
   "license": "UNLICENSED",
@@ -45,7 +45,7 @@
         }
       ],
       "artifactName": "IsaiahAI-Agent-${version}-${arch}.${ext}",
-      "icon": "build/icon.svg"
+      "icon": "build/icon.ico"
     },
     "nsis": {
       "oneClick": false,
@@ -56,5 +56,6 @@
     "portable": {
       "artifactName": "IsaiahAI-Agent-Portable-${version}-${arch}.${ext}"
     }
-  }
+  },
+  "author": "Stamour Electronics"
 }
