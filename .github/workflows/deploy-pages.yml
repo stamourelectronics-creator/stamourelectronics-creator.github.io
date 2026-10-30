@@ -28,6 +28,29 @@ jobs:
         run: |
           npx esbuild server.ts --bundle --platform=node --format=cjs --packages=external --outfile=/tmp/isaiah-server-check.cjs
           npx esbuild netlify/functions/api.mts --bundle --platform=node --format=esm --packages=external --outfile=/tmp/isaiah-netlify-api-check.mjs
+      - name: Probe configured Netlify API domains
+        continue-on-error: true
+        run: |
+          node --input-type=module <<'NODE'
+          const hosts = [
+            'https://isaiahsearch.netlify.app',
+            'https://isaiahai.netlify.app',
+            'https://isaiah-ai-acel.netlify.app'
+          ];
+          for (const host of hosts) {
+            try {
+              const response = await fetch(host + '/api/health', { signal: AbortSignal.timeout(10000) });
+              const body = await response.text();
+              let health = null;
+              try { health = JSON.parse(body); } catch {}
+              console.log(host + ' -> HTTP ' + response.status +
+                (health ? ' | aiConfigured=' + Boolean(health.aiConfigured) : ' | non-JSON response'));
+              if (health) console.log('  service=' + String(health.service || 'unknown'));
+            } catch (error) {
+              console.log(host + ' -> unavailable: ' + String(error?.message || error));
+            }
+          }
+          NODE
       - name: Build the GitHub Pages website
         run: npm run build:pages
         env:
