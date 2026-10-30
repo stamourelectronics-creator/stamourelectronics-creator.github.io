@@ -162,16 +162,20 @@ function requireWorkspace() {
   if (!workspaceRoot) throw new Error('Choose a workspace folder first.');
   return workspaceRoot;
 }
+function isInsideWorkspace(root, candidate) {
+  const relative = path.relative(root, candidate);
+  return relative !== '' && relative !== '..' && !relative.startsWith('..' + path.sep) && !path.isAbsolute(relative);
+}
 async function safeWorkspaceFile(relativePath, options = {}) {
   const root = await fs.realpath(requireWorkspace());
   const relative = String(relativePath || '').trim();
   if (!relative || path.isAbsolute(relative)) throw new Error('Use a relative path inside the selected workspace.');
   const candidate = path.resolve(root, relative);
-  if (candidate === root || !candidate.startsWith(root + path.sep)) throw new Error('That path is outside the selected workspace.');
+  if (!isInsideWorkspace(root, candidate)) throw new Error('That path is outside the selected workspace.');
   if (!textExtensions.has(path.extname(candidate).toLowerCase())) throw new Error('This file type is not enabled for text editing.');
   try {
     const real = await fs.realpath(candidate);
-    if (!real.startsWith(root + path.sep)) throw new Error('Links outside the selected workspace are blocked.');
+    if (!isInsideWorkspace(root, real)) throw new Error('Links outside the selected workspace are blocked.');
     const stat = await fs.stat(real);
     if (!stat.isFile()) throw new Error('Only files can be opened.');
     if (stat.size > 2000000) throw new Error('Files over 2 MB are not opened in the editor.');
@@ -179,7 +183,7 @@ async function safeWorkspaceFile(relativePath, options = {}) {
   } catch (error) {
     if (error.code !== 'ENOENT' || !options.allowCreate) throw error;
     const parent = await fs.realpath(path.dirname(candidate));
-    if (parent !== root && !parent.startsWith(root + path.sep)) throw new Error('The destination folder is outside the selected workspace.');
+    if (parent !== root && !isInsideWorkspace(root, parent)) throw new Error('The destination folder is outside the selected workspace.');
     return { root, file: path.join(parent, path.basename(candidate)), exists: false };
   }
 }
