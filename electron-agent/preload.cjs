@@ -10,5 +10,11 @@ contextBridge.exposeInMainWorld('isaiahDesktop', {
   readWorkspaceFile: path => ipcRenderer.invoke('workspace:read', path),
   writeWorkspaceFile: payload => ipcRenderer.invoke('workspace:write', payload),
   runApprovedPreset: key => ipcRenderer.invoke('workspace:run-preset', key),
-  runShellCommand: payload => ipcRenderer.invoke('workspace:run-custom-command', payload)
+  runShellCommand: payload => ipcRenderer.invoke('workspace:run-custom-command', payload),
+  onBrowserOpenTab: callback => {
+    if (typeof callback !== 'function') return () => {};
+    const listener = (_event, url) => callback(String(url || ''));
+    ipcRenderer.on('browser:open-tab', listener);
+    return () => ipcRenderer.removeListener('browser:open-tab', listener);
+  }
 });
