@@ -178,7 +178,7 @@ function hasCodeBlock(content){const start=String(content||'').indexOf(fence);re
 function extractCommandProposal(content){
  const pattern=new RegExp(fence+'(powershell|ps1|cmd|bat)[ \\t]*\\r?\\n([\\s\\S]*?)'+fence,'i');
  const match=String(content||'').match(pattern);if(!match)return null;
- const command=String(match[2]||'').trim();if(!command||command.length>2000)return null;
+ const command=String(match[2]||'').trim();if(!command||command.length>1200)return null;
  return {shell:/^(cmd|bat)$/i.test(match[1])?'cmd':'powershell',command:command};
 }
 async function sendChat(prompt){
