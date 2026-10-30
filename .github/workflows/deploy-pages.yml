@@ -138,6 +138,40 @@ jobs:
             console.warn('Hosted AI chat smoke test could not complete: ' + String(error?.message || error));
           }
           NODE
+      - name: Smoke test Breakaway 1.0 through Gemini
+        continue-on-error: true
+        run: |
+          node --input-type=module <<'NODE'
+          const endpoint = 'https://isaiahsearch.netlify.app/api/chat';
+          try {
+            const response = await fetch(endpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+              body: JSON.stringify({
+                message: 'Reply with the single word OK.',
+                model: 'breakaway_1_0',
+                selectedModel: 'breakaway_1_0',
+                chatMode: 'general',
+                disableWebSearch: true,
+                searchWebEnabled: false
+              }),
+              signal: AbortSignal.timeout(55000),
+              cache: 'no-store'
+            });
+            const data = await response.json().catch(() => ({}));
+            const answer = String(data.content || '').trim();
+            if (!response.ok || !answer || data.selectedProvider !== 'Gemini') {
+              console.warn('Breakaway 1.0 Gemini smoke test failed: HTTP ' + response.status +
+                ' | provider=' + String(data.selectedProvider || 'not specified') +
+                ' | ' + String(data.error || 'The selected model did not return a Gemini answer.').slice(0, 240));
+              process.exit(0);
+            }
+            console.log('Breakaway 1.0 returned a response successfully through Gemini. Answer length: ' +
+              answer.length + ' characters.');
+          } catch (error) {
+            console.warn('Breakaway 1.0 Gemini smoke test could not complete: ' + String(error?.message || error));
+          }
+          NODE
       - name: Smoke test IsaiahSearch browser results
         continue-on-error: true
         run: |
