@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
+const { app, BrowserWindow, WebContentsView, ipcMain, dialog, shell } = require('electron');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
@@ -9,6 +9,11 @@ let appServer = null;
 let appOrigin = null;
 let workspaceRoot = null;
 let unrestrictedAgentEnabled = false;
+let unrestrictedModeChoiceSaved = false;
+const browserViews = new Map();
+let activeBrowserTabId = '';
+let browserPanelVisible = false;
+let browserBounds = { x: 0, y: 0, width: 0, height: 0 };
 const settingsFile = path.join(app.getPath('userData'), 'agent-settings.json');
 const DEFAULT_API_BASE_URL = 'https://isaiahsearch.netlify.app/api';
 async function loadSavedWorkspace() {
@@ -17,6 +22,7 @@ async function loadSavedWorkspace() {
     const saved = JSON.parse(await fs.readFile(settingsFile, 'utf8'));
     candidate = typeof saved.workspaceRoot === 'string' ? saved.workspaceRoot : '';
     unrestrictedAgentEnabled = saved.unrestrictedAgentEnabled === true;
+    unrestrictedModeChoiceSaved = saved.unrestrictedModeChoiceSaved === true || unrestrictedAgentEnabled;
   } catch { /* first launch or reset: use the private default workspace */ }
   if (candidate) {
     try {
@@ -35,7 +41,7 @@ async function loadSavedWorkspace() {
 }
 async function persistWorkspace() {
   await fs.mkdir(path.dirname(settingsFile), { recursive: true });
-  await fs.writeFile(settingsFile, JSON.stringify({ workspaceRoot, unrestrictedAgentEnabled }, null, 2), { encoding: 'utf8', mode: 0o600 });
+  await fs.writeFile(settingsFile, JSON.stringify({ workspaceRoot, unrestrictedAgentEnabled, unrestrictedModeChoiceSaved }, null, 2), { encoding: 'utf8', mode: 0o600 });
 }
 const skippedDirs = new Set(['.git', 'node_modules', 'dist', 'build', 'release', '.next', '.cache', '.idea', '.vscode']);
 const textExtensions = new Set(['.txt', '.md', '.json', '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.css', '.html', '.htm', '.py', '.rs', '.go', '.java', '.cs', '.xml', '.yml', '.yaml', '.toml', '.ini', '.sh', '.bat', '.ps1', '.sql', '.svg', '.env.example']);
@@ -53,7 +59,7 @@ function createWindow() {
     backgroundColor: '#090d17', title: 'IsaiahAI Agent',
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
-      contextIsolation: true, nodeIntegration: false, sandbox: true, webviewTag: true
+      contextIsolation: true, nodeIntegration: false, sandbox: true, webviewTag: false
     }
   });
 
@@ -117,36 +123,178 @@ function createWindow() {
   mainWindow.webContents.on('will-navigate', (event, url) => {
     if (!appOrigin || !(url === appOrigin || url.startsWith(appOrigin + '/'))) event.preventDefault();
   });
-  mainWindow.webContents.on('will-attach-webview', (event, webPreferences, params) => {
-    // Treat remote pages as untrusted content and remove any path to Node/preload APIs.
-    delete webPreferences.preload;
-    webPreferences.nodeIntegration = false;
-    webPreferences.contextIsolation = true;
-    webPreferences.sandbox = true;
-    webPreferences.webviewTag = false;
-    if (!/^https?:\/\//i.test(String(params.src || ''))) event.preventDefault();
+  mainWindow.on('resize', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('browser:bounds-refresh');
   });
-  mainWindow.webContents.on('did-attach-webview', (_event, guestContents) => {
-    // Browser sites get camera/location/clipboard access only after an explicit native prompt.
-    guestContents.session.setPermissionRequestHandler((requestingContents, permission, callback, details) => {
-      let origin = 'this website';
-      try { origin = new URL(details.requestingUrl || requestingContents.getURL()).origin; } catch {}
-      dialog.showMessageBox(mainWindow, {
-        type: 'question',
-        title: 'Website permission request',
-        message: 'Allow this website to access ' + permission + '?',
-        detail: origin + '\n\nOnly approve permissions you expect the website to need.',
-        buttons: ['Block', 'Allow once'], defaultId: 0, cancelId: 0, noLink: true
-      }).then(result => callback(result.response === 1)).catch(() => callback(false));
-    });
-    guestContents.setWindowOpenHandler(({ url }) => {
-      if (/^https?:\/\//i.test(url) && mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('browser:open-tab', url);
-      return { action: 'deny' };
-    });
+  mainWindow.on('closed', () => {
+    browserViews.clear();
+    mainWindow = null;
   });
 }
+
+function sendBrowserEvent(tabId, type, extra = {}) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('browser:event', { tabId, type, ...extra });
+  }
+}
+function getBrowserView(tabId) {
+  return browserViews.get(String(tabId || '')) || null;
+}
+function applyBrowserViewState() {
+  for (const [tabId, view] of browserViews) {
+    const visible = browserPanelVisible && tabId === activeBrowserTabId && browserBounds.width > 1 && browserBounds.height > 1;
+    view.setBounds(browserBounds);
+    view.setVisible(visible);
+  }
+}
+function isAllowedBrowserUrl(rawUrl) {
+  try {
+    const parsed = new URL(String(rawUrl || ''));
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch { return false; }
+}
+ipcMain.handle('browser:create', async (_event, payload) => {
+  if (!mainWindow || mainWindow.isDestroyed()) throw new Error('The IsaiahAI window is not available.');
+  const tabId = String(payload?.tabId || '').slice(0, 100);
+  if (!tabId) throw new Error('A browser tab ID is required.');
+  const existing = browserViews.get(tabId);
+  if (existing) {
+    try { mainWindow.contentView.removeChildView(existing); } catch {}
+    try { existing.webContents.close(); } catch {}
+    browserViews.delete(tabId);
+  }
+  const view = new WebContentsView({
+    webPreferences: {
+      partition: 'persist:isaiahai-browser',
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
+      webSecurity: true,
+      allowRunningInsecureContent: false
+    }
+  });
+  mainWindow.contentView.addChildView(view);
+  browserViews.set(tabId, view);
+  const userAgent = view.webContents.getUserAgent().replace(/\\sElectron\\/[^\\s]+/g, '');
+  view.webContents.setUserAgent(userAgent);
+  view.webContents.setWindowOpenHandler(({ url }) => {
+    if (isAllowedBrowserUrl(url)) sendBrowserEvent(tabId, 'new-tab', { url });
+    return { action: 'deny' };
+  });
+  view.webContents.on('will-navigate', (event, url) => {
+    if (!isAllowedBrowserUrl(url)) event.preventDefault();
+  });
+  view.webContents.on('did-navigate', (_event, url) => {
+    sendBrowserEvent(tabId, 'navigate', {
+      url, canGoBack: view.webContents.canGoBack(), canGoForward: view.webContents.canGoForward()
+    });
+  });
+  view.webContents.on('did-navigate-in-page', (_event, url) => {
+    sendBrowserEvent(tabId, 'navigate', {
+      url, canGoBack: view.webContents.canGoBack(), canGoForward: view.webContents.canGoForward()
+    });
+  });
+  view.webContents.on('page-title-updated', (_event, title) => {
+    sendBrowserEvent(tabId, 'title', { title: String(title || '').slice(0, 100) });
+  });
+  view.webContents.on('did-start-loading', () => sendBrowserEvent(tabId, 'loading', { loading: true }));
+  view.webContents.on('did-stop-loading', () => sendBrowserEvent(tabId, 'loading', { loading: false }));
+  view.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+    if (isMainFrame && errorCode !== -3) {
+      sendBrowserEvent(tabId, 'error', {
+        errorCode, errorDescription: String(errorDescription || 'Chromium could not load this page.'),
+        url: validatedURL || ''
+      });
+    }
+  });
+  view.webContents.on('render-process-gone', (_event, details) => {
+    sendBrowserEvent(tabId, 'error', { errorDescription: 'Chromium renderer stopped: ' + String(details?.reason || 'unknown reason') });
+  });
+  view.webContents.session.setPermissionRequestHandler((requestingContents, permission, callback, details) => {
+    let origin = 'this website';
+    try { origin = new URL(details?.requestingUrl || requestingContents.getURL()).origin; } catch {}
+    dialog.showMessageBox(mainWindow, {
+      type: 'question',
+      title: 'Website permission request',
+      message: 'Allow this website to access ' + permission + '?',
+      detail: origin + '\\n\\nOnly approve permissions you expect the website to need.',
+      buttons: ['Block', 'Allow once'], defaultId: 0, cancelId: 0, noLink: true
+    }).then(result => callback(result.response === 1)).catch(() => callback(false));
+  });
+  applyBrowserViewState();
+  return { created: true };
+});
+ipcMain.handle('browser:navigate', async (_event, payload) => {
+  const tabId = String(payload?.tabId || '');
+  const url = String(payload?.url || '');
+  const view = getBrowserView(tabId);
+  if (!view) throw new Error('That browser tab is no longer open.');
+  if (!isAllowedBrowserUrl(url)) throw new Error('Only HTTP and HTTPS websites can be opened.');
+  try {
+    await view.webContents.loadURL(url);
+    return { ok: true };
+  } catch (error) {
+    sendBrowserEvent(tabId, 'error', { errorDescription: error?.message || 'Chromium could not load this page.', url });
+    throw error;
+  }
+});
+ipcMain.handle('browser:set-active', (_event, payload) => {
+  activeBrowserTabId = String(payload?.tabId || '');
+  browserPanelVisible = payload?.visible === true;
+  applyBrowserViewState();
+  return { ok: true };
+});
+ipcMain.on('browser:set-bounds', (_event, bounds) => {
+  const next = bounds || {};
+  browserBounds = {
+    x: Math.max(0, Math.round(Number(next.x) || 0)),
+    y: Math.max(0, Math.round(Number(next.y) || 0)),
+    width: Math.max(0, Math.round(Number(next.width) || 0)),
+    height: Math.max(0, Math.round(Number(next.height) || 0))
+  };
+  applyBrowserViewState();
+});
+ipcMain.handle('browser:back', (_event, tabId) => {
+  const view = getBrowserView(tabId);
+  if (view?.webContents.canGoBack()) view.webContents.goBack();
+  return { canGoBack: !!view?.webContents.canGoBack() };
+});
+ipcMain.handle('browser:forward', (_event, tabId) => {
+  const view = getBrowserView(tabId);
+  if (view?.webContents.canGoForward()) view.webContents.goForward();
+  return { canGoForward: !!view?.webContents.canGoForward() };
+});
+ipcMain.handle('browser:reload', (_event, tabId) => {
+  const view = getBrowserView(tabId);
+  if (view) view.webContents.reload();
+  return { ok: !!view };
+});
+ipcMain.handle('browser:close', (_event, tabId) => {
+  const view = getBrowserView(String(tabId || ''));
+  if (view) {
+    browserViews.delete(String(tabId || ''));
+    try { mainWindow?.contentView.removeChildView(view); } catch {}
+    try { view.webContents.close(); } catch {}
+  }
+  applyBrowserViewState();
+  return { ok: true };
+});
+
 app.whenReady().then(async () => {
   await loadSavedWorkspace();
+  if (!unrestrictedModeChoiceSaved) {
+    const choice = await dialog.showMessageBox({
+      type: 'warning',
+      title: 'Choose IsaiahAI system-agent access',
+      message: 'Enable unrestricted system mode by default?',
+      detail: 'When enabled, IsaiahAI can automatically run AI-proposed PowerShell and Command Prompt commands with the Windows permissions granted to this app. This can change or delete files, install software, edit the registry, and modify system settings. You can turn it off at any time in Computer tools. Windows UAC remains in control.',
+      buttons: ['Keep it off', 'Enable unrestricted mode'],
+      defaultId: 0, cancelId: 0, noLink: true
+    });
+    unrestrictedAgentEnabled = choice.response === 1;
+    unrestrictedModeChoiceSaved = true;
+    await persistWorkspace();
+  }
   createWindow();
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
@@ -224,6 +372,7 @@ ipcMain.handle('agent:unrestricted:set', async (_event, enabled) => {
     if (!accepted) return { enabled: false, canceled: true };
   }
   unrestrictedAgentEnabled = requested;
+  unrestrictedModeChoiceSaved = true;
   await persistWorkspace();
   return { enabled: unrestrictedAgentEnabled, canceled: false };
 });
