@@ -127,6 +127,9 @@ function createWindow() {
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('browser:bounds-refresh');
   });
   mainWindow.on('closed', () => {
+    for (const view of browserViews.values()) {
+      try { view.webContents.close(); } catch {}
+    }
     browserViews.clear();
     mainWindow = null;
   });
