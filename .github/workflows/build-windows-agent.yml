@@ -63,7 +63,7 @@ jobs:
           name: IsaiahAI Agent Windows build ${{ github.run_number }}
           body: |
             IsaiahAI Agent Windows installer and portable executable.
-            Includes IsaiahSearch multi-tab browsing, selectable IsaiahAI 7.0 SUPER (OpenRouter) and Breakaway 1.0 (Gemini), and an opt-in unrestricted system agent. The app requests Windows Administrator elevation; when unrestricted mode is enabled, AI-generated PowerShell/CMD commands run automatically without per-command prompts. AI file-editor writes remain confirmed.
+            Includes native Chromium WebContentsView tabs, selectable IsaiahAI 7.0 SUPER (OpenRouter) and Breakaway 1.0 (Gemini), smoother request status, and unrestricted system mode enabled after the first-run Windows warning is accepted. The app requests Windows Administrator elevation; AI-generated PowerShell/CMD commands then run automatically without per-command prompts. AI file-editor writes remain confirmed.
             Cloud AI provider usage policies still apply.
           files: electron-agent/release/*
           make_latest: true
