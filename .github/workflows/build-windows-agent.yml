@@ -29,6 +29,9 @@ jobs:
       - name: Install dependencies
         working-directory: electron-agent
         run: npm install
+      - name: Validate desktop renderer and main-process JavaScript
+        working-directory: electron-agent
+        run: npm run check
       - name: Build Windows installer and portable EXE
         working-directory: electron-agent
         run: npm run dist
