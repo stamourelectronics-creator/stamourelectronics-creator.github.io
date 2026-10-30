@@ -72,6 +72,35 @@ jobs:
     needs: build
     steps:
       # One-time owner setup: Settings → Pages → Build and deployment → Source = GitHub Actions.
+      - name: Verify deployed IsaiahAI API
+        continue-on-error: true
+        run: |
+          node --input-type=module <<'NODE'
+          const endpoint = 'https://isaiahsearch.netlify.app/api/health';
+          let lastStatus = 'no response';
+          for (let attempt = 1; attempt <= 7; attempt += 1) {
+            try {
+              const response = await fetch(endpoint, { signal: AbortSignal.timeout(10000), cache: 'no-store' });
+              const raw = await response.text();
+              let health = null;
+              try { health = JSON.parse(raw); } catch {}
+              lastStatus = 'HTTP ' + response.status + ' (' + (response.headers.get('content-type') || 'unknown content type') + ')';
+              if (response.ok && health?.ok === true && health?.service === 'IsaiahAI') {
+                console.log('IsaiahAI API is responding at ' + endpoint + '.');
+                if (health.aiConfigured) {
+                  console.log('The deployed function sees at least one server-side AI credential.');
+                } else {
+                  console.warn('The deployed function is live, but no Gemini/OpenRouter API credential is configured for Functions.');
+                }
+                process.exit(0);
+              }
+            } catch (error) {
+              lastStatus = String(error?.message || error);
+            }
+            if (attempt < 7) await new Promise(resolve => setTimeout(resolve, 10000));
+          }
+          console.warn('IsaiahAI API did not pass its post-deploy health check: ' + lastStatus);
+          NODE
       - name: Publish the site
         id: deployment
         uses: actions/deploy-pages@v4
