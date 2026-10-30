@@ -138,3 +138,28 @@ jobs:
             console.warn('Hosted AI chat smoke test could not complete: ' + String(error?.message || error));
           }
           NODE
+      - name: Smoke test IsaiahSearch browser results
+        continue-on-error: true
+        run: |
+          node --input-type=module <<'NODE'
+          try {
+            const response = await fetch('https://isaiahsearch.netlify.app/api/quick-search-links', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+              body: JSON.stringify({ query: 'OpenAI', engine: 'isaiah', safeSearch: 'Moderate' }),
+              signal: AbortSignal.timeout(30000),
+              cache: 'no-store'
+            });
+            const data = await response.json().catch(() => ({}));
+            const results = Array.isArray(data.results) ? data.results : [];
+            const directLinks = results.filter(item => /^https?:\\/\\//i.test(String(item.url || ''))).length;
+            if (!response.ok || !directLinks) {
+              console.warn('IsaiahSearch browser-search smoke test did not return direct links: HTTP ' +
+                response.status + ' | ' + String(data.error || 'No usable results.'));
+            } else {
+              console.log('IsaiahSearch browser search returned ' + directLinks + ' direct web links.');
+            }
+          } catch (error) {
+            console.warn('IsaiahSearch browser-search smoke test could not complete: ' + String(error?.message || error));
+          }
+          NODE
