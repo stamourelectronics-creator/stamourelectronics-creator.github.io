@@ -32,6 +32,20 @@ jobs:
       - name: Validate desktop renderer and main-process JavaScript
         working-directory: electron-agent
         run: npm run check
+      - name: Check hosted AI API availability
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          try {
+            $health = Invoke-RestMethod -Uri 'https://isaiahsearch.netlify.app/api/health' -TimeoutSec 12
+            if ($health.aiConfigured) {
+              Write-Host 'Hosted AI API is reachable and reports server-side AI credentials configured.'
+            } else {
+              Write-Warning 'Hosted AI API is reachable, but its server-side Gemini/OpenRouter keys are not configured.'
+            }
+          } catch {
+            Write-Warning ('Hosted AI API health check failed: ' + $_.Exception.Message)
+          }
       - name: Build Windows installer and portable EXE
         working-directory: electron-agent
         run: npm run dist
