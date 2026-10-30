@@ -152,7 +152,7 @@ jobs:
             });
             const data = await response.json().catch(() => ({}));
             const results = Array.isArray(data.results) ? data.results : [];
-            const directLinks = results.filter(item => /^https?:\\/\\//i.test(String(item.url || ''))).length;
+            const directLinks = results.filter(item => String(item.url || '').startsWith('https://') || String(item.url || '').startsWith('http://')).length;
             if (!response.ok || !directLinks) {
               console.warn('IsaiahSearch browser-search smoke test did not return direct links: HTTP ' +
                 response.status + ' | ' + String(data.error || 'No usable results.'));
