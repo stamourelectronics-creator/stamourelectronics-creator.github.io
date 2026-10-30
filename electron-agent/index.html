@@ -325,59 +325,132 @@ workspaceReady=(async function restoreWorkspace(){
   setToolStatus('Automatic workspace unavailable: '+safeError(error));
  }
 })();
-const webview=$('browserView');
+const SEARCH_ENGINE_HOME='https://stamourelectronics-creator.github.io/';
+const browserViews=$('browserViews');
+let browserTabs=[],activeBrowserTabId='',browserTabSequence=0;
+function activeBrowserTab(){return browserTabs.find(function(tab){return tab.id===activeBrowserTabId;})||null;}
+function currentWebview(){return activeBrowserTab()?.view||null;}
+function renderBrowserTabs(){
+ const root=$('browserTabs'),newButton=$('newBrowserTab');root.replaceChildren();
+ browserTabs.forEach(function(tab){
+  const item=document.createElement('div');item.className='browser-tab'+(tab.id===activeBrowserTabId?' active':'');item.setAttribute('role','presentation');
+  const select=document.createElement('button');select.type='button';select.className='browser-tab-title';select.textContent=tab.title||'New Tab';select.title=tab.url||tab.title||'New Tab';
+  select.addEventListener('click',function(){activateBrowserTab(tab.id);});
+  const close=document.createElement('button');close.type='button';close.className='browser-tab-close';close.textContent='×';close.title='Close tab';close.setAttribute('aria-label','Close '+(tab.title||'tab'));
+  close.addEventListener('click',function(event){event.stopPropagation();closeBrowserTab(tab.id);});
+  item.append(select,close);root.append(item);
+ });
+ root.append(newButton);
+}
+function activateBrowserTab(id){
+ const tab=browserTabs.find(function(item){return item.id===id;});if(!tab)return;
+ activeBrowserTabId=id;
+ browserTabs.forEach(function(item){item.view.hidden=item.id!==id;});
+ $('browserHome').hidden=!!tab.url;
+ $('address').value=tab.url||SEARCH_ENGINE_HOME;
+ $('browserNote').hidden=true;
+ renderBrowserTabs();
+}
+function createBrowserTab(initialUrl,activate){
+ const id='tab-'+Date.now()+'-'+(++browserTabSequence);
+ const view=document.createElement('webview');
+ view.className='browser-view';view.setAttribute('partition','persist:isaiahai-browser');view.setAttribute('allowpopups','');view.hidden=true;
+ browserViews.append(view);
+ const tab={id:id,title:'New Tab',url:'',view:view};
+ browserTabs.push(tab);
+ view.addEventListener('dom-ready',function(){
+  if(activeBrowserTabId===id)$('browserNote').hidden=true;
+ });
+ view.addEventListener('page-title-updated',function(event){
+  if(event.title)tab.title=String(event.title).slice(0,70);
+  renderBrowserTabs();
+ });
+ view.addEventListener('did-navigate',function(event){
+  tab.url=event.url||tab.url;
+  try{tab.title=new URL(tab.url).hostname.replace(/^www\./,'');}catch{}
+  if(activeBrowserTabId===id){$('address').value=tab.url;$('browserNote').hidden=true;}
+  renderBrowserTabs();
+ });
+ view.addEventListener('did-navigate-in-page',function(event){
+  tab.url=event.url||tab.url;
+  if(activeBrowserTabId===id)$('address').value=tab.url;
+ });
+ view.addEventListener('did-fail-load',function(event){
+  if(event.errorCode!==-3&&activeBrowserTabId===id){
+   $('browserNote').hidden=false;$('browserNote').textContent='This website could not finish loading inside Chromium. Use Open outside to continue. '+String(event.errorDescription||'');
+  }
+ });
+ renderBrowserTabs();
+ if(activate!==false)activateBrowserTab(id);
+ if(initialUrl)navigateBrowser(initialUrl,{tabId:id});
+ else if(activate!==false)showBrowserHome();
+ return tab;
+}
+function closeBrowserTab(id){
+ const index=browserTabs.findIndex(function(tab){return tab.id===id;});if(index<0)return;
+ const wasActive=activeBrowserTabId===id;
+ browserTabs[index].view.remove();browserTabs.splice(index,1);
+ if(!browserTabs.length){activeBrowserTabId='';createBrowserTab(SEARCH_ENGINE_HOME,true);return;}
+ if(wasActive){const next=browserTabs[Math.min(index,browserTabs.length-1)];activateBrowserTab(next.id);}
+ else renderBrowserTabs();
+}
 function activatePanel(name){
  document.querySelectorAll('nav button[data-panel]').forEach(function(button){button.classList.toggle('active',button.dataset.panel===name);});
  document.querySelectorAll('.panel').forEach(function(panel){panel.classList.toggle('active',panel.id==='panel-'+name);});
  if(name==='browser'){
-   if($('browserHome').hidden&&webview.hidden)showBrowserHome();
-   setTimeout(function(){($('browserHome').hidden?$('address'):$('browserSearchInput')).focus();},30);
+  if(!browserTabs.length)createBrowserTab(SEARCH_ENGINE_HOME,true);
+  setTimeout(function(){ $('address').focus(); },30);
  }else if(name==='chat'){setTimeout(()=>$('chatInput').focus(),30);}
 }
 document.querySelectorAll('nav button[data-panel]').forEach(function(button){button.addEventListener('click',function(){activatePanel(button.dataset.panel);});});
-function showBrowserHome(){$('browserHome').hidden=false;webview.hidden=true;$('address').value='';$('browserNote').hidden=true;$('browserSearchInput').focus();}
+function showBrowserHome(){navigateBrowser(SEARCH_ENGINE_HOME);}
 function normalizeAddress(value){const v=String(value||'').trim();if(!v)return '';if(/^(https?:\/\/|about:blank)/i.test(v))return v;if(/^[^\s]+\.[^\s]+$/.test(v))return 'https://'+v;return '';}
-async function navigateBrowser(raw){
- let url;try{url=new URL(raw);if(!['http:','https:'].includes(url.protocol))throw new Error('Only HTTP and HTTPS websites can be opened.');}
+async function navigateBrowser(raw,options){
+ const settings=options||{};
+ let url;
+ try{url=new URL(raw);if(!['http:','https:'].includes(url.protocol))throw new Error('Only HTTP and HTTPS websites can be opened.');}
  catch(error){$('browserNote').hidden=false;$('browserNote').textContent=safeError(error);return;}
- if(typeof webview.loadURL!=='function'){
-   $('browserNote').hidden=false;$('browserNote').textContent='The Chromium page view could not start. Use Open outside to open this page in your default browser.';
-   $('address').value=url.href;return;
+ let tab=settings.tabId?browserTabs.find(function(item){return item.id===settings.tabId;}):activeBrowserTab();
+ if(settings.newTab||!tab)tab=createBrowserTab(null,true);
+ if(!tab)return;
+ tab.url=url.href;
+ try{tab.title=url.hostname.replace(/^www\./,'')||'New Tab';}catch{tab.title='New Tab';}
+ if(tab.id===activeBrowserTabId){$('address').value=url.href;$('browserHome').hidden=true;$('browserNote').hidden=true;}
+ renderBrowserTabs();
+ try{
+  if(typeof tab.view.loadURL==='function')await tab.view.loadURL(url.href);
+  else tab.view.setAttribute('src',url.href);
+ }catch(error){
+  if(tab.id===activeBrowserTabId){$('browserNote').hidden=false;$('browserNote').textContent='This page did not load inside Chromium. Use Open outside to continue. '+safeError(error);}
  }
- $('address').value=url.href;$('browserHome').hidden=true;webview.hidden=false;$('browserNote').hidden=true;
- try{await webview.loadURL(url.href);}
- catch(error){$('browserNote').hidden=false;$('browserNote').textContent='This page did not load inside Chromium. Use Open outside to continue. '+safeError(error);}
 }
-function renderBrowserResults(results){
- const root=$('browserResults');root.replaceChildren();
- if(!results.length){const empty=document.createElement('p');empty.className='muted';empty.textContent='No direct links returned. Try a different search.';root.append(empty);return;}
- results.forEach(function(item){const button=document.createElement('button');button.className='result';const title=document.createElement('b');title.textContent=String(item.title||'Web result');button.append(title);const url=document.createElement('small');url.textContent=String(item.url||'');button.append(url);const snippet=document.createElement('span');snippet.textContent=String(item.snippet||'');button.append(snippet);button.addEventListener('click',function(){navigateBrowser(item.url);});root.append(button);});
-}
-async function searchBrowser(query){
+function searchBrowser(query){
  query=String(query||'').trim();if(!query)return;
- $('browserSearchInput').value=query;$('browserSearchStatus').textContent='Searching the IsaiahSearch index…';$('browserResults').replaceChildren();
- try{const results=await fetchIsaiahSearch(query);$('browserSearchStatus').textContent=results.length+' results · select a result to open it in Chromium';renderBrowserResults(results);}
- catch(error){$('browserSearchStatus').textContent='IsaiahSearch could not search right now: '+safeError(error);}
+ $('browserSearchInput').value=query;
+ $('browserSearchStatus').textContent='Opening IsaiahSearch…';
+ const target=new URL(SEARCH_ENGINE_HOME);target.searchParams.set('q',query);
+ navigateBrowser(target.href).catch(function(error){$('browserSearchStatus').textContent='Search could not open: '+safeError(error);});
 }
 $('browserForm').addEventListener('submit',function(event){
  event.preventDefault();const raw=$('address').value.trim();if(!raw)return;
- const url=normalizeAddress(raw);if(url){activatePanel('browser');navigateBrowser(url);return;}
- $('browserHome').hidden=false;webview.hidden=true;searchBrowser(raw);
+ const url=normalizeAddress(raw);
+ activatePanel('browser');
+ if(url)navigateBrowser(url);else searchBrowser(raw);
 });
 $('browserSearchForm').addEventListener('submit',function(event){event.preventDefault();searchBrowser($('browserSearchInput').value);});
 $('homeBtn').addEventListener('click',showBrowserHome);
-$('backBtn').addEventListener('click',function(){if(!webview.hidden&&webview.canGoBack())webview.goBack();});
-$('forwardBtn').addEventListener('click',function(){if(!webview.hidden&&webview.canGoForward())webview.goForward();});
-$('reloadBtn').addEventListener('click',function(){if(!webview.hidden)webview.reload();else searchBrowser($('browserSearchInput').value);});
+$('newBrowserTab').addEventListener('click',function(){createBrowserTab(SEARCH_ENGINE_HOME,true);});
+$('backBtn').addEventListener('click',function(){const view=currentWebview();if(view&&view.canGoBack())view.goBack();});
+$('forwardBtn').addEventListener('click',function(){const view=currentWebview();if(view&&view.canGoForward())view.goForward();});
+$('reloadBtn').addEventListener('click',function(){const view=currentWebview();if(view&&activeBrowserTab()?.url)view.reload();else showBrowserHome();});
 $('newWindowBtn').addEventListener('click',function(){const url=$('address').value;if(!isHttpUrl(url))return;window.isaiahDesktop.openExternal(url).catch(function(error){$('browserNote').hidden=false;$('browserNote').textContent=safeError(error);});});
-webview.addEventListener('dom-ready',function(){$('browserNote').hidden=true;});
-webview.addEventListener('did-navigate',function(event){$('address').value=event.url;$('browserNote').hidden=true;});
-webview.addEventListener('did-navigate-in-page',function(event){$('address').value=event.url;});
-webview.addEventListener('did-fail-load',function(event){
- if(event.errorCode!==-3){$('browserNote').hidden=false;$('browserNote').textContent='This site blocked or failed the embedded page view. Use Open outside to continue. '+event.errorDescription;}
-});
-function switchToBrowser(url){activatePanel('browser');if(url)navigateBrowser(url);}
-showBrowserHome();
-})();
+if(typeof window.isaiahDesktop.onBrowserOpenTab==='function'){
+ window.isaiahDesktop.onBrowserOpenTab(function(url){
+  if(isHttpUrl(url)){activatePanel('browser');navigateBrowser(url,{newTab:true});}
+ });
+}
+function switchToBrowser(url){activatePanel('browser');if(url)navigateBrowser(url,{newTab:true});}
+createBrowserTab(SEARCH_ENGINE_HOME,true);
+();
 </script>
 </body></html>
