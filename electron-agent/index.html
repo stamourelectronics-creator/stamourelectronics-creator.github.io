@@ -80,7 +80,8 @@ nav{padding:8px 16px;gap:7px}nav button{border-radius:999px;padding:9px 16px}.pa
 <script>
 (function(){
 'use strict';
-const API='https://isaiahsearch.netlify.app/api', $=function(id){return document.getElementById(id);};
+let API='https://isaiahsearch.netlify.app/api';
+const $=function(id){return document.getElementById(id);};
 let messages=[],lastAssistantContent='',workspacePath='',selectedWorkspaceFile='',pinnedFileContexts=[],workspaceFiles=[],lastCommandOutput='',thinkingTimer=null,showThinking=false,apiReady=null;
 const fence=String.fromCharCode(96).repeat(3);
 function isHttpUrl(value){try{const u=new URL(value);return u.protocol==='http:'||u.protocol==='https:';}catch{return false;}}
@@ -90,14 +91,16 @@ function escapeHtml(value){return String(value).replace(/&/g,'&amp;').replace(/<
 function inlineMarkdown(value){
  let text=escapeHtml(value);
  const code=[];
- text=text.replace(/`([^`]+)`/g,(_,content)=>{const token='@@INLINECODE'+code.length+'@@';code.push('<code>'+content+'</code>');return token;});
- text=text.replace(/[([^]]+)]((https?:\/\/[^\s)]+))/g,(_,label,rawUrl)=>{
-   const url=rawUrl.replace(/&amp;/g,'&');
-   try{const parsed=new URL(url);if(!['http:','https:'].includes(parsed.protocol))return label;return '<a href="'+escapeHtml(parsed.href)+'" target="_blank" rel="noopener noreferrer">'+label+'</a>';}catch{return label;}
+ const tick=String.fromCharCode(96);
+ const inlineCodePattern=new RegExp(tick+'([^'+tick+']+)'+tick,'g');
+ text=text.replace(inlineCodePattern,function(_,content){const token='@@INLINECODE'+code.length+'@@';code.push('<code>'+content+'</code>');return token;});
+ text=text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,function(_,label,rawUrl){
+  const url=rawUrl.replace(/&amp;/g,'&');
+  try{const parsed=new URL(url);if(!['http:','https:'].includes(parsed.protocol))return label;return '<a href="'+escapeHtml(parsed.href)+'" target="_blank" rel="noopener noreferrer">'+label+'</a>';}catch{return label;}
  });
- text=text.replace(/**(.+?)**/g,'<strong>$1</strong>').replace(/__(.+?)__/g,'<strong>$1</strong>');
- text=text.replace(/~~(.+?)~~/g,'<del>$1</del>').replace(/(^|[^*])*([^*]+)*/g,'$1<em>$2</em>');
- code.forEach((html,index)=>{text=text.replace('@@INLINECODE'+index+'@@',html);});
+ text=text.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/__(.+?)__/g,'<strong>$1</strong>');
+ text=text.replace(/~~(.+?)~~/g,'<del>$1</del>').replace(/(^|[^*])\*([^*]+)\*/g,'$1<em>$2</em>');
+ code.forEach(function(html,index){text=text.replace('@@INLINECODE'+index+'@@',html);});
  return text;
 }
 function renderMarkdown(markdown){
@@ -146,7 +149,7 @@ function appendMessage(role,content,sources,thinkingSummary,provider){
  if(role==='assistant'){const actions=document.createElement('div');actions.className='message-actions';const copy=document.createElement('button');copy.type='button';copy.textContent='Copy answer';copy.addEventListener('click',function(){navigator.clipboard.writeText(String(content||'')).then(()=>{copy.textContent='Copied';setTimeout(()=>copy.textContent='Copy answer',1200);}).catch(()=>{copy.textContent='Copy unavailable';});});actions.append(copy);article.append(actions);}
  transcript.append(article);transcript.scrollTop=transcript.scrollHeight;return article;
 }
-function setThinking(function setThinking(text){$('thinkingBar').hidden=false;$('thinkingText').textContent=text;}
+function setThinking(text){$('thinkingBar').hidden=false;$('thinkingText').textContent=text;}
 function startThinking(){const stages=['Connecting to IsaiahAI…','Searching the web for useful sources…','Comparing evidence and reasoning…','Writing a clear answer…'];let idx=0;setThinking(stages[0]);if(thinkingTimer)clearInterval(thinkingTimer);thinkingTimer=setInterval(function(){idx=Math.min(idx+1,stages.length-1);setThinking(stages[idx]);},1700);}
 function stopThinking(){if(thinkingTimer)clearInterval(thinkingTimer);thinkingTimer=null;$('thinkingBar').hidden=true;}
 $('showThinkingToggle').addEventListener('click',function(){showThinking=!showThinking;$('showThinkingToggle').setAttribute('aria-pressed',String(showThinking));$('showThinkingToggle').textContent=showThinking?'Reasoning summaries on':'Show reasoning summary';});
@@ -187,7 +190,7 @@ async function sendChat(prompt){
  appendMessage('assistant',answer,sources,thinkingSummary,provider);
  $('saveAiCode').disabled=!hasCodeBlock(answer)||!selectedWorkspaceFile;$('sendBtn').disabled=false;$('chatInput').focus();
 }
-$('chatForm').addEventListener$('chatForm').addEventListener('submit',function(event){event.preventDefault();sendChat($('chatInput').value).catch(function(error){stopThinking();appendMessage('assistant','Something went wrong: '+safeError(error));$('sendBtn').disabled=false;});});
+$('chatForm').addEventListener('submit',function(event){event.preventDefault();sendChat($('chatInput').value).catch(function(error){stopThinking();appendMessage('assistant','Something went wrong: '+safeError(error));$('sendBtn').disabled=false;});});
 document.querySelectorAll('[data-prompt]').forEach(function(button){button.addEventListener('click',function(){sendChat(button.dataset.prompt).catch(function(error){stopThinking();appendMessage('assistant','Something went wrong: '+safeError(error));$('sendBtn').disabled=false;});});});
 $('chatInput').addEventListener('keydown',function(event){if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();$('chatForm').requestSubmit();}});
 /* API configuration and health are loaded before the first chat request. */
@@ -320,7 +323,6 @@ webview.addEventListener('did-fail-load',function(event){
 });
 function switchToBrowser(url){activatePanel('browser');if(url)navigateBrowser(url);}
 showBrowserHome();
-})();showBrowserHome();
 })();
 </script>
 </body></html>
