@@ -56,12 +56,14 @@ nav{padding:8px 16px;gap:7px}nav button{border-radius:999px;padding:9px 16px}.pa
 
 .model-picker{max-width:1040px;margin:0 auto 8px;display:flex;align-items:center;gap:9px;padding:0 4px;color:#9db0c8;font-size:11px}.model-picker label{font-weight:800;letter-spacing:.08em;text-transform:uppercase}.model-picker select{min-width:220px;padding:8px 11px;font-size:12px;border-radius:11px;background:#101b2a;border-color:#40516b}.model-picker span{color:#8295af;font-size:11px}.message.assistant,.message.assistant .answer-text,.message.assistant .markdown-body{background:transparent!important;border:0!important;box-shadow:none!important}.message.assistant{padding:2px 0 14px!important}.message.assistant .answer-text{padding:0!important}.browser-tabs{height:42px;display:flex;align-items:stretch;gap:5px;padding:5px 9px 0;background:#080f1b;border-bottom:1px solid #ffffff15;overflow-x:auto;scrollbar-width:thin}.browser-tab{display:flex;align-items:center;gap:8px;min-width:110px;max-width:220px;padding:7px 10px;border-radius:10px 10px 0 0;background:#101a29;color:#a8b8cd;border:1px solid #ffffff12;border-bottom:0;font-size:11px;white-space:nowrap}.browser-tab.active{background:#15243a;color:#e8f7ff;border-color:#4ccce755}.browser-tab-title{flex:1;overflow:hidden;text-overflow:ellipsis;text-align:left}.browser-tab-close{padding:0 3px;border:0;background:transparent;color:#8799b1;font-size:14px;line-height:1}.new-browser-tab{flex:none;width:30px;height:30px;padding:0;border-radius:9px;background:#ffffff08;color:#c6d9ef;font-size:19px}.browser-views{flex:1;min-width:0;min-height:0;display:flex;background:#fff}.browser-view{flex:1;width:100%;height:100%;border:0;background:#fff}.browser-view[hidden]{display:none!important}.browser-tabs:empty{display:none}
 @media(max-width:800px){.model-picker{flex-wrap:wrap}.model-picker select{min-width:175px;flex:1}.browser-tab{min-width:95px;max-width:160px}}
+
+.unrestricted-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 11px;margin-top:8px;border:1px solid #f0a45a44;border-radius:12px;background:#f0a45a0a;color:#d4dfef;font-size:11px}.unrestricted-row label{display:flex;align-items:center;gap:8px;font-weight:800;color:#f6c58d}.unrestricted-row input{accent-color:#e9a04e;width:15px;height:15px}.unrestricted-row span{color:#9aabc1}
 </style></head><body>
 <header><div class="brand"><img class="brand-icon" src="/assets/isaiahai-icon.svg" alt="IsaiahAI logo"><div>IsaiahAI Agent<small>Desktop intelligence · Windows</small></div></div><div class="header-actions"><button id="agentModeToggle" class="sign-in" type="button" aria-pressed="true">Agent mode on</button><button id="showThinkingToggle" class="sign-in" type="button" aria-pressed="false">Show reasoning summary</button><div class="status"><span class="dot"></span><span id="apiStatus">Checking AI connection…</span></div></div></header>
 <nav><button class="active" data-panel="chat">✦ AI Chat</button><button data-panel="browser">🌐 IsaiahSearch Browser</button></nav>
 <main>
 <section id="panel-chat" class="panel active"><div class="chat">
-<div class="agent-tools"><div class="tool-top"><span class="workspace-indicator" id="workspaceStatus">Preparing your automatic computer workspace…</span></div>
+<div class="agent-tools"><div class="tool-top"><span class="workspace-indicator" id="workspaceStatus">Preparing your automatic computer workspace…</span></div><div class="unrestricted-row"><label><input id="unrestrictedModeToggle" type="checkbox"> Unrestricted system agent · auto-run as Administrator</label><span id="unrestrictedModeStatus">Off · AI command proposals need your review</span></div>
 <details id="agentTools"><summary>Computer tools · project files, PowerShell and Command Prompt</summary><div class="tool-content">
 <input id="fileFilter" placeholder="Filter project files…" aria-label="Filter project files">
 <select id="agentFileSelect" multiple size="4" aria-label="Choose multiple workspace files"><option value="">Choose a supported file…</option></select>
@@ -86,7 +88,7 @@ nav{padding:8px 16px;gap:7px}nav button{border-radius:999px;padding:9px 16px}.pa
 'use strict';
 let API='https://isaiahsearch.netlify.app/api';
 const $=function(id){return document.getElementById(id);};
-let messages=[],lastAssistantContent='',workspacePath='',selectedWorkspaceFile='',pinnedFileContexts=[],workspaceFiles=[],lastCommandOutput='',thinkingTimer=null,showThinking=false,agentMode=true,apiReady=null,apiHealth=null,workspaceReady=Promise.resolve();
+let messages=[],lastAssistantContent='',workspacePath='',selectedWorkspaceFile='',pinnedFileContexts=[],workspaceFiles=[],lastCommandOutput='',thinkingTimer=null,showThinking=false,agentMode=true,unrestrictedAgentMode=false,apiReady=null,apiHealth=null,workspaceReady=Promise.resolve();
 const fence=String.fromCharCode(96).repeat(3);
 function isHttpUrl(value){try{const u=new URL(value);return u.protocol==='http:'||u.protocol==='https:';}catch{return false;}}
 function setToolStatus(message){$('agentToolStatus').textContent=message;}
@@ -150,7 +152,7 @@ function updateModelStatus(){
  setApiStatus(apiHealth?(configured?'Ready · '+name:'Selected model is not configured'):'AI service unavailable',!!apiHealth&&configured);
 }
 $('modelSelect').addEventListener('change',updateModelStatus);
-apiReady=initializeApi();apiReady=initializeApi();
+apiReady=initializeApi();
 function appendMessage(role,content,sources,thinkingSummary,provider,modelName){
   const transcript=$('transcript'),welcome=transcript.querySelector('.welcome');if(welcome)welcome.remove();
   const article=document.createElement('article');article.className='message '+role;
@@ -165,14 +167,26 @@ function appendMessage(role,content,sources,thinkingSummary,provider,modelName){
   if(role==='assistant'){const actions=document.createElement('div');actions.className='message-actions';const copy=document.createElement('button');copy.type='button';copy.textContent='Copy answer';copy.addEventListener('click',function(){navigator.clipboard.writeText(String(content||'')).then(()=>{copy.textContent='Copied';setTimeout(()=>copy.textContent='Copy answer',1200);}).catch(()=>{copy.textContent='Copy unavailable';});});actions.append(copy);
    const proposal=extractCommandProposal(content);
    if(proposal&&workspacePath){
-    const run=document.createElement('button');run.type='button';run.textContent='Review & run command';
-    run.addEventListener('click',async function(){
-     run.disabled=true;run.textContent='Waiting for approval…';
-     try{const result=await window.isaiahDesktop.runShellCommand(proposal);showTerminalResult(result,proposal.shell+' · AI proposal');$('agentTools').open;}
-     catch(error){setToolStatus('Suggested command failed: '+safeError(error));}
-     finally{run.disabled=false;run.textContent='Review & run command';}
-    });
-    actions.append(run);
+    const run=document.createElement('button');run.type='button';run.textContent=unrestrictedAgentMode&&agentMode?'Running automatically as Administrator…':'Review & run command';
+    if(unrestrictedAgentMode&&agentMode){
+     run.disabled=true;actions.append(run);
+     (async function autoRunProposal(){
+      try{
+       $('agentTools').open;setToolStatus('IsaiahAI is automatically running its proposed '+proposal.shell.toUpperCase()+' command as Administrator…');
+       const result=await window.isaiahDesktop.runShellCommand(proposal);
+       showTerminalResult(result,proposal.shell+' · automatic AI execution');
+      }catch(error){setToolStatus('Automatic command failed: '+safeError(error));}
+      finally{run.textContent='Command execution finished';run.disabled=false;}
+     })();
+    }else{
+     run.addEventListener('click',async function(){
+      run.disabled=true;run.textContent='Waiting for approval…';
+      try{const result=await window.isaiahDesktop.runShellCommand(proposal);showTerminalResult(result,proposal.shell+' · AI proposal');$('agentTools').open;}
+      catch(error){setToolStatus('Suggested command failed: '+safeError(error));}
+      finally{run.disabled=false;run.textContent='Review & run command';}
+     });
+     actions.append(run);
+    }
    }
    article.append(actions);}
   transcript.append(article);transcript.scrollTop=transcript.scrollHeight;return article;
@@ -182,6 +196,16 @@ function startThinking(){const stages=['Preparing your request…','Searching th
 function stopThinking(){if(thinkingTimer)clearInterval(thinkingTimer);thinkingTimer=null;$('thinkingBar').hidden=true;}
 $('showThinkingToggle').addEventListener('click',function(){showThinking=!showThinking;$('showThinkingToggle').setAttribute('aria-pressed',String(showThinking));$('showThinkingToggle').textContent=showThinking?'Reasoning summaries on':'Show reasoning summary';});
 $('agentModeToggle').addEventListener('click',function(){agentMode=!agentMode;$('agentModeToggle').setAttribute('aria-pressed',String(agentMode));$('agentModeToggle').textContent=agentMode?'Agent mode on':'Agent mode off';});
+$('unrestrictedModeToggle').addEventListener('change',async function(){
+ const desired=$('unrestrictedModeToggle').checked;$('unrestrictedModeToggle').disabled=true;
+ try{
+  const result=await window.isaiahDesktop.setUnrestrictedMode(desired);
+  unrestrictedAgentMode=!!result.enabled;$('unrestrictedModeToggle').checked=unrestrictedAgentMode;
+  $('unrestrictedModeStatus').textContent=unrestrictedAgentMode?'ON · AI PowerShell/CMD commands execute automatically as Administrator':'Off · AI command proposals need your review';
+  setToolStatus(unrestrictedAgentMode?'Unrestricted system agent enabled. AI command proposals will run automatically with Administrator permissions.':'Unrestricted system agent disabled. AI command proposals require the normal review step.');
+ }catch(error){$('unrestrictedModeToggle').checked=unrestrictedAgentMode;setToolStatus('Could not change unrestricted mode: '+safeError(error));}
+ finally{$('unrestrictedModeToggle').disabled=false;}
+});
 async function fetchIsaiahSearch(query){
  await apiReady;
  const response=await fetch(API+'/quick-search-links',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:query,engine:'isaiah',safeSearch:'Moderate'}),signal:AbortSignal.timeout(18000)});
@@ -211,7 +235,7 @@ async function sendChat(prompt){
     if(lastCommandOutput){
       contextParts.push('Most recent approved terminal result (use it as evidence; do not assume the command succeeded):\\n'+fence+'\\n'+lastCommandOutput.slice(0,14000)+'\\n'+fence);
     }
-    const agentInstructions=agentMode?'Desktop agent mode is enabled. You can use attached project files and the latest approved terminal output. If a task needs PowerShell or Command Prompt, propose one concise command in a fenced code block labelled powershell or cmd, explain what it does, and wait for the user to approve it in the Windows dialog. Never claim a command ran until a later message includes its output. Be especially careful with deletion, registry, security, startup, and system settings; explain risks and ask before proposing them.':'Desktop agent mode is off. Give guidance but do not propose commands for execution.';
+    const agentInstructions=agentMode?(unrestrictedAgentMode?'Unrestricted system agent mode is ON. You have access to elevated Windows PowerShell or Command Prompt through the desktop agent. When a task needs computer actions, provide one concise actionable command in a fenced code block labelled powershell or cmd; the app will execute that command automatically with Administrator permissions and return its output. Do not claim success until the output is returned. Use the computer to complete the requested task rather than only giving manual instructions.':'Desktop agent mode is enabled but unrestricted auto-run is OFF. You may propose a concise Windows PowerShell or Command Prompt command in a fenced code block labelled powershell or cmd; the user must review and run it. Never claim a command has run without output.'):'Desktop agent mode is off. Give guidance but do not propose commands for execution.';
     const contextualPrompt=agentInstructions+'\\n\\n'+(contextParts.length?prompt+'\\n\\n'+contextParts.join('\\n\\n'):prompt);
     const health=await apiReady;
     if(!health||health.ok!==true)throw new Error('The IsaiahAI server is unreachable. Check your internet connection and retry.');
@@ -318,7 +342,11 @@ workspaceReady=(async function restoreWorkspace(){
   workspacePath=await window.isaiahDesktop.getWorkspacePath();
   if(workspacePath){
    await refreshWorkspace();
-   setToolStatus('Computer tools ready. IsaiahAI can inspect files in this automatic workspace. Approved commands can operate elsewhere on your computer; file changes always need your approval.');
+   const mode=await window.isaiahDesktop.getUnrestrictedMode();
+   unrestrictedAgentMode=!!mode?.enabled;
+   $('unrestrictedModeToggle').checked=unrestrictedAgentMode;
+   $('unrestrictedModeStatus').textContent=unrestrictedAgentMode?'ON · AI PowerShell/CMD commands execute automatically as Administrator':'Off · AI command proposals need your review';
+   setToolStatus(unrestrictedAgentMode?'Computer tools ready. Unrestricted system mode is ON; AI shell commands auto-run as Administrator.':'Computer tools ready. Turn on unrestricted system mode to let AI shell commands auto-run as Administrator.');
   }
  }catch(error){
   console.warn('[Workspace] Could not initialize the automatic workspace:',safeError(error));
