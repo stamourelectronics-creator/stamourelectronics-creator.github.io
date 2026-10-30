@@ -8,6 +8,7 @@ let mainWindow;
 let appServer = null;
 let appOrigin = null;
 let workspaceRoot = null;
+let unrestrictedAgentEnabled = false;
 const settingsFile = path.join(app.getPath('userData'), 'agent-settings.json');
 const DEFAULT_API_BASE_URL = 'https://isaiahsearch.netlify.app/api';
 async function loadSavedWorkspace() {
@@ -15,6 +16,7 @@ async function loadSavedWorkspace() {
   try {
     const saved = JSON.parse(await fs.readFile(settingsFile, 'utf8'));
     candidate = typeof saved.workspaceRoot === 'string' ? saved.workspaceRoot : '';
+    unrestrictedAgentEnabled = saved.unrestrictedAgentEnabled === true;
   } catch { /* first launch or reset: use the private default workspace */ }
   if (candidate) {
     try {
@@ -33,7 +35,7 @@ async function loadSavedWorkspace() {
 }
 async function persistWorkspace() {
   await fs.mkdir(path.dirname(settingsFile), { recursive: true });
-  await fs.writeFile(settingsFile, JSON.stringify({ workspaceRoot }, null, 2), { encoding: 'utf8', mode: 0o600 });
+  await fs.writeFile(settingsFile, JSON.stringify({ workspaceRoot, unrestrictedAgentEnabled }, null, 2), { encoding: 'utf8', mode: 0o600 });
 }
 const skippedDirs = new Set(['.git', 'node_modules', 'dist', 'build', 'release', '.next', '.cache', '.idea', '.vscode']);
 const textExtensions = new Set(['.txt', '.md', '.json', '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.css', '.html', '.htm', '.py', '.rs', '.go', '.java', '.cs', '.xml', '.yml', '.yaml', '.toml', '.ini', '.sh', '.bat', '.ps1', '.sql', '.svg', '.env.example']);
@@ -206,6 +208,25 @@ async function confirmAction(title, message, detail, confirmLabel) {
   });
   return result.response === 1;
 }
+ipcMain.handle('agent:unrestricted:get', () => ({
+  enabled: unrestrictedAgentEnabled,
+  administratorRequested: process.platform === 'win32'
+}));
+ipcMain.handle('agent:unrestricted:set', async (_event, enabled) => {
+  const requested = enabled === true;
+  if (requested && !unrestrictedAgentEnabled) {
+    const accepted = await confirmAction(
+      'Enable unrestricted system agent?',
+      'IsaiahAI will automatically run its PowerShell and Command Prompt proposals as Administrator.',
+      'No separate approval dialog will appear for each AI-generated command while this mode is enabled. Commands may read, change, or delete files anywhere on this computer, install or remove software, edit the registry, change services, and alter Windows settings. Web pages and files can contain malicious instructions that try to influence the AI. Only enable this on a computer you control and disable it when finished. Windows UAC elevation is still required when the app starts.',
+      'Enable unrestricted mode'
+    );
+    if (!accepted) return { enabled: false, canceled: true };
+  }
+  unrestrictedAgentEnabled = requested;
+  await persistWorkspace();
+  return { enabled: unrestrictedAgentEnabled, canceled: false };
+});
 ipcMain.handle('external:open', async (_event, rawUrl) => {
   const url = new URL(String(rawUrl || ''));
   if (!['https:', 'http:'].includes(url.protocol)) throw new Error('Only HTTP/HTTPS links can be opened externally.');
@@ -311,7 +332,7 @@ ipcMain.handle('workspace:run-preset', async (_event, presetKey) => {
   const root = requireWorkspace();
   const preset = presets[String(presetKey || '')];
   if (!preset) throw new Error('That command is not in the approved command list.');
-  if (!await confirmAction('Approve command?', 'Run this command in the chosen workspace?', preset.label + '\nWorking directory: ' + root, 'Run command')) {
+  if (!unrestrictedAgentEnabled && !await confirmAction('Approve command?', 'Run this command in the chosen workspace?', preset.label + '\nWorking directory: ' + root, 'Run command')) {
     return { canceled: true, exitCode: null, output: 'Command canceled.' };
   }
   return runProcess(preset.bin, preset.args, root);
@@ -320,12 +341,12 @@ ipcMain.handle('workspace:run-custom-command', async (_event, payload) => {
   const root = requireWorkspace();
   const command = String(payload?.command || '').trim();
   const selectedShell = String(payload?.shell || 'powershell').toLowerCase();
-  if (!command || command.length > 1200) throw new Error('Enter a command up to 1,200 characters so the full command fits in the Windows approval dialog.');
+  if (!command || command.length > 12000) throw new Error('Enter a command up to 12,000 characters.');
   if (!['powershell', 'cmd'].includes(selectedShell)) throw new Error('Choose PowerShell or Command Prompt.');
   const shellLabel = selectedShell === 'powershell' ? 'Windows PowerShell' : 'Command Prompt';
   const detail = command + '\n\nWorking directory: ' + root +
-    '\n\nThis command runs with your Windows user permissions and may access files outside the selected folder. Review it carefully. No command runs until you approve this exact request.';
-  if (!await confirmAction('Approve terminal command?', 'IsaiahAI Agent is requesting permission to run this command in ' + shellLabel + '.', detail, 'Run this command')) {
+    '\n\nThis command runs with the permissions granted to IsaiahAI Agent (the app requests Windows Administrator elevation). It may change the entire computer.';
+  if (!unrestrictedAgentEnabled && !await confirmAction('Approve terminal command?', 'IsaiahAI Agent is requesting permission to run this command in ' + shellLabel + '.', detail + '\n\nNo command runs until you approve this exact request.', 'Run this command')) {
     return { canceled: true, exitCode: null, output: 'Command canceled by user.' };
   }
   if (selectedShell === 'cmd') {
