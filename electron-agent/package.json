@@ -1,8 +1,8 @@
 {
   "name": "isaiahai-agent",
   "productName": "IsaiahAI Agent",
-  "version": "1.0.3",
-  "description": "IsaiahAI desktop agent with Chromium browsing, persistent scoped workspaces, multi-file context and approval-gated terminal tools.",
+  "version": "1.0.4",
+  "description": "IsaiahAI desktop agent with administrator-powered unrestricted command automation, selectable AI models and Chromium tabs.",
   "main": "main.cjs",
   "license": "UNLICENSED",
   "scripts": {
@@ -45,7 +45,8 @@
         }
       ],
       "artifactName": "IsaiahAI-Agent-${version}-${arch}.${ext}",
-      "icon": "build/icon.svg"
+      "icon": "build/icon.svg",
+      "requestedExecutionLevel": "requireAdministrator"
     },
     "nsis": {
       "oneClick": false,
