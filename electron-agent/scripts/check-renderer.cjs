@@ -9,7 +9,7 @@ for (let index = 0; index < scripts.length; index += 1) {
 for (const required of [
   'data-panel="browser"',
   "document.querySelectorAll('nav button[data-panel]')",
-  'runShellCommand({shell,command})',
+  'runShellCommand({shell:proposal.shell,command:proposal.command,executionId:executionId})',
   'showThinkingToggle',
   'isaiahai-icon.svg',
   'value="isaiahai_7_super"',
