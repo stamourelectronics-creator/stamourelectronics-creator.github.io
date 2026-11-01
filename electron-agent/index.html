@@ -906,7 +906,7 @@ if(typeof window.isaiahDesktop.onBrowserEvent==='function'){
    try{tab.title=new URL(tab.url).hostname.replace(/^www\./,'');}catch{}
    if(activeBrowserTabId===tab.id){$('address').value=tab.url;$('browserHome').hidden=true;$('browserCanvas').hidden=false;$('browserNote').hidden=true;}
    addRecentSite(tab.url,tab.title);renderBrowserTabs();updateBookmarkButton();
-  }else if(event.type==='title'{
+  }else if(event.type==='title'){
    if(event.title)tab.title=String(event.title).slice(0,70);renderBrowserTabs();
   }else if(event.type==='loading'){
    tab.loading=!!event.loading;
