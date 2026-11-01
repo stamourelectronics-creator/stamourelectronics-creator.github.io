@@ -282,7 +282,6 @@ function appendMessage(role,content,sources,thinkingSummary,provider,modelName){
  transcript.append(article);transcript.scrollTo({top:transcript.scrollHeight,behavior:'smooth'});return article;
 }
 
-function setThinking(text){
 function setThinking(text){$('thinkingBar').hidden=false;$('thinkingText').textContent=text;}
 function startThinking(){const stages=['Preparing your request…','Searching the web for useful sources…','Comparing evidence and reasoning…','Writing your answer…'];let idx=0;setThinking(stages[0]);if(thinkingTimer)clearInterval(thinkingTimer);thinkingTimer=setInterval(function(){idx=Math.min(idx+1,stages.length-1);setThinking(stages[idx]);},1700);}
 function stopThinking(){if(thinkingTimer)clearInterval(thinkingTimer);thinkingTimer=null;$('thinkingBar').hidden=true;}
@@ -540,7 +539,6 @@ async function sendChat(prompt){
  $('saveAiCode').disabled=!hasCodeBlock(answer)||!selectedWorkspaceFile;$('sendBtn').disabled=false;$('chatInput').focus();
 }
 
-$('chatForm').addEventListener('submit'
 $('chatForm').addEventListener('submit',function(event){event.preventDefault();sendChat($('chatInput').value).catch(function(error){stopThinking();appendMessage('assistant','Something went wrong: '+safeError(error));$('sendBtn').disabled=false;});});
 document.querySelectorAll('[data-prompt]').forEach(function(button){button.addEventListener('click',function(){sendChat(button.dataset.prompt).catch(function(error){stopThinking();appendMessage('assistant','Something went wrong: '+safeError(error));$('sendBtn').disabled=false;});});});
 function resizeChatInput(){const input=$('chatInput');input.style.height='auto';input.style.height=Math.min(input.scrollHeight,180)+'px';}
