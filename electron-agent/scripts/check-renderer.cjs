@@ -15,8 +15,14 @@ for (const required of [
   'value="isaiahai_7_super"',
   'value="breakaway_1_0"',
   'unrestrictedModeToggle',
-  'autoRunProposal',
   'function createBrowserTab',
+  'attachmentInput',
+  'attachmentTray',
+  'prepareAttachment',
+  'requestChatTurn',
+  'maxActions=6',
+  'onAgentCommandOutput',
+  'setAgentProgress',
   'createBrowserView',
   'onBrowserEvent',
   'browserCanvas',
@@ -25,6 +31,12 @@ for (const required of [
   'stamourelectronics-creator.github.io/'
 ]) {
   if (!html.includes(required)) throw new Error('Desktop renderer validation missing: ' + required);
+}
+if (!html.includes("currentPanel='browser'") || !html.includes('<section id="panel-browser" class="panel active">')) {
+  throw new Error('IsaiahAI Agent must launch directly into its browser.');
+}
+if (!html.includes("dataTransfer") || !html.includes("application/pdf")) {
+  throw new Error('Chat attachments and drag/drop support are missing.');
 }
 const mainSource = fs.readFileSync(require('node:path').join(__dirname, '..', 'main.cjs'), 'utf8');
 if (!mainSource.includes('WebContentsView')) {
