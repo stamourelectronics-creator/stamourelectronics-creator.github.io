@@ -205,8 +205,8 @@ export function Sidebar({
         </button>
 
         <a
-          href="https://github.com/stamourelectronics-creator/stamourelectronics-creator.github.io/releases/latest/download/IsaiahAI-Agent-1.0.5-x64.exe"
-          download="IsaiahAI-Agent-1.0.5-x64.exe"
+          href="https://github.com/stamourelectronics-creator/stamourelectronics-creator.github.io/releases/latest/download/IsaiahAI-Agent-1.0.6-x64.exe"
+          download="IsaiahAI-Agent-1.0.6-x64.exe"
           className="w-full h-9 flex items-center gap-2.5 px-3 rounded-xl text-xs font-semibold transition-all text-left cursor-pointer hover:bg-zinc-850 text-zinc-300 hover:text-white"
           title="Download the Windows IsaiahAI Agent installer"
         >
