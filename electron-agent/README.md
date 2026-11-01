@@ -14,9 +14,9 @@ Files are written to the release directory.
 
 ## Browser
 
-- New tabs open `https://stamourelectronics-creator.github.io/`, the IsaiahSearch/IsaiahAI website.
+- The app starts in the browser panel. New tabs open `https://stamourelectronics-creator.github.io/`, the IsaiahSearch/IsaiahAI website.
 - Search queries open the site with its `?q=` parameter.
-- Each tab uses an isolated native Electron `WebContentsView` with its own navigation history, title and close button. The legacy `<webview>` element is no longer used.
+- Each tab uses an isolated native Electron `WebContentsView` with its own navigation history, title and close button. The legacy `<webview>` element is no longer used. The browser surface has a redesigned toolbar, address field, start page and tab strip.
 - Webpage links that request a new tab are opened as new tabs inside IsaiahAI.
 
 ## AI models
@@ -36,6 +36,8 @@ Files are written to the release directory.
 - Windows UAC remains in control: the user must approve the UAC prompt when starting the application. IsaiahAI does not bypass UAC or other Windows security controls.
 - Unrestricted commands can access the entire computer, modify or delete files, install or remove software, change registry values and services, or change system settings. Web content and downloaded files may contain malicious instructions that try to manipulate an AI agent. Enable this mode only on a computer you own and when you understand these risks. Turn it off at any time to restore the per-command review dialog.
 - AI-generated file writes through the file editor still use a native confirmation dialog and create dated backups when replacing a file.
+- The chat composer accepts up to six attachments per message: images (PNG/JPEG/WebP/GIF), PDFs, and text/code files. Images are resized/compressed before upload. Text files are passed as text; PDFs are passed as document input to the selected model.
+- In unrestricted mode, an AI answer can propose one PowerShell/CMD command at a time. The desktop streams stdout/stderr into the chat, checks the real exit code, and gives the result back to the model. The model may report an error, try another command, and verify the task in the same user turn, up to six commands. The runner keeps its 120-second per-command time limit and output cap.
 
 ## AI routing and readiness
 
