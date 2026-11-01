@@ -461,6 +461,15 @@ async function openRouterChat(model: string, messages: any[], timeoutMs = 30000)
   // Accept either spelling used by prior Netlify deployments; the key remains server-side.
   const key = env('OPENROUTER_API_KEY') || env('ISAIAH_OPENROUTER_API_KEY');
   if (!key) throw new Error('OPENROUTER_API_KEY is not configured in Netlify environment variables.');
+  const hasPdfFiles = messages.some((message: any) =>
+    Array.isArray(message?.content) && message.content.some((part: any) => part?.type === 'file')
+  );
+  const requestBody: AnyRecord = {
+    model, messages, reasoning: { effort: 'high', exclude: true }, max_tokens: 8192,
+  };
+  // Keep PDF input on the free text-extraction engine. The default scanned-PDF OCR
+  // engine can incur a separate per-page charge on the user's OpenRouter account.
+  if (hasPdfFiles) requestBody.plugins = [{ id: 'file-parser', pdf: { engine: 'cloudflare-ai' } }];
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -469,7 +478,7 @@ async function openRouterChat(model: string, messages: any[], timeoutMs = 30000)
       'HTTP-Referer': env('APP_URL') || 'https://isaiahai.netlify.app',
       'X-Title': 'IsaiahAI Acceleration',
     },
-    body: JSON.stringify({ model, messages, reasoning: { effort: 'high', exclude: true }, max_tokens: 8192 }),
+    body: JSON.stringify(requestBody),
     signal: AbortSignal.timeout(timeoutMs),
   });
   const data = await response.json().catch(() => ({}));
