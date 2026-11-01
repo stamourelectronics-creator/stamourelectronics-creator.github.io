@@ -307,7 +307,7 @@ async function fetchIsaiahSearch(query){
 function formatSourcesForPrompt(results){return results.map(function(item,i){return (i+1)+'. '+String(item.title||item.siteName||'Web page')+' ('+item.url+')\nSnippet: '+String(item.snippet||'').slice(0,1000);}).join('\n\n');}
 function hasCodeBlock(content){const start=String(content||'').indexOf(fence);return start>=0&&String(content||'').indexOf(fence,start+fence.length)>=0;}
 function extractCommandProposal(content){
- const pattern=new RegExp(fence+'(powershell|ps1|cmd|bat)[ \\t]*\\r?\\n([\\s\\S]*?)'+fence,'i');
+ const pattern=new RegExp(fence+'(powershell|ps1|cmd|bat)[ \\t]*\\r?\n([\\s\\S]*?)'+fence,'i');
  const match=String(content||'').match(pattern);if(!match)return null;
  const command=String(match[2]||'').trim();if(!command||command.length>12000)return null;
  return {shell:/^(cmd|bat)$/i.test(match[1])?'cmd':'powershell',command:command};
@@ -460,8 +460,8 @@ async function sendChat(prompt){
  const attachments=pendingAttachments.slice();pendingAttachments=[];renderAttachmentTray();
  const images=attachments.filter(function(item){return item.kind==='image';}).map(function(item){return {name:item.name,mimeType:item.mimeType,data:item.data};});
  const files=attachments.filter(function(item){return item.kind!=='image';}).map(function(item){return item;});
- const attachmentLabels=attachments.length?'\\\\n\\\\nAttachments: '+attachments.map(function(item){return item.name+' ('+item.kind+')';}).join(', '):'';
- appendMessage('user',prompt+(attachments.length?'\\\\n\\\\n📎 '+attachments.map(function(item){return item.name;}).join(', '):''));
+ const attachmentLabels=attachments.length?'\\\n\\\nAttachments: '+attachments.map(function(item){return item.name+' ('+item.kind+')';}).join(', '):'';
+ appendMessage('user',prompt+(attachments.length?'\\\n\\\n📎 '+attachments.map(function(item){return item.name;}).join(', '):''));
  $('chatInput').value='';$('chatInput').style.height='auto';$('sendBtn').disabled=true;
  messages.push({role:'user',content:prompt+attachmentLabels});
  startThinking();
@@ -469,14 +469,14 @@ async function sendChat(prompt){
  try{
   await workspaceReady;
   const contextParts=[];
-  if(pinnedFileContexts.length)contextParts.push('Files attached from the automatic computer workspace (read-only context):\\\\n'+pinnedFileContexts.map(function(file,index){return 'FILE '+(index+1)+': '+file.path+'\\\\n'+fence+'\\\\n'+file.content+'\\\\n'+fence;}).join('\\\\n\\\\n'));
-  if(lastCommandOutput)contextParts.push('Most recent terminal result from an earlier task (use it as evidence; do not assume it succeeded):\\\\n'+fence+'\\\\n'+lastCommandOutput.slice(0,14000)+'\\\\n'+fence);
+  if(pinnedFileContexts.length)contextParts.push('Files attached from the automatic computer workspace (read-only context):\\\n'+pinnedFileContexts.map(function(file,index){return 'FILE '+(index+1)+': '+file.path+'\\\n'+fence+'\\\n'+file.content+'\\\n'+fence;}).join('\\\n\\\n'));
+  if(lastCommandOutput)contextParts.push('Most recent terminal result from an earlier task (use it as evidence; do not assume it succeeded):\\\n'+fence+'\\\n'+lastCommandOutput.slice(0,14000)+'\\\n'+fence);
   const autoRun=agentMode&&unrestrictedAgentMode;
   const agentInstructions=agentMode?(autoRun?
    'You are operating the IsaiahAI Windows desktop agent. You may use the user-approved unrestricted PowerShell/CMD runner. For each action, return exactly ONE concise Windows command in a fenced code block labelled powershell or cmd. The app will execute it and send you the real exit code and output. Do not claim success before seeing output. When a command fails, tell the user briefly what failed and return a corrective command; keep diagnosing and trying alternatives rather than stopping after the first error. Verify changes with appropriate commands or tests. Continue until the task is complete, or clearly explain what is blocked. Do not use destructive commands unless they are necessary for the explicit task. Do not ask the user to repeat the original task. After the task is verified, give a normal final answer with no command block.':
    'Desktop agent mode is enabled, but unrestricted automatic execution is OFF. You may provide one concise Windows PowerShell or Command Prompt command in a fenced code block labelled powershell or cmd; the user must review and run it. Never claim it has run without terminal output.') :
    'Desktop agent mode is off. Give guidance but do not propose commands for execution.';
-  requestMessage=agentInstructions+'\\\\n\\\\n'+(contextParts.length?prompt+'\\\\n\\\\n'+contextParts.join('\\\\n\\\\n'):prompt);
+  requestMessage=agentInstructions+'\\\n\\\n'+(contextParts.length?prompt+'\\\n\\\n'+contextParts.join('\\\n\\\n'):prompt);
   let historyForRequest=messages.slice(0,-1).slice(-18);
   const maxActions=6;
   while(true){
@@ -496,13 +496,13 @@ async function sendChat(prompt){
     const finalData=await requestChatTurn(requestMessage,historyForRequest,selectedModel,[],[],false,false);
     answer=String(finalData.content||'').trim();provider=finalData.selectedProvider||selectedLabel;thinkingSummary=String(finalData.thinkingSummary||'');
     const finalProposal=extractCommandProposal(answer);
-    if(finalProposal)answer=answer.replace(new RegExp(fence+'(powershell|ps1|cmd|bat)[ \\\\t]*\\\\r?\\\\n[\\\\s\\\\S]*?'+fence,'i'),'[An additional command was not run because the six-step limit was reached.]');
+    if(finalProposal)answer=answer.replace(new RegExp(fence+'(powershell|ps1|cmd|bat)[ \\\\t]*\\\\r?\\\n[\\\\s\\\\S]*?'+fence,'i'),'[An additional command was not run because the six-step limit was reached.]');
     setAgentProgress(limitProgress,'Final summary received. No more commands will run in this turn.','done');
     break;
    }
    actionCount++;
    const executionId='agent-'+Date.now()+'-'+(++agentRunSequence);
-   const cleanExplanation=answer.replace(new RegExp(fence+'(powershell|ps1|cmd|bat)[ \\\\t]*\\\\r?\\\\n[\\\\s\\\\S]*?'+fence,'i'),'').trim();
+   const cleanExplanation=answer.replace(new RegExp(fence+'(powershell|ps1|cmd|bat)[ \\\\t]*\\\\r?\\\n[\\\\s\\\\S]*?'+fence,'i'),'').trim();
    const progress=appendAgentProgress('Step '+actionCount+' · selected action',cleanExplanation||'IsaiahAI selected a computer action.',executionId);
    setAgentProgress(progress,'Running '+proposal.shell.toUpperCase()+' and streaming terminal output…');
    setThinking('Step '+actionCount+': running a computer action…');
@@ -511,7 +511,7 @@ async function sendChat(prompt){
    try{
     result=await window.isaiahDesktop.runShellCommand({shell:proposal.shell,command:proposal.command,executionId:executionId});
    }catch(error){result={exitCode:-1,output:safeError(error),canceled:false,timedOut:false};}
-   const terminal='Shell: '+proposal.shell.toUpperCase()+'\\\\nExit code: '+result.exitCode+(result.timedOut?' · timed out':'')+'\\\\n'+String(result.output||'(No output)');
+   const terminal='Shell: '+proposal.shell.toUpperCase()+'\\\nExit code: '+result.exitCode+(result.timedOut?' · timed out':'')+'\\\n'+String(result.output||'(No output)');
    lastCommandOutput=terminal;
    $('terminalOutput').textContent=terminal;$('terminalOutput').hidden=false;
    if(result.canceled){
@@ -525,12 +525,12 @@ async function sendChat(prompt){
     setAgentProgress(progress,'The command reported an error (exit code '+result.exitCode+(result.timedOut?', time limit reached':'')+'). IsaiahAI is reviewing the output and preparing a corrective step.','failed');
    }
    messages.push({role:'assistant',content:answer});
-   messages.push({role:'user',content:'[Desktop agent command result]\\\\n'+terminal+'\\\\n\\\\nContinue the original request. Diagnose errors, try a different fix if needed, and verify the outcome before giving the final answer.'});
+   messages.push({role:'user',content:'[Desktop agent command result]\\\n'+terminal+'\\\n\\\nContinue the original request. Diagnose errors, try a different fix if needed, and verify the outcome before giving the final answer.'});
    historyForRequest=messages.slice(-18);
    requestMessage='Continue the original user task. The latest Windows command has finished; its real exit code and output are in the conversation. Diagnose the result, explain any error briefly, and when needed return exactly one next PowerShell or CMD command in a fenced code block. Keep going until verified complete. Do not repeat an already-failed command unchanged.';
   }
  }catch(cloudError){
-  answer=selectedLabel+' could not complete this request.\\\\n\\\\n'+safeError(cloudError);
+  answer=selectedLabel+' could not complete this request.\\\n\\\n'+safeError(cloudError);
   provider='Unavailable';updateModelStatus();
  }finally{stopThinking();}
  setToolStatus(provider==='Unavailable'?'Request failed for '+selectedLabel+'.':('Response generated with '+selectedLabel+'.'+(actionCount?' Completed '+actionCount+' automatic command step(s).':'')));
