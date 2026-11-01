@@ -160,7 +160,7 @@ nav{padding:8px 16px;gap:7px}nav button{border-radius:999px;padding:9px 16px}.pa
 'use strict';
 let API='https://isaiahsearch.netlify.app/api';
 const $=function(id){return document.getElementById(id);};
-let messages=[],lastAssistantContent='',workspacePath='',selectedWorkspaceFile='',pinnedFileContexts=[],workspaceFiles=[],lastCommandOutput='',thinkingTimer=null,showThinking=false,agentMode=true,unrestrictedAgentMode=false,apiReady=null,apiHealth=null,workspaceReady=Promise.resolve(),currentPanel='browser';
+let messages=[],lastAssistantContent='',workspacePath='',selectedWorkspaceFile='',pinnedFileContexts=[],workspaceFiles=[],lastCommandOutput='',thinkingTimer=null,showThinking=false,agentMode=true,unrestrictedAgentMode=false,apiReady=null,apiHealth=null,workspaceReady=Promise.resolve(),currentPanel='browser',pendingAttachments=[],progressNodes=new Map(),agentRunSequence=0;
 const fence=String.fromCharCode(96).repeat(3);
 function isHttpUrl(value){try{const u=new URL(value);return u.protocol==='http:'||u.protocol==='https:';}catch{return false;}}
 function setToolStatus(message){$('agentToolStatus').textContent=message;}
@@ -226,43 +226,63 @@ function updateModelStatus(){
 $('modelSelect').addEventListener('change',updateModelStatus);
 apiReady=initializeApi();
 function appendMessage(role,content,sources,thinkingSummary,provider,modelName){
-  const transcript=$('transcript'),welcome=transcript.querySelector('.welcome');if(welcome)welcome.remove();
-  const article=document.createElement('article');article.className='message '+role;
-  const label=document.createElement('div');label.className='label';label.textContent=role==='assistant'?(modelName||modelLabel($('modelSelect').value)):'You';
-  article.append(label);
-  const body=document.createElement('div');body.className='answer-text'+(role==='assistant'?' markdown-body':'');
-  if(role==='assistant')body.innerHTML=renderMarkdown(content);else body.textContent=content;
-  article.append(body);
-  if(role==='assistant'&&thinkingSummary){const details=document.createElement('details');details.className='reasoning-summary';const summary=document.createElement('summary');summary.textContent='Reasoning summary';const p=document.createElement('p');p.textContent=thinkingSummary;const note=document.createElement('small');note.textContent='A concise explanation of the approach — not private internal reasoning.';details.append(summary,p,note);article.append(details);}
-  if(role==='assistant'&&Array.isArray(sources)&&sources.length){const area=document.createElement('div');area.className='source-area';const title=document.createElement('div');title.className='source-label';title.textContent='Sources';area.append(title);const row=document.createElement('div');row.className='sources';
-  sources.slice(0,10).forEach(function(source){const uri=String(source.uri||source.url||'');if(!isHttpUrl(uri))return;const chip=document.createElement('button');chip.className='source-chip';chip.textContent=String(source.title||source.siteName||new URL(uri).hostname).slice(0,90)+' ↗';chip.title=uri;chip.addEventListener('click',function(){switchToBrowser(uri);});row.append(chip);});area.append(row);article.append(area);}
-  if(role==='assistant'){const actions=document.createElement('div');actions.className='message-actions';const copy=document.createElement('button');copy.type='button';copy.textContent='Copy answer';copy.addEventListener('click',function(){navigator.clipboard.writeText(String(content||'')).then(()=>{copy.textContent='Copied';setTimeout(()=>copy.textContent='Copy answer',1200);}).catch(()=>{copy.textContent='Copy unavailable';});});actions.append(copy);
-   const proposal=extractCommandProposal(content);
-   if(proposal&&workspacePath){
-    const run=document.createElement('button');run.type='button';run.textContent=unrestrictedAgentMode&&agentMode?'Running automatically as Administrator…':'Review & run command';
-    if(unrestrictedAgentMode&&agentMode){
-     run.disabled=true;actions.append(run);
-     (async function autoRunProposal(){
-      try{
-       $('agentTools').open=true;setToolStatus('IsaiahAI is automatically running its proposed '+proposal.shell.toUpperCase()+' command as Administrator…');
-       const result=await window.isaiahDesktop.runShellCommand(proposal);
-       showTerminalResult(result,proposal.shell+' · automatic AI execution');
-      }catch(error){setToolStatus('Automatic command failed: '+safeError(error));}
-      finally{run.textContent='Command execution finished';run.disabled=false;}
-     })();
-    }else{
-     run.addEventListener('click',async function(){
-      run.disabled=true;run.textContent='Waiting for approval…';
-      try{const result=await window.isaiahDesktop.runShellCommand(proposal);showTerminalResult(result,proposal.shell+' · AI proposal');$('agentTools').open=true;}
-      catch(error){setToolStatus('Suggested command failed: '+safeError(error));}
-      finally{run.disabled=false;run.textContent='Review & run command';}
-     });
-     actions.append(run);
-    }
-   }
-   article.append(actions);}
-  transcript.append(article);transcript.scrollTo({top:transcript.scrollHeight,behavior:'smooth'});return article;
+ const transcript=$('transcript'),welcome=transcript.querySelector('.welcome');if(welcome)welcome.remove();
+ const article=document.createElement('article');article.className='message '+role;
+ const label=document.createElement('div');label.className='label';label.textContent=role==='assistant'?(modelName||modelLabel($('modelSelect').value)):'You';
+ article.append(label);
+ const body=document.createElement('div');body.className='answer-text'+(role==='assistant'?' markdown-body':'');
+ if(role==='assistant')body.innerHTML=renderMarkdown(content);else body.textContent=content;
+ article.append(body);
+ if(role==='assistant'&&thinkingSummary){
+  const details=document.createElement('details');details.className='reasoning-summary';
+  const summary=document.createElement('summary');summary.textContent='Reasoning summary';
+  const p=document.createElement('p');p.textContent=thinkingSummary;
+  const note=document.createElement('small');note.textContent='A concise explanation of the approach — not private internal reasoning.';
+  details.append(summary,p,note);article.append(details);
+ }
+ if(role==='assistant'&&Array.isArray(sources)&&sources.length){
+  const area=document.createElement('div');area.className='source-area';
+  const title=document.createElement('div');title.className='source-label';title.textContent='Sources';area.append(title);
+  const row=document.createElement('div');row.className='sources';
+  sources.slice(0,10).forEach(function(source){
+   const uri=String(source.uri||source.url||'');if(!isHttpUrl(uri))return;
+   const chip=document.createElement('button');chip.className='source-chip';
+   chip.textContent=String(source.title||source.siteName||new URL(uri).hostname).slice(0,90)+' ↗';chip.title=uri;
+   chip.addEventListener('click',function(){switchToBrowser(uri);});row.append(chip);
+  });
+  area.append(row);article.append(area);
+ }
+ if(role==='assistant'){
+  const actions=document.createElement('div');actions.className='message-actions';
+  const copy=document.createElement('button');copy.type='button';copy.textContent='Copy answer';
+  copy.addEventListener('click',function(){
+   navigator.clipboard.writeText(String(content||'')).then(function(){copy.textContent='Copied';setTimeout(function(){copy.textContent='Copy answer';},1200);})
+    .catch(function(){copy.textContent='Copy unavailable';});
+  });
+  actions.append(copy);
+  const proposal=extractCommandProposal(content);
+  if(proposal&&workspacePath){
+   const run=document.createElement('button');run.type='button';
+   run.textContent=unrestrictedAgentMode&&agentMode?'Run another command':'Review & run command';
+   run.addEventListener('click',async function(){
+    run.disabled=true;run.textContent='Running…';
+    const executionId='manual-'+Date.now()+'-'+(++agentRunSequence);
+    const progress=appendAgentProgress('Manual command',proposal.command,executionId);
+    try{
+     const result=await window.isaiahDesktop.runShellCommand({shell:proposal.shell,command:proposal.command,executionId:executionId});
+     showTerminalResult(result,proposal.shell+' · AI proposal');
+     setAgentProgress(progress,result.exitCode===0?'Command completed.':('Command ended with exit code '+result.exitCode+'.'),result.exitCode===0?'done':'failed');
+    }catch(error){setAgentProgress(progress,'Command failed: '+safeError(error),'failed');}
+    finally{run.disabled=false;run.textContent=unrestrictedAgentMode&&agentMode?'Run another command':'Review & run command';}
+   });
+   actions.append(run);
+  }
+  article.append(actions);
+ }
+ transcript.append(article);transcript.scrollTo({top:transcript.scrollHeight,behavior:'smooth'});return article;
 }
+
+function setThinking(text){
 function setThinking(text){$('thinkingBar').hidden=false;$('thinkingText').textContent=text;}
 function startThinking(){const stages=['Preparing your request…','Searching the web for useful sources…','Comparing evidence and reasoning…','Writing your answer…'];let idx=0;setThinking(stages[0]);if(thinkingTimer)clearInterval(thinkingTimer);thinkingTimer=setInterval(function(){idx=Math.min(idx+1,stages.length-1);setThinking(stages[idx]);},1700);}
 function stopThinking(){if(thinkingTimer)clearInterval(thinkingTimer);thinkingTimer=null;$('thinkingBar').hidden=true;}
@@ -290,46 +310,237 @@ function hasCodeBlock(content){const start=String(content||'').indexOf(fence);re
 function extractCommandProposal(content){
  const pattern=new RegExp(fence+'(powershell|ps1|cmd|bat)[ \\t]*\\r?\\n([\\s\\S]*?)'+fence,'i');
  const match=String(content||'').match(pattern);if(!match)return null;
- const command=String(match[2]||'').trim();if(!command||command.length>1200)return null;
+ const command=String(match[2]||'').trim();if(!command||command.length>12000)return null;
  return {shell:/^(cmd|bat)$/i.test(match[1])?'cmd':'powershell',command:command};
 }
-async function sendChat(prompt){
-  prompt=String(prompt||'').trim();if(!prompt)return;
-  const selectedModel=$('modelSelect').value,selectedLabel=modelLabel(selectedModel);
-  appendMessage('user',prompt);$('chatInput').value='';$('chatInput').style.height='auto';$('sendBtn').disabled=true;messages.push({role:'user',content:prompt});
-  startThinking();let answer='',sources=[],provider='Unavailable',thinkingSummary='';
-  try{
-    await workspaceReady;
-    const contextParts=[];
-    if(pinnedFileContexts.length){
-      contextParts.push('Files attached from the automatic computer workspace (read-only context):\\n'+pinnedFileContexts.map(function(file,index){return 'FILE '+(index+1)+': '+file.path+'\\n'+fence+'\\n'+file.content+'\\n'+fence;}).join('\\n\\n'));
-    }
-    if(lastCommandOutput){
-      contextParts.push('Most recent approved terminal result (use it as evidence; do not assume the command succeeded):\\n'+fence+'\\n'+lastCommandOutput.slice(0,14000)+'\\n'+fence);
-    }
-    const agentInstructions=agentMode?(unrestrictedAgentMode?'Unrestricted system agent mode is ON. You have access to elevated Windows PowerShell or Command Prompt through the desktop agent. When a task needs computer actions, provide one concise actionable command in a fenced code block labelled powershell or cmd; the app will execute that command automatically with Administrator permissions and return its output. Do not claim success until the output is returned. Use the computer to complete the requested task rather than only giving manual instructions.':'Desktop agent mode is enabled but unrestricted auto-run is OFF. You may propose a concise Windows PowerShell or Command Prompt command in a fenced code block labelled powershell or cmd; the user must review and run it. Never claim a command has run without output.'):'Desktop agent mode is off. Give guidance but do not propose commands for execution.';
-    const contextualPrompt=agentInstructions+'\\n\\n'+(contextParts.length?prompt+'\\n\\n'+contextParts.join('\\n\\n'):prompt);
-    let health=await apiReady;
-     if(!health){apiReady=initializeApi();health=await apiReady;}
-    if(!health||health.ok!==true)throw new Error('The IsaiahAI server is unreachable. Check your internet connection and retry.');
-    if(!modelConfigured(selectedModel,health))throw new Error(selectedModel==='breakaway_1_0'?'Breakaway 1.0 needs the Gemini API key configured on the server.':'IsaiahAI 7.0 SUPER needs the OpenRouter API key configured on the server.');
-    const response=await fetch(API+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:contextualPrompt,history:messages.slice(0,-1).slice(-18),model:selectedModel,selectedModel:selectedModel,chatMode:'general',searchWebEnabled:true,showThinking:showThinking}),signal:AbortSignal.timeout(55000)});
-    const data=await response.json().catch(function(){return {};});
-    if(!response.ok)throw new Error((data.error||selectedLabel+' is temporarily unavailable.')+' (HTTP '+response.status+')');
-    answer=String(data.content||'').trim();if(!answer)throw new Error('The selected model returned an empty answer.');
-    sources=Array.isArray(data.sources)?data.sources:[];provider=data.selectedProvider||selectedLabel;thinkingSummary=String(data.thinkingSummary||data.thinking||'');
-    setApiStatus('Online',true);
-  }catch(cloudError){
-    answer=selectedLabel+' could not complete this request.\\n\\n'+safeError(cloudError);
-    provider='Unavailable';updateModelStatus();
-  }finally{
-    stopThinking();
-  }
-  setToolStatus(provider==='Unavailable'?'Request failed for '+selectedLabel+'.':('Response generated with '+selectedLabel+'.'));
-  lastAssistantContent=answer;messages.push({role:'assistant',content:answer});
-  appendMessage('assistant',answer,sources,thinkingSummary,provider,selectedLabel);
-  $('saveAiCode').disabled=!hasCodeBlock(answer)||!selectedWorkspaceFile;$('sendBtn').disabled=false;$('chatInput').focus();
+function formatBytes(bytes){
+ if(bytes<1024)return bytes+' B';
+ if(bytes<1024*1024)return (bytes/1024).toFixed(0)+' KB';
+ return (bytes/1024/1024).toFixed(1)+' MB';
 }
+function readFileDataUrl(file){
+ return new Promise(function(resolve,reject){
+  const reader=new FileReader();
+  reader.onload=function(){resolve(String(reader.result||''));};
+  reader.onerror=function(){reject(new Error('Could not read '+file.name+'.'));};
+  reader.readAsDataURL(file);
+ });
+}
+async function compressImageAttachment(file){
+ let source=file;
+ try{
+  const bitmap=await createImageBitmap(file);
+  const maxSide=1800,scale=Math.min(1,maxSide/Math.max(bitmap.width,bitmap.height));
+  const canvas=document.createElement('canvas');
+  canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+  const context=canvas.getContext('2d');if(!context)throw new Error('Image processing is unavailable.');
+  context.drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close();
+  const blob=await new Promise(function(resolve,reject){
+   canvas.toBlob(function(result){if(result)resolve(result);else reject(new Error('Could not optimize '+file.name+'.'));},'image/jpeg',.84);
+  });
+  source=new File([blob],file.name.replace(/\.[^.]+$/,'')+'.jpg',{type:'image/jpeg'});
+ }catch(error){
+  if(file.size>1800000)throw new Error(file.name+' could not be compressed. Use a PNG, JPG, or WebP image under 1.8 MB.');
+ }
+ return {name:file.name,mimeType:source.type||'image/jpeg',kind:'image',data:await readFileDataUrl(source),size:source.size};
+}
+const readableExtensions=new Set(['.txt','.md','.markdown','.csv','.tsv','.json','.jsonl','.html','.htm','.xml','.css','.js','.jsx','.ts','.tsx','.py','.ps1','.bat','.cmd','.sh','.yml','.yaml','.toml','.ini','.log','.sql','.rs','.go','.java','.c','.cpp','.h','.cs']);
+async function prepareAttachment(file){
+ const name=String(file.name||'attachment').slice(0,180),ext=(name.match(/\.[^.]+$/)||[''])[0].toLowerCase(),type=String(file.type||'').toLowerCase();
+ if(type.startsWith('image/')){
+  if(!['image/png','image/jpeg','image/webp','image/gif'].includes(type))throw new Error(name+': supported image formats are PNG, JPG, WebP, and GIF.');
+  return await compressImageAttachment(file);
+ }
+ if(type==='application/pdf'||ext==='.pdf'){
+  if(file.size>2200000)throw new Error(name+' is over the 2.2 MB PDF limit.');
+  return {name:name,mimeType:'application/pdf',kind:'pdf',data:await readFileDataUrl(file),size:file.size};
+ }
+ if(type.startsWith('text/')||['application/json','application/xml','application/javascript'].includes(type)||readableExtensions.has(ext)){
+  if(file.size>220000)throw new Error(name+' is over the 220 KB text-file limit.');
+  return {name:name,mimeType:type||'text/plain',kind:'text',text:(await file.text()).slice(0,220000),size:file.size};
+ }
+ throw new Error(name+': use an image, PDF, or readable text/code file.');
+}
+function renderAttachmentTray(){
+ const tray=$('attachmentTray');tray.replaceChildren();
+ pendingAttachments.forEach(function(item,index){
+  const chip=document.createElement('div');chip.className='attachment-chip';
+  if(item.kind==='image'){
+   const image=document.createElement('img');image.src=item.data;image.alt=item.name;chip.append(image);
+  }else{
+   const icon=document.createElement('span');icon.textContent=item.kind==='pdf'?'PDF':'FILE';
+   icon.style.cssText='font-size:10px;font-weight:900;color:#7fe4f5;border:1px solid #4cbfd544;border-radius:8px;padding:8px 5px';chip.append(icon);
+  }
+  const meta=document.createElement('div');meta.className='attachment-meta';
+  const title=document.createElement('span');title.className='attachment-name';title.textContent=item.name;title.title=item.name;
+  const size=document.createElement('span');size.className='attachment-size';size.textContent=(item.kind==='image'?'Image':item.kind==='pdf'?'PDF':'Text file')+' · '+formatBytes(item.size);
+  meta.append(title,size);
+  const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.title='Remove attachment';remove.setAttribute('aria-label','Remove '+item.name);
+  remove.addEventListener('click',function(){pendingAttachments.splice(index,1);renderAttachmentTray();});
+  chip.append(meta,remove);tray.append(chip);
+ });
+ tray.hidden=pendingAttachments.length===0;
+}
+async function addAttachments(fileList){
+ const incoming=Array.from(fileList||[]);if(!incoming.length)return;
+ for(const file of incoming){
+  if(pendingAttachments.length>=6){setToolStatus('You can attach up to 6 files per message.');break;}
+  try{
+   const prepared=await prepareAttachment(file);
+   const total=pendingAttachments.reduce(function(sum,item){return sum+(item.data?item.data.length*.75:(item.text||'').length);},0)+(prepared.data?prepared.data.length*.75:(prepared.text||'').length);
+   if(total>3900000){setToolStatus('Attachments exceed the 3.9 MB combined upload limit. Remove a file or attach smaller files.');break;}
+   pendingAttachments.push(prepared);
+  }catch(error){setToolStatus(safeError(error));}
+ }
+ renderAttachmentTray();
+}
+$('attachButton').addEventListener('click',function(){$('attachmentInput').click();});
+$('attachmentInput').addEventListener('change',function(){
+ const files=$('attachmentInput').files;addAttachments(files).catch(function(error){setToolStatus(safeError(error));});
+ $('attachmentInput').value='';
+});
+$('panel-chat').addEventListener('dragover',function(event){
+ if(Array.from(event.dataTransfer?.types||[]).includes('Files')){event.preventDefault();$('panel-chat').classList.add('file-drop-active');}
+});
+$('panel-chat').addEventListener('dragleave',function(event){
+ if(!event.relatedTarget||!$('panel-chat').contains(event.relatedTarget))$('panel-chat').classList.remove('file-drop-active');
+});
+$('panel-chat').addEventListener('drop',function(event){
+ $('panel-chat').classList.remove('file-drop-active');
+ if(event.dataTransfer?.files?.length){event.preventDefault();addAttachments(event.dataTransfer.files).catch(function(error){setToolStatus(safeError(error));});}
+});
+$('chatInput').addEventListener('paste',function(event){
+ const files=Array.from(event.clipboardData?.items||[]).filter(function(item){return item.kind==='file';}).map(function(item){return item.getAsFile();}).filter(Boolean);
+ if(files.length){event.preventDefault();addAttachments(files).catch(function(error){setToolStatus(safeError(error));});}
+});
+function appendAgentProgress(title,detail,executionId){
+ const transcript=$('transcript'),welcome=transcript.querySelector('.welcome');if(welcome)welcome.remove();
+ const article=document.createElement('article');article.className='agent-progress';article.dataset.executionId=executionId;
+ const head=document.createElement('div');head.className='agent-progress-head';
+ const dot=document.createElement('span');dot.className='agent-progress-dot';
+ const label=document.createElement('span');label.textContent=title;head.append(dot,label);
+ const body=document.createElement('div');body.className='agent-progress-detail';body.textContent=detail||'';
+ const output=document.createElement('pre');output.className='agent-progress-output';
+ article.append(head,body,output);transcript.append(article);progressNodes.set(executionId,{article,label,body,output});
+ transcript.scrollTo({top:transcript.scrollHeight,behavior:'smooth'});return article;
+}
+function setAgentProgress(article,detail,state){
+ const item=progressNodes.get(article.dataset.executionId);if(!item)return;
+ item.body.textContent=detail||'';
+ item.article.classList.toggle('done',state==='done');item.article.classList.toggle('failed',state==='failed');
+ const dot=item.article.querySelector('.agent-progress-dot');if(dot)dot.style.animation=state?'none':'';
+ $('transcript').scrollTop=$('transcript').scrollHeight;
+}
+if(typeof window.isaiahDesktop.onAgentCommandOutput==='function'){
+ window.isaiahDesktop.onAgentCommandOutput(function(event){
+  const item=progressNodes.get(event.executionId);if(!item)return;
+  item.output.textContent=(item.output.textContent+String(event.chunk||'')).slice(-16000);
+  const transcript=$('transcript');transcript.scrollTop=transcript.scrollHeight;
+ });
+}
+async function requestChatTurn(message,history,selectedModel,images,files,showSummary,allowSearch){
+ let health=await apiReady;
+ if(!health){apiReady=initializeApi();health=await apiReady;}
+ if(!health||health.ok!==true)throw new Error('The IsaiahAI server is unreachable. Check your internet connection and retry.');
+ if(!modelConfigured(selectedModel,health))throw new Error(selectedModel==='breakaway_1_0'?'Breakaway 1.0 needs the Gemini API key configured on the server.':'IsaiahAI 7.0 SUPER needs the OpenRouter API key configured on the server.');
+ const response=await fetch(API+'/chat',{
+  method:'POST',headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({message:message,history:history,model:selectedModel,selectedModel:selectedModel,chatMode:'general',searchWebEnabled:allowSearch,showThinking:showSummary,images:images,files:files}),
+  signal:AbortSignal.timeout(65000)
+ });
+ const data=await response.json().catch(function(){return {};});
+ if(!response.ok)throw new Error((data.error||modelLabel(selectedModel)+' is temporarily unavailable.')+' (HTTP '+response.status+')');
+ const answer=String(data.content||'').trim();if(!answer)throw new Error('The selected model returned an empty answer.');
+ return data;
+}
+async function sendChat(prompt){
+ prompt=String(prompt||'').trim();
+ if(!prompt&&!pendingAttachments.length)return;
+ if(!prompt&&pendingAttachments.length)prompt='Please inspect the attached files and explain what they contain. For code or projects, identify issues and useful next steps.';
+ const selectedModel=$('modelSelect').value,selectedLabel=modelLabel(selectedModel);
+ const attachments=pendingAttachments.slice();pendingAttachments=[];renderAttachmentTray();
+ const images=attachments.filter(function(item){return item.kind==='image';}).map(function(item){return {name:item.name,mimeType:item.mimeType,data:item.data};});
+ const files=attachments.filter(function(item){return item.kind!=='image';}).map(function(item){return item;});
+ const attachmentLabels=attachments.length?'\\\\n\\\\nAttachments: '+attachments.map(function(item){return item.name+' ('+item.kind+')';}).join(', '):'';
+ appendMessage('user',prompt+(attachments.length?'\\\\n\\\\n📎 '+attachments.map(function(item){return item.name;}).join(', '):''));
+ $('chatInput').value='';$('chatInput').style.height='auto';$('sendBtn').disabled=true;
+ messages.push({role:'user',content:prompt+attachmentLabels});
+ startThinking();
+ let answer='',sources=[],provider='Unavailable',thinkingSummary='',actionCount=0,requestMessage='';
+ try{
+  await workspaceReady;
+  const contextParts=[];
+  if(pinnedFileContexts.length)contextParts.push('Files attached from the automatic computer workspace (read-only context):\\\\n'+pinnedFileContexts.map(function(file,index){return 'FILE '+(index+1)+': '+file.path+'\\\\n'+fence+'\\\\n'+file.content+'\\\\n'+fence;}).join('\\\\n\\\\n'));
+  if(lastCommandOutput)contextParts.push('Most recent terminal result from an earlier task (use it as evidence; do not assume it succeeded):\\\\n'+fence+'\\\\n'+lastCommandOutput.slice(0,14000)+'\\\\n'+fence);
+  const autoRun=agentMode&&unrestrictedAgentMode;
+  const agentInstructions=agentMode?(autoRun?
+   'You are operating the IsaiahAI Windows desktop agent. You may use the user-approved unrestricted PowerShell/CMD runner. For each action, return exactly ONE concise Windows command in a fenced code block labelled powershell or cmd. The app will execute it and send you the real exit code and output. Do not claim success before seeing output. When a command fails, tell the user briefly what failed and return a corrective command; keep diagnosing and trying alternatives rather than stopping after the first error. Verify changes with appropriate commands or tests. Continue until the task is complete, or clearly explain what is blocked. Do not use destructive commands unless they are necessary for the explicit task. Do not ask the user to repeat the original task. After the task is verified, give a normal final answer with no command block.':
+   'Desktop agent mode is enabled, but unrestricted automatic execution is OFF. You may provide one concise Windows PowerShell or Command Prompt command in a fenced code block labelled powershell or cmd; the user must review and run it. Never claim it has run without terminal output.') :
+   'Desktop agent mode is off. Give guidance but do not propose commands for execution.';
+  requestMessage=agentInstructions+'\\\\n\\\\n'+(contextParts.length?prompt+'\\\\n\\\\n'+contextParts.join('\\\\n\\\\n'):prompt);
+  let historyForRequest=messages.slice(0,-1).slice(-18);
+  const maxActions=6;
+  while(true){
+   setThinking(actionCount?('Reviewing step '+actionCount+' and deciding the next action…'):'Connecting to '+selectedLabel+'…');
+   const data=await requestChatTurn(requestMessage,historyForRequest,selectedModel,images,files,actionCount===0&&showThinking,actionCount===0);
+   answer=String(data.content||'').trim();provider=data.selectedProvider||selectedLabel;thinkingSummary=String(data.thinkingSummary||data.thinking||'');
+   if(Array.isArray(data.sources))data.sources.forEach(function(source){if(source?.uri&&!sources.some(function(item){return item.uri===source.uri;}))sources.push(source);});
+   setApiStatus('Online',true);
+   const proposal=autoRun?extractCommandProposal(answer):null;
+   if(!proposal)break;
+   if(actionCount>=maxActions){
+    const limitId='agent-limit-'+Date.now();
+    const limitProgress=appendAgentProgress('Finishing the task summary','The automatic run reached its 6-command safety limit. Asking IsaiahAI to summarize the verified state without running more commands.',limitId);
+    messages.push({role:'assistant',content:answer});
+    historyForRequest=messages.slice(-18);
+    requestMessage='The automatic action limit has been reached. Do not output another command or code block. Based only on the task and command results in the conversation, summarize what was completed, tests run, errors that remain, and what the user should do next.';
+    const finalData=await requestChatTurn(requestMessage,historyForRequest,selectedModel,[],[],false,false);
+    answer=String(finalData.content||'').trim();provider=finalData.selectedProvider||selectedLabel;thinkingSummary=String(finalData.thinkingSummary||'');
+    const finalProposal=extractCommandProposal(answer);
+    if(finalProposal)answer=answer.replace(new RegExp(fence+'(powershell|ps1|cmd|bat)[ \\\\t]*\\\\r?\\\\n[\\\\s\\\\S]*?'+fence,'i'),'[An additional command was not run because the six-step limit was reached.]');
+    setAgentProgress(limitProgress,'Final summary received. No more commands will run in this turn.','done');
+    break;
+   }
+   actionCount++;
+   const executionId='agent-'+Date.now()+'-'+(++agentRunSequence);
+   const cleanExplanation=answer.replace(new RegExp(fence+'(powershell|ps1|cmd|bat)[ \\\\t]*\\\\r?\\\\n[\\\\s\\\\S]*?'+fence,'i'),'').trim();
+   const progress=appendAgentProgress('Step '+actionCount+' · selected action',cleanExplanation||'IsaiahAI selected a computer action.',executionId);
+   setAgentProgress(progress,'Running '+proposal.shell.toUpperCase()+' and streaming terminal output…');
+   setThinking('Step '+actionCount+': running a computer action…');
+   $('agentTools').open=true;
+   let result;
+   try{
+    result=await window.isaiahDesktop.runShellCommand({shell:proposal.shell,command:proposal.command,executionId:executionId});
+   }catch(error){result={exitCode:-1,output:safeError(error),canceled:false,timedOut:false};}
+   const terminal='Shell: '+proposal.shell.toUpperCase()+'\\\\nExit code: '+result.exitCode+(result.timedOut?' · timed out':'')+'\\\\n'+String(result.output||'(No output)');
+   lastCommandOutput=terminal;
+   $('terminalOutput').textContent=terminal;$('terminalOutput').hidden=false;
+   if(result.canceled){
+    setAgentProgress(progress,'Command was canceled. The agent stopped this run.','failed');
+    answer='The agent run was canceled before the command could execute. No further commands were run.';
+    break;
+   }
+   if(result.exitCode===0&&!result.timedOut){
+    setAgentProgress(progress,'Command completed. IsaiahAI is checking the result and verifying the requested change.','done');
+   }else{
+    setAgentProgress(progress,'The command reported an error (exit code '+result.exitCode+(result.timedOut?', time limit reached':'')+'). IsaiahAI is reviewing the output and preparing a corrective step.','failed');
+   }
+   messages.push({role:'assistant',content:answer});
+   messages.push({role:'user',content:'[Desktop agent command result]\\\\n'+terminal+'\\\\n\\\\nContinue the original request. Diagnose errors, try a different fix if needed, and verify the outcome before giving the final answer.'});
+   historyForRequest=messages.slice(-18);
+   requestMessage='Continue the original user task. The latest Windows command has finished; its real exit code and output are in the conversation. Diagnose the result, explain any error briefly, and when needed return exactly one next PowerShell or CMD command in a fenced code block. Keep going until verified complete. Do not repeat an already-failed command unchanged.';
+  }
+ }catch(cloudError){
+  answer=selectedLabel+' could not complete this request.\\\\n\\\\n'+safeError(cloudError);
+  provider='Unavailable';updateModelStatus();
+ }finally{stopThinking();}
+ setToolStatus(provider==='Unavailable'?'Request failed for '+selectedLabel+'.':('Response generated with '+selectedLabel+'.'+(actionCount?' Completed '+actionCount+' automatic command step(s).':'')));
+ lastAssistantContent=answer;messages.push({role:'assistant',content:answer});
+ appendMessage('assistant',answer,sources,thinkingSummary,provider,selectedLabel);
+ $('saveAiCode').disabled=!hasCodeBlock(answer)||!selectedWorkspaceFile;$('sendBtn').disabled=false;$('chatInput').focus();
+}
+
+$('chatForm').addEventListener('submit'
 $('chatForm').addEventListener('submit',function(event){event.preventDefault();sendChat($('chatInput').value).catch(function(error){stopThinking();appendMessage('assistant','Something went wrong: '+safeError(error));$('sendBtn').disabled=false;});});
 document.querySelectorAll('[data-prompt]').forEach(function(button){button.addEventListener('click',function(){sendChat(button.dataset.prompt).catch(function(error){stopThinking();appendMessage('assistant','Something went wrong: '+safeError(error));$('sendBtn').disabled=false;});});});
 function resizeChatInput(){const input=$('chatInput');input.style.height='auto';input.style.height=Math.min(input.scrollHeight,180)+'px';}
