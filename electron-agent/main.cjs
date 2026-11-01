@@ -448,7 +448,7 @@ ipcMain.handle('workspace:write', async (_event, payload) => {
   await fs.writeFile(item.file, content, { encoding: 'utf8', flag: 'wx' });
   return { saved: true, created: true, backup: null };
 });
-function runProcess(bin, args, cwd, timeoutMs = 120000) {
+function runProcess(bin, args, cwd, timeoutMs = 120000, onOutput = null) {
   return new Promise(resolve => {
     let output = '';
     let settled = false;
@@ -460,7 +460,11 @@ function runProcess(bin, args, cwd, timeoutMs = 120000) {
       clearTimeout(timer);
       resolve(result);
     };
-    const append = chunk => { output = (output + String(chunk)).slice(-48000); };
+    const append = chunk => {
+      const text = String(chunk);
+      output = (output + text).slice(-48000);
+      if (typeof onOutput === 'function') { try { onOutput(text); } catch {} }
+    };
     const timer = setTimeout(() => {
       timedOut = true;
       try { child?.kill(); } catch {}
@@ -493,6 +497,7 @@ ipcMain.handle('workspace:run-custom-command', async (_event, payload) => {
   const root = requireWorkspace();
   const command = String(payload?.command || '').trim();
   const selectedShell = String(payload?.shell || 'powershell').toLowerCase();
+  const executionId = String(payload?.executionId || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 100);
   if (!command || command.length > 12000) throw new Error('Enter a command up to 12,000 characters.');
   if (!['powershell', 'cmd'].includes(selectedShell)) throw new Error('Choose PowerShell or Command Prompt.');
   const shellLabel = selectedShell === 'powershell' ? 'Windows PowerShell' : 'Command Prompt';
@@ -501,8 +506,13 @@ ipcMain.handle('workspace:run-custom-command', async (_event, payload) => {
   if (!unrestrictedAgentEnabled && !await confirmAction('Approve terminal command?', 'IsaiahAI Agent is requesting permission to run this command in ' + shellLabel + '.', detail + '\n\nNo command runs until you approve this exact request.', 'Run this command')) {
     return { canceled: true, exitCode: null, output: 'Command canceled by user.' };
   }
+  const stream = chunk => {
+    if (executionId && mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('agent:command-output', { executionId, chunk: String(chunk) });
+    }
+  };
   if (selectedShell === 'cmd') {
-    return runProcess(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', command], root);
+    return runProcess(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', command], root, 120000, stream);
   }
-  return runProcess('powershell.exe', ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'RemoteSigned', '-Command', command], root);
+  return runProcess('powershell.exe', ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'RemoteSigned', '-Command', command], root, 120000, stream);
 });
