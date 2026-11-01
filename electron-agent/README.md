@@ -31,7 +31,7 @@ Files are written to the release directory.
 
 - The app automatically prepares the Documents/IsaiahAI Workspace folder; no folder-picker step is required.
 - On first launch, a native Windows warning asks whether to enable the **Unrestricted system agent · auto-run as Administrator** mode by default. The mode is enabled only if the user explicitly accepts; it can be switched off at any time in Computer tools. This choice is remembered.
-- When enabled and Agent mode is on, a PowerShell or Command Prompt code block proposed by the selected AI model is run automatically without per-command approval. Its output is shown in the app and included as context for the next prompt.
+- When enabled and Agent mode is on, a PowerShell or Command Prompt code block proposed by the selected AI model runs automatically without per-command approval. Live output and the exit code are fed straight back to the model in the same user turn.
 - In unrestricted mode, command execution does not show a separate Windows approval dialog for every command. Commands run with the privileges granted to the app, which requests Windows Administrator elevation at launch.
 - Windows UAC remains in control: the user must approve the UAC prompt when starting the application. IsaiahAI does not bypass UAC or other Windows security controls.
 - Unrestricted commands can access the entire computer, modify or delete files, install or remove software, change registry values and services, or change system settings. Web content and downloaded files may contain malicious instructions that try to manipulate an AI agent. Enable this mode only on a computer you own and when you understand these risks. Turn it off at any time to restore the per-command review dialog.
