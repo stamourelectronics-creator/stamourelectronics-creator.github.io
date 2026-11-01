@@ -310,7 +310,7 @@ function extractCommandProposal(content){
  const pattern=new RegExp(fence+'(powershell|ps1|cmd|bat)[ \\t]*\\r?\n([\\s\\S]*?)'+fence,'i');
  const match=String(content||'').match(pattern);if(!match)return null;
  const command=String(match[2]||'').trim();if(!command||command.length>12000)return null;
- return {shell:/^(cmd|bat)$/i.test(match[1])?'cmd':'powershell',command:command};
+  return {shell:/^(cmd|bat)$/i.test(match[1])?'cmd':'powershell',command:command,start:match.index||0,end:(match.index||0)+match[0].length};
 }
 function formatBytes(bytes){
  if(bytes<1024)return bytes+' B';
@@ -496,13 +496,13 @@ async function sendChat(prompt){
     const finalData=await requestChatTurn(requestMessage,historyForRequest,selectedModel,[],[],false,false);
     answer=String(finalData.content||'').trim();provider=finalData.selectedProvider||selectedLabel;thinkingSummary=String(finalData.thinkingSummary||'');
     const finalProposal=extractCommandProposal(answer);
-    if(finalProposal)answer=answer.replace(new RegExp(fence+'(powershell|ps1|cmd|bat)[ \\\\t]*\\\\r?\n[\\\\s\\\\S]*?'+fence,'i'),'[An additional command was not run because the six-step limit was reached.]');
+    if(finalProposal)answer=answer.slice(0,finalProposal.start)+'[An additional command was not run because the six-step limit was reached.]'+answer.slice(finalProposal.end);
     setAgentProgress(limitProgress,'Final summary received. No more commands will run in this turn.','done');
     break;
    }
    actionCount++;
    const executionId='agent-'+Date.now()+'-'+(++agentRunSequence);
-   const cleanExplanation=answer.replace(new RegExp(fence+'(powershell|ps1|cmd|bat)[ \\\\t]*\\\\r?\n[\\\\s\\\\S]*?'+fence,'i'),'').trim();
+    const cleanExplanation=(answer.slice(0,proposal.start)+answer.slice(proposal.end)).trim();
    const progress=appendAgentProgress('Step '+actionCount+' · selected action',cleanExplanation||'IsaiahAI selected a computer action.',executionId);
    setAgentProgress(progress,'Running '+proposal.shell.toUpperCase()+' and streaming terminal output…');
    setThinking('Step '+actionCount+': running a computer action…');
