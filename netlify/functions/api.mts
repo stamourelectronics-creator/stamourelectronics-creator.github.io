@@ -405,20 +405,35 @@ async function searchWeb(query: string, options: { offset?: number; safeSearch?:
   };
 }
 
-function dedupeMessages(history: any[], message: string, images: any[] = []) {
+function attachmentBase64(value: any): string {
+  const raw = typeof value === 'string' ? value : '';
+  return raw.includes(',') ? (raw.split(',').pop() || '') : raw;
+}
+function dedupeMessages(history: any[], message: string, images: any[] = [], files: any[] = []) {
   const contents: any[] = [];
   for (const item of Array.isArray(history) ? history : []) {
     if (!item || typeof item.content !== 'string' || !item.content.trim()) continue;
     const role = item.role === 'assistant' || item.role === 'model' ? 'model' : 'user';
     const last = contents[contents.length - 1];
-    if (last?.role === role) last.parts[0].text += `\n\n${item.content}`;
+    if (last?.role === role) last.parts[0].text += `\\n\\n${item.content}`;
     else contents.push({ role, parts: [{ text: item.content }] });
   }
   const parts: any[] = [{ text: typeof message === 'string' ? message : String(message ?? '') }];
-  for (const item of Array.isArray(images) ? images : []) {
-    let data = typeof item?.data === 'string' ? item.data : '';
-    if (data.includes(',')) data = data.split(',').pop() || '';
-    if (data) parts.push({ inlineData: { data, mimeType: item?.mimeType || 'image/png' } });
+  for (const item of Array.isArray(images) ? images.slice(0, 6) : []) {
+    const data = attachmentBase64(item?.data);
+    if (data) parts.push({ inlineData: { data, mimeType: item?.mimeType || 'image/jpeg' } });
+  }
+  for (const item of Array.isArray(files) ? files.slice(0, 6) : []) {
+    const name = String(item?.name || 'Attached file').slice(0, 140);
+    if (item?.kind === 'pdf') {
+      const data = attachmentBase64(item?.data);
+      if (data) {
+        parts.push({ text: `Attached PDF: ${name}` });
+        parts.push({ inlineData: { data, mimeType: 'application/pdf' } });
+      }
+    } else if (typeof item?.text === 'string' && item.text.trim()) {
+      parts.push({ text: `Attached file: ${name}\\n${item.text.slice(0, 220000)}` });
+    }
   }
   contents.push({ role: 'user', parts });
   return contents;
@@ -475,12 +490,23 @@ async function askOpenRouter(body: AnyRecord, systemInstruction: string, preferr
     messages.push({ role: item.role === 'assistant' || item.role === 'model' ? 'assistant' : 'user', content: item.content });
   }
   const text = typeof body.message === 'string' ? body.message : String(body.message ?? '');
-  const imageParts = Array.isArray(body.images) ? body.images.map((image: any) => {
+  const imageParts = Array.isArray(body.images) ? body.images.slice(0, 6).map((image: any) => {
     if (typeof image?.data !== 'string' || !image.data) return null;
-    const url = image.data.startsWith('data:') ? image.data : `data:${image.mimeType || 'image/png'};base64,${image.data}`;
+    const url = image.data.startsWith('data:') ? image.data : `data:${image.mimeType || 'image/jpeg'};base64,${image.data}`;
     return { type: 'image_url', image_url: { url } };
   }).filter(Boolean) : [];
-  messages.push({ role: 'user', content: imageParts.length ? [{ type: 'text', text }, ...imageParts] : text });
+  const fileParts = Array.isArray(body.files) ? body.files.slice(0, 6).flatMap((file: any) => {
+    if (file?.kind === 'pdf' && typeof file.data === 'string' && file.data) {
+      const data = file.data.startsWith('data:') ? file.data : `data:application/pdf;base64,${file.data}`;
+      return [{ type: 'file', file: { filename: String(file.name || 'attachment.pdf').slice(0, 140), file_data: data } }];
+    }
+    if (typeof file?.text === 'string' && file.text.trim()) {
+      return [{ type: 'text', text: `Attached file: ${String(file.name || 'attachment').slice(0, 140)}\\n${file.text.slice(0, 220000)}` }];
+    }
+    return [];
+  }) : [];
+  const contentParts = [{ type: 'text', text }, ...imageParts, ...fileParts];
+  messages.push({ role: 'user', content: imageParts.length || fileParts.length ? contentParts : text });
 
   const models = {
     vision: 'nvidia/nemotron-3.5-super-vl:free',
@@ -540,7 +566,7 @@ async function askGemini(body: AnyRecord, systemInstruction: string, webSearch: 
   const key = env('GEMINI_API_KEY');
   if (!key) throw new Error('GEMINI_API_KEY is not configured.');
   const ai = new GoogleGenAI({ apiKey: key });
-  const contents = dedupeMessages(body.history || [], body.message || '', body.images || []);
+  const contents = dedupeMessages(body.history || [], body.message || '', body.images || [], body.files || []);
   const attempts = [
     { model: 'gemini-4-argon', timeoutMs: 10500, highReasoning: true },
     { model: 'gemini-3.8-flash', timeoutMs: 6500, highReasoning: true },
@@ -639,6 +665,14 @@ Live web findings follow. Use them as evidence and cite useful URLs in Markdown.
   }
   const sources: any[] = webSearch?.results?.slice(0, 12).map((item: SearchResult) => ({ title: item.title, uri: item.url })) || [];
   const hasImages = Array.isArray(body.images) && body.images.length > 0;
+  const files = Array.isArray(body.files) ? body.files.slice(0, 6) : [];
+  const attachmentBytes = [
+    ...(Array.isArray(body.images) ? body.images : []),
+    ...files,
+  ].reduce((sum: number, item: any) => sum + (typeof item?.data === 'string' ? item.data.length : (typeof item?.text === 'string' ? item.text.length : 0)), 0);
+  if (attachmentBytes > 5_200_000) throw new Error('Attachments exceed the 5 MB combined limit. Remove a file or attach smaller files.');
+  if (files.some((item: any) => item?.kind === 'pdf' && typeof item?.data !== 'string')) throw new Error('A PDF attachment is missing its file data. Please attach it again.');
+  if (files.some((item: any) => typeof item?.text === 'string' && item.text.length > 220000)) throw new Error('A text attachment is too large. Keep each text file under 220 KB.');
   let content = '';
   let thinking = '';
   let provider: 'Gemini' | 'OpenRouter';
