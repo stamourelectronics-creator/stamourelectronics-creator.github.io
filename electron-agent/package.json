@@ -1,8 +1,8 @@
 {
-  "name": "isaiahai-agent",
-  "productName": "IsaiahAI Agent",
-  "version": "1.0.6",
-  "description": "IsaiahAI browser-first Windows desktop agent with file attachments, native Chromium tabs, and a multi-step command-verifying AI agent.",
+  "name": "isaiahsearch-browser",
+  "productName": "IsaiahSearch",
+  "version": "1.2.0",
+  "description": "IsaiahSearch full-window Windows browser with Firefox-style new tabs, persistent bookmarks, native Chromium pages, and an integrated AI browser agent.",
   "main": "main.cjs",
   "license": "UNLICENSED",
   "scripts": {
@@ -15,8 +15,8 @@
     "electron-builder": "^26.0.12"
   },
   "build": {
-    "appId": "com.stamourelectronics.isaiahai.agent",
-    "productName": "IsaiahAI Agent",
+    "appId": "com.stamourelectronics.isaiahsearch",
+    "productName": "IsaiahSearch",
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -44,7 +44,7 @@
           ]
         }
       ],
-      "artifactName": "IsaiahAI-Agent-${version}-${arch}.${ext}",
+      "artifactName": "IsaiahSearch-Setup-${version}-${arch}.${ext}",
       "icon": "build/icon.svg",
       "requestedExecutionLevel": "requireAdministrator"
     },
@@ -55,8 +55,17 @@
       "createStartMenuShortcut": true
     },
     "portable": {
-      "artifactName": "IsaiahAI-Agent-Portable-${version}-${arch}.${ext}"
-    }
+      "artifactName": "IsaiahSearch-Portable-${version}-${arch}.${ext}"
+    },
+    "protocols": [
+      {
+        "name": "IsaiahSearch Browser Link",
+        "schemes": [
+          "isaiahsearch",
+          "web+isaiahsearch"
+        ]
+      }
+    ]
   },
   "author": "Stamour Electronics"
 }

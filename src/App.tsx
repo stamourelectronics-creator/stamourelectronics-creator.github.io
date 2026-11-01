@@ -12,7 +12,6 @@ import { ShareModal } from './components/ShareModal';
 import { LocalFileWorkspaceModal } from './components/LocalFileWorkspaceModal';
 import { InteractiveQuizCard, parseQuizFromText } from './components/InteractiveQuizCard';
 import { SchoolDocSyncModal } from './components/SchoolDocSyncModal';
-import { ChromeExtensionPrompt } from './components/ChromeExtensionPrompt';
 import { generateIsaiahsiImage } from './lib/puterClient';
 import { formatMathAndFractions, MATH_FRACTION_SYMBOLS, MATH_OPERATION_SYMBOLS } from './lib/mathFormatter';
 import { pickLocalFile, pickLocalDirectory, readFileText, writeFileText, extractCodeBlockFromResponse, LocalFileItem, isFileSystemAccessSupported } from './lib/localWorkspace';
@@ -3511,6 +3510,9 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                         >
                           <Paperclip className="w-5 h-5 stroke-[1.8]" />
                         </button>
+                        <a href="/downloads/isaiahai-chrome-extension.zip" download title="Download the IsaiahAI Chrome extension" aria-label="Download IsaiahAI Chrome extension" className={`p-1.5 rounded-full transition-colors cursor-pointer ${isLight ? 'text-zinc-600 hover:text-zinc-900' : 'text-zinc-400 hover:text-white'}`}>
+                          <Download className="w-5 h-5 stroke-[1.8]" />
+                        </a>
 
                         {/* 2. Sliders button -> Quick settings & intelligence toggles */}
                         <div className="relative">
@@ -3925,6 +3927,9 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                     >
                       <Plus className="w-5 h-5" />
                     </button>
+                    <a href="/downloads/isaiahai-chrome-extension.zip" download title="Download the IsaiahAI Chrome extension" aria-label="Download IsaiahAI Chrome extension" className={`p-1.5 rounded-full transition-colors cursor-pointer ${isLight ? 'hover:text-zinc-900 hover:bg-zinc-200/50' : 'hover:text-white hover:bg-zinc-800/50'}`}>
+                      <Download className="w-5 h-5" />
+                    </a>
 
                     {/* Mode & Model Selector Dropdown (Smooth popup right above typing area) */}
                     <div className="relative select-none">
@@ -5039,9 +5044,6 @@ Workspace Host: ${window.location.host}
           </button>
         </div>
       )}
-
-      {/* Optional Chrome extension download popup; existing app design remains unchanged. */}
-      <ChromeExtensionPrompt />
 
       {/* Image generation is handled directly in chat powered behind-the-scenes by Claude AI & Puter, credited to Isaiahsi */}
 

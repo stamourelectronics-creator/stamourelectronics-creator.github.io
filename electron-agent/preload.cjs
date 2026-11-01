@@ -26,6 +26,13 @@ contextBridge.exposeInMainWorld('isaiahDesktop', {
   browserBack: tabId => ipcRenderer.invoke('browser:back', tabId),
   browserForward: tabId => ipcRenderer.invoke('browser:forward', tabId),
   browserReload: tabId => ipcRenderer.invoke('browser:reload', tabId),
+  inspectBrowserView: tabId => ipcRenderer.invoke('browser:inspect', tabId),
+  onOpenUrl: callback => {
+    if (typeof callback !== 'function') return () => {};
+    const listener = (_event, payload) => callback(payload || {});
+    ipcRenderer.on('app:open-url', listener);
+    return () => ipcRenderer.removeListener('app:open-url', listener);
+  },
   closeBrowserView: tabId => ipcRenderer.invoke('browser:close', tabId),
   onBrowserEvent: callback => {
     if (typeof callback !== 'function') return () => {};

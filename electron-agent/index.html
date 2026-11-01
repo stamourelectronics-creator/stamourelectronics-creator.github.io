@@ -734,7 +734,7 @@ $('browserForm').addEventListener('submit',function(event){
 });
 $('browserSearchForm').addEventListener('submit',function(event){event.preventDefault();searchBrowser($('browserSearchInput').value);});
 $('homeBtn').addEventListener('click',showBrowserHome);
-$('newBrowserTab').addEventListener('click',function(){createBrowserTab(SEARCH_ENGINE_HOME,true);});
+$('newBrowserTab').addEventListener('click',function(){createBrowserTab('',true);});
 $('backBtn').addEventListener('click',function(){const tab=activeBrowserTab();if(tab?.nativeCreated)window.isaiahDesktop.browserBack(tab.id).catch(function(){});});
 $('forwardBtn').addEventListener('click',function(){const tab=activeBrowserTab();if(tab?.nativeCreated)window.isaiahDesktop.browserForward(tab.id).catch(function(){});});
 $('reloadBtn').addEventListener('click',function(){const tab=activeBrowserTab();if(tab?.nativeCreated)window.isaiahDesktop.browserReload(tab.id).catch(function(error){$('browserNote').hidden=false;$('browserNote').textContent=safeError(error);});else showBrowserHome();});

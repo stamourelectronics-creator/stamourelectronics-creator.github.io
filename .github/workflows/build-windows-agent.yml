@@ -1,4 +1,4 @@
-name: Build IsaiahAI Agent for Windows
+name: Build IsaiahSearch Browser for Windows
 on:
   push:
     branches: [main]
@@ -6,13 +6,11 @@ on:
       - 'electron-agent/**'
       - 'public/downloads/isaiahai-agent.html'
       - '.github/workflows/build-windows-agent.yml'
+      - 'src/App.tsx'
   workflow_dispatch:
-
-# Cancel stale builds so an older Windows package cannot publish after a newer source commit.
 concurrency:
-  group: windows-agent-${{ github.workflow }}
+  group: windows-isaiahsearch-${{ github.workflow }}
   cancel-in-progress: true
-
 permissions:
   contents: write
   actions: read
@@ -20,7 +18,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-      - name: Check out IsaiahAI
+      - name: Check out IsaiahSearch
         uses: actions/checkout@v4
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -29,7 +27,7 @@ jobs:
       - name: Install dependencies
         working-directory: electron-agent
         run: npm install
-      - name: Validate desktop renderer and main-process JavaScript
+      - name: Validate browser and agent source
         working-directory: electron-agent
         run: npm run check
       - name: Check hosted AI API availability
@@ -38,32 +36,27 @@ jobs:
         run: |
           try {
             $health = Invoke-RestMethod -Uri 'https://isaiahsearch.netlify.app/api/health' -TimeoutSec 12
-            if ($health.aiConfigured) {
-              Write-Host 'Hosted AI API is reachable and reports server-side AI credentials configured.'
-            } else {
-              Write-Warning 'Hosted AI API is reachable, but its server-side Gemini/OpenRouter keys are not configured.'
-            }
-          } catch {
-            Write-Warning ('Hosted AI API health check failed: ' + $_.Exception.Message)
-          }
-      - name: Build Windows installer and portable EXE
+            if ($health.aiConfigured) { Write-Host 'Hosted AI API is reachable and reports AI credentials configured.' }
+            else { Write-Warning 'Hosted AI API is reachable, but server-side AI credentials are not configured.' }
+          } catch { Write-Warning ('Hosted AI API health check failed: ' + $_.Exception.Message) }
+      - name: Build Windows installer and portable browser
         working-directory: electron-agent
         run: npm run dist
       - name: Upload Windows binaries as workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: IsaiahAI-Agent-Windows
+          name: IsaiahSearch-Windows
           path: electron-agent/release/*
           if-no-files-found: error
           retention-days: 90
-      - name: Publish downloadable release assets
+      - name: Publish downloadable Windows release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: isaiahai-agent-build-${{ github.run_number }}
-          name: IsaiahAI Agent Windows build ${{ github.run_number }}
+          tag_name: isaiahsearch-browser-build-${{ github.run_number }}
+          name: IsaiahSearch Browser Windows build ${{ github.run_number }}
           body: |
-            IsaiahAI Agent Windows installer and portable executable.
-            Version 1.0.6 adds browser-first native Chromium WebContentsView tabs, a redesigned browser toolbar/start page, image/PDF/text attachments, and a multi-step agent loop with live PowerShell/CMD output, exit-code checks, retries, and verification (up to six commands per user request). It retains selectable IsaiahAI 7.0 SUPER (OpenRouter) and Breakaway 1.0 (Gemini), and unrestricted system mode is enabled only after the first-run Windows warning is accepted. The app requests Windows Administrator elevation; AI-generated commands run without per-command prompts when unrestricted mode is on. AI file-editor writes remain confirmed.
-            Cloud AI provider usage policies still apply.
+            IsaiahSearch Browser for Windows x64.
+            Full-window browser with Firefox-inspired tabs, address bar, bookmark toolbar, top-site shortcuts, local clock/date and bookmark/recent widgets. Native Chromium tabs fill the browser window. IsaiahSearch Agent opens as a side drawer, inspects the current tab, opens websites in new tabs, accepts image/PDF/text files, and supports verified multi-step actions with real command output and exit-code feedback. System commands remain subject to Windows first-run warnings, UAC, workspace protections and the configured command approval mode.
+            AI availability depends on the configured hosted model providers.
           files: electron-agent/release/*
           make_latest: true

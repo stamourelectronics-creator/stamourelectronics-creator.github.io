@@ -15,6 +15,30 @@ let activeBrowserTabId = '';
 let browserPanelVisible = false;
 let browserBounds = { x: 0, y: 0, width: 0, height: 0 };
 const settingsFile = path.join(app.getPath('userData'), 'agent-settings.json');
+let pendingProtocolUrls = (process.argv || []).filter(value => /^(web\+)?isaiahsearch:\/\//i.test(String(value)));
+function sendProtocolUrl(rawUrl) {
+  if (!/^(web\+)?isaiahsearch:\/\//i.test(String(rawUrl || ''))) return;
+  if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isLoading()) mainWindow.webContents.send('app:open-url', { url: String(rawUrl) });
+  else pendingProtocolUrls.push(String(rawUrl));
+}
+function flushProtocolUrls() {
+  if (!mainWindow || mainWindow.isDestroyed() || mainWindow.webContents.isLoading()) return;
+  const queued = pendingProtocolUrls.splice(0);
+  for (const item of queued) mainWindow.webContents.send('app:open-url', { url: item });
+}
+if (process.defaultApp && process.argv.length >= 2) {
+  app.setAsDefaultProtocolClient('isaiahsearch', process.execPath, [path.resolve(process.argv[1])]);
+  app.setAsDefaultProtocolClient('web+isaiahsearch', process.execPath, [path.resolve(process.argv[1])]);
+} else {
+  app.setAsDefaultProtocolClient('isaiahsearch');
+  app.setAsDefaultProtocolClient('web+isaiahsearch');
+}
+app.on('open-url', (event, url) => { event.preventDefault(); sendProtocolUrl(url); });
+app.on('second-instance', (_event, argv) => {
+  const url = (argv || []).find(value => /^(web\+)?isaiahsearch:\/\//i.test(String(value)));
+  if (mainWindow && !mainWindow.isDestroyed()) { if (mainWindow.isMinimized()) mainWindow.restore(); mainWindow.show(); mainWindow.focus(); }
+  if (url) sendProtocolUrl(url);
+});
 const DEFAULT_API_BASE_URL = 'https://isaiahsearch.netlify.app/api';
 async function loadSavedWorkspace() {
   let candidate = '';
@@ -33,7 +57,7 @@ async function loadSavedWorkspace() {
   }
   if (!workspaceRoot) {
     const documents = app.getPath('documents') || app.getPath('home');
-    const defaultFolder = path.join(documents, 'IsaiahAI Workspace');
+    const defaultFolder = path.join(documents, 'IsaiahSearch Workspace');
     await fs.mkdir(defaultFolder, { recursive: true });
     workspaceRoot = await fs.realpath(defaultFolder);
     await persistWorkspace();
@@ -56,7 +80,7 @@ const presets = {
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1420, height: 920, minWidth: 700, minHeight: 560,
-    backgroundColor: '#090d17', title: 'IsaiahAI Agent',
+    backgroundColor: '#0b1020', title: 'IsaiahSearch', autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true, nodeIntegration: false, sandbox: true, webviewTag: false
@@ -96,9 +120,12 @@ function createWindow() {
       response.end(page);
     } catch {
       response.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
-      response.end('IsaiahAI Agent could not load its interface.');
+      response.end('IsaiahSearch could not load its interface.');
     }
   });
+  mainWindow.webContents.once('did-finish-load', flushProtocolUrls);
+  mainWindow.setMenuBarVisibility(false);
+  mainWindow.maximize();
   appServer.listen(0, 'localhost', () => {
     const address = appServer.address();
     const port = address && typeof address === 'object' ? address.port : 0;
@@ -267,6 +294,12 @@ ipcMain.handle('browser:forward', (_event, tabId) => {
   if (view?.webContents.canGoForward()) view.webContents.goForward();
   return { canGoForward: !!view?.webContents.canGoForward() };
 });
+ipcMain.handle('browser:inspect', async (_event, tabId) => {
+  const view = getBrowserView(tabId);
+  if (!view || view.webContents.isDestroyed()) throw new Error('That browser tab is no longer open.');
+  const script = '(()=>{const description=document.querySelector("meta[name=description]")?.content||"";const links=Array.from(document.querySelectorAll("a[href]")).slice(0,35).map(a=>({title:(a.innerText||a.getAttribute("aria-label")||a.href).trim().slice(0,160),url:a.href})).filter(a=>/^https?:/i.test(a.url));return {title:document.title||"",url:location.href,description:String(description).slice(0,500),text:String(document.body?.innerText||"").slice(0,12000),links};})()';
+  return await view.webContents.executeJavaScript(script, true);
+});
 ipcMain.handle('browser:reload', (_event, tabId) => {
   const view = getBrowserView(tabId);
   if (view) view.webContents.reload();
@@ -288,9 +321,9 @@ app.whenReady().then(async () => {
   if (!unrestrictedModeChoiceSaved) {
     const choice = await dialog.showMessageBox({
       type: 'warning',
-      title: 'Choose IsaiahAI system-agent access',
+      title: 'Choose IsaiahSearch Agent access',
       message: 'Enable unrestricted system mode by default?',
-      detail: 'When enabled, IsaiahAI can automatically run AI-proposed PowerShell and Command Prompt commands with the Windows permissions granted to this app. This can change or delete files, install software, edit the registry, and modify system settings. You can turn it off at any time in Computer tools. Windows UAC remains in control.',
+      detail: 'When enabled, IsaiahSearch Agent can automatically run AI-proposed PowerShell and Command Prompt commands with the Windows permissions granted to this app. This can change or delete files, install software, edit the registry, and modify system settings. You can turn it off at any time in Computer tools. Windows UAC remains in control.',
       buttons: ['Keep it off', 'Enable unrestricted mode'],
       defaultId: 0, cancelId: 0, noLink: true
     });
