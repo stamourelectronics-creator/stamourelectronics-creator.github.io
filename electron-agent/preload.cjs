@@ -11,6 +11,12 @@ contextBridge.exposeInMainWorld('isaiahDesktop', {
   writeWorkspaceFile: payload => ipcRenderer.invoke('workspace:write', payload),
   runApprovedPreset: key => ipcRenderer.invoke('workspace:run-preset', key),
   runShellCommand: payload => ipcRenderer.invoke('workspace:run-custom-command', payload),
+  onAgentCommandOutput: callback => {
+    if (typeof callback !== 'function') return () => {};
+    const listener = (_event, payload) => callback(payload || {});
+    ipcRenderer.on('agent:command-output', listener);
+    return () => ipcRenderer.removeListener('agent:command-output', listener);
+  },
   getUnrestrictedMode: () => ipcRenderer.invoke('agent:unrestricted:get'),
   setUnrestrictedMode: enabled => ipcRenderer.invoke('agent:unrestricted:set', enabled),
   createBrowserView: payload => ipcRenderer.invoke('browser:create', payload),
