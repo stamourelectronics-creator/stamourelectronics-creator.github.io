@@ -77,10 +77,17 @@ const presets = {
   'python-version': { bin: 'python', args: ['--version'], label: 'python --version' }
 };
 
+function toggleFullscreenShortcut(event, input) {
+  if (input?.type !== 'keyDown' || String(input.key).toLowerCase() !== 'f11') return;
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  event.preventDefault();
+  mainWindow.setFullScreen(!mainWindow.isFullScreen());
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1420, height: 920, minWidth: 700, minHeight: 560,
-    backgroundColor: '#0b1020', title: 'IsaiahSearch', autoHideMenuBar: true,
+    backgroundColor: '#0b1020', title: 'IsaiahSearch', autoHideMenuBar: true, fullscreen: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true, nodeIntegration: false, sandbox: true, webviewTag: false
@@ -125,7 +132,7 @@ function createWindow() {
   });
   mainWindow.webContents.once('did-finish-load', flushProtocolUrls);
   mainWindow.setMenuBarVisibility(false);
-  mainWindow.maximize();
+  mainWindow.webContents.on('before-input-event', toggleFullscreenShortcut);
   appServer.listen(0, 'localhost', () => {
     const address = appServer.address();
     const port = address && typeof address === 'object' ? address.port : 0;
@@ -184,7 +191,7 @@ function isAllowedBrowserUrl(rawUrl) {
   } catch { return false; }
 }
 ipcMain.handle('browser:create', async (_event, payload) => {
-  if (!mainWindow || mainWindow.isDestroyed()) throw new Error('The IsaiahAI window is not available.');
+  if (!mainWindow || mainWindow.isDestroyed()) throw new Error('The IsaiahSearch window is not available.');
   const tabId = String(payload?.tabId || '').slice(0, 100);
   if (!tabId) throw new Error('A browser tab ID is required.');
   const existing = browserViews.get(tabId);
@@ -203,6 +210,7 @@ ipcMain.handle('browser:create', async (_event, payload) => {
       allowRunningInsecureContent: false
     }
   });
+  view.webContents.on('before-input-event', toggleFullscreenShortcut);
   mainWindow.contentView.addChildView(view);
   browserViews.set(tabId, view);
   const userAgent = view.webContents.getUserAgent().replace(/\sElectron\/[^\s]+/g, '');
@@ -466,8 +474,8 @@ ipcMain.handle('workspace:write', async (_event, payload) => {
   const action = item.exists ? 'replace this file' : 'create this file';
   const detail = item.exists
     ? item.file + '\n\nA dated backup will be saved inside .isaiahai-backups first.' + (item.insideWorkspace ? '' : '\n\nThis file is outside the default workspace. Check the full path carefully.')
-    : item.file + '\n\nThis path does not exist yet. IsaiahAI Agent will create it only after your approval.' + (item.insideWorkspace ? '' : '\n\nThis file is outside the default workspace. Check the full path carefully.');
-  if (!await confirmAction('Approve file change?', 'Allow IsaiahAI Agent to ' + action + '?', detail, item.exists ? 'Back up and save' : 'Create file')) {
+    : item.file + '\n\nThis path does not exist yet. IsaiahSearch Agent will create it only after your approval.' + (item.insideWorkspace ? '' : '\n\nThis file is outside the default workspace. Check the full path carefully.');
+  if (!await confirmAction('Approve file change?', 'Allow IsaiahSearch Agent to ' + action + '?', detail, item.exists ? 'Back up and save' : 'Create file')) {
     return { saved: false, canceled: true };
   }
   if (item.exists) {
@@ -535,8 +543,8 @@ ipcMain.handle('workspace:run-custom-command', async (_event, payload) => {
   if (!['powershell', 'cmd'].includes(selectedShell)) throw new Error('Choose PowerShell or Command Prompt.');
   const shellLabel = selectedShell === 'powershell' ? 'Windows PowerShell' : 'Command Prompt';
   const detail = command + '\n\nWorking directory: ' + root +
-    '\n\nThis command runs with the permissions granted to IsaiahAI Agent (the app requests Windows Administrator elevation). It may change the entire computer.';
-  if (!unrestrictedAgentEnabled && !await confirmAction('Approve terminal command?', 'IsaiahAI Agent is requesting permission to run this command in ' + shellLabel + '.', detail + '\n\nNo command runs until you approve this exact request.', 'Run this command')) {
+    '\n\nThis command runs with the permissions granted to IsaiahSearch Agent (the app requests Windows Administrator elevation). It may change the entire computer.';
+  if (!unrestrictedAgentEnabled && !await confirmAction('Approve terminal command?', 'IsaiahSearch Agent is requesting permission to run this command in ' + shellLabel + '.', detail + '\n\nNo command runs until you approve this exact request.', 'Run this command')) {
     return { canceled: true, exitCode: null, output: 'Command canceled by user.' };
   }
   const stream = chunk => {

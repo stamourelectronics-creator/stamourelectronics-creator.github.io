@@ -3,12 +3,12 @@
 IsaiahSearch is a browser-first Windows desktop browser built with Electron and native Chromium WebContentsView. The browser is the main app; the AI agent is integrated into it as an optional slide-over panel.
 
 ## Browser interface
-- Starts directly in a browser new-tab page without an app-level banner or separate Chat/Browser navigation.
+- Starts directly in a true full-screen browser new-tab page without an app-level banner or separate Chat/Browser navigation.
 - Firefox-inspired tab strip, address/search bar, navigation controls, bookmark toolbar, top-site shortcuts, a local clock/date widget, and bookmark/recent-site widgets.
 - Websites open as native Chromium pages and fill the browser window.
 - The AI button opens the IsaiahSearch Agent drawer over the active page.
 - Bookmarks and recently visited sites are stored locally on this Windows device.
-- Shortcuts: Ctrl+T new tab, Ctrl+L address bar, Ctrl+D bookmark, Ctrl+W close tab, Ctrl+Shift+A open AI chat, Esc close chat.
+- Shortcuts: F11 toggle full screen, Ctrl+T new tab, Ctrl+L address bar, Ctrl+D bookmark, Ctrl+W close tab, Ctrl+Shift+A open AI chat, Esc close chat.
 
 The new-tab search box uses the IsaiahSearch website search route when a query is submitted. The desktop application itself is a full browser; search is one of its start-page functions.
 

@@ -21,6 +21,7 @@ for (const required of [
   'runShellCommand({shell:proposal.shell,command:proposal.command,executionId:executionId})',
   'showThinkingToggle',
   'isaiahai-icon.svg',
+  'ISAIAHSEARCH BROWSER · AGENT · RESEARCH',
   'value="isaiahai_7_super"',
   'value="breakaway_1_0"',
   'unrestrictedModeToggle',
@@ -60,6 +61,12 @@ if (!html.includes("dataTransfer") || !html.includes("application/pdf")) {
   throw new Error('Chat attachments and drag/drop support are missing.');
 }
 const mainSource = fs.readFileSync(require('node:path').join(__dirname, '..', 'main.cjs'), 'utf8');
+if (!html.includes('main{height:100%;width:100%;min-height:0;flex:1;display:flex;margin:0;padding:0}')) {
+  throw new Error('The browser renderer must fill the full application viewport.');
+}
+if (!mainSource.includes('fullscreen: true') || !mainSource.includes('toggleFullscreenShortcut') || !mainSource.includes("'f11'")) {
+  throw new Error('The browser must launch full-screen and support the F11 toggle.');
+}
 if (!mainSource.includes('WebContentsView')) {
   throw new Error('Desktop browser must use Electron WebContentsView.');
 }

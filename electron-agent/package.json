@@ -1,7 +1,7 @@
 {
   "name": "isaiahsearch-browser",
   "productName": "IsaiahSearch",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "IsaiahSearch full-window Windows browser with Firefox-style new tabs, persistent bookmarks, native Chromium pages, and an integrated AI browser agent.",
   "main": "main.cjs",
   "license": "UNLICENSED",
