@@ -1,4 +1,5 @@
 const { app, BrowserWindow, WebContentsView, ipcMain, dialog, shell } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
@@ -9,7 +10,9 @@ let appServer = null;
 let appOrigin = null;
 let workspaceRoot = null;
 let unrestrictedAgentEnabled = false;
-let unrestrictedModeChoiceSaved = false;
+let unrestrictedModeChoiceSaved = true;
+let defaultBrowserPrompted = false;
+let updateCheckTimer = null;
 const browserViews = new Map();
 let activeBrowserTabId = '';
 let browserPanelVisible = false;
@@ -45,8 +48,9 @@ async function loadSavedWorkspace() {
   try {
     const saved = JSON.parse(await fs.readFile(settingsFile, 'utf8'));
     candidate = typeof saved.workspaceRoot === 'string' ? saved.workspaceRoot : '';
-    unrestrictedAgentEnabled = saved.unrestrictedAgentEnabled === true;
-    unrestrictedModeChoiceSaved = saved.unrestrictedModeChoiceSaved === true || unrestrictedAgentEnabled;
+    unrestrictedAgentEnabled = false;
+    unrestrictedModeChoiceSaved = true;
+    defaultBrowserPrompted = saved.defaultBrowserPrompted === true;
   } catch { /* first launch or reset: use the private default workspace */ }
   if (candidate) {
     try {
@@ -65,7 +69,7 @@ async function loadSavedWorkspace() {
 }
 async function persistWorkspace() {
   await fs.mkdir(path.dirname(settingsFile), { recursive: true });
-  await fs.writeFile(settingsFile, JSON.stringify({ workspaceRoot, unrestrictedAgentEnabled, unrestrictedModeChoiceSaved }, null, 2), { encoding: 'utf8', mode: 0o600 });
+  await fs.writeFile(settingsFile, JSON.stringify({ workspaceRoot, unrestrictedAgentEnabled: false, unrestrictedModeChoiceSaved: true, defaultBrowserPrompted }, null, 2), { encoding: 'utf8', mode: 0o600 });
 }
 const skippedDirs = new Set(['.git', 'node_modules', 'dist', 'build', 'release', '.next', '.cache', '.idea', '.vscode']);
 const textExtensions = new Set(['.txt', '.md', '.json', '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.css', '.html', '.htm', '.py', '.rs', '.go', '.java', '.cs', '.xml', '.yml', '.yaml', '.toml', '.ini', '.sh', '.bat', '.ps1', '.sql', '.svg', '.env.example']);
@@ -324,26 +328,54 @@ ipcMain.handle('browser:close', (_event, tabId) => {
   return { ok: true };
 });
 
+function beginUpdateChecks() {
+  if (!app.isPackaged) return;
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.allowPrerelease = false;
+  autoUpdater.on('error', error => console.warn('[IsaiahSearch updater]', error?.message || error));
+  autoUpdater.on('update-downloaded', async info => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    const choice = await dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: 'IsaiahSearch update ready',
+      message: 'IsaiahSearch ' + String(info?.version || 'new version') + ' has been downloaded.',
+      detail: 'Restart IsaiahSearch to install the update. You can also choose Later and it will install when you next close the app.',
+      buttons: ['Restart and install', 'Later'],
+      defaultId: 0, cancelId: 1
+    });
+    if (choice.response === 0) autoUpdater.quitAndInstall();
+  });
+  const check = () => autoUpdater.checkForUpdatesAndNotify().catch(error => console.warn('[IsaiahSearch updater]', error?.message || error));
+  setTimeout(check, 5000);
+  updateCheckTimer = setInterval(check, 4 * 60 * 60 * 1000);
+}
+async function askDefaultBrowserPreference() {
+  if (process.platform !== 'win32' || defaultBrowserPrompted) return;
+  const choice = await dialog.showMessageBox(mainWindow, {
+    type: 'question',
+    title: 'Make IsaiahSearch your default browser?',
+    message: 'Would you like to choose IsaiahSearch as your default browser?',
+    detail: 'Windows requires you to confirm this in Default apps. Choose IsaiahSearch for web links (HTTP and HTTPS) if it is listed.',
+    buttons: ['Not now', 'Open Default Apps'],
+    defaultId: 0, cancelId: 0, noLink: true
+  });
+  defaultBrowserPrompted = true;
+  await persistWorkspace();
+  if (choice.response === 1) {
+    try { await shell.openExternal('ms-settings:defaultapps'); } catch (error) { console.warn('[IsaiahSearch] Could not open Default Apps:', error?.message || error); }
+  }
+}
 app.whenReady().then(async () => {
   await loadSavedWorkspace();
-  if (!unrestrictedModeChoiceSaved) {
-    const choice = await dialog.showMessageBox({
-      type: 'warning',
-      title: 'Choose IsaiahSearch Agent access',
-      message: 'Enable unrestricted system mode by default?',
-      detail: 'When enabled, IsaiahSearch Agent can automatically run AI-proposed PowerShell and Command Prompt commands with the Windows permissions granted to this app. This can change or delete files, install software, edit the registry, and modify system settings. You can turn it off at any time in Computer tools. Windows UAC remains in control.',
-      buttons: ['Keep it off', 'Enable unrestricted mode'],
-      defaultId: 0, cancelId: 0, noLink: true
-    });
-    unrestrictedAgentEnabled = choice.response === 1;
-    unrestrictedModeChoiceSaved = true;
-    await persistWorkspace();
-  }
   createWindow();
+  await askDefaultBrowserPreference();
+  beginUpdateChecks();
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 app.on('before-quit', () => {
+  if (updateCheckTimer) { clearInterval(updateCheckTimer); updateCheckTimer = null; }
   if (appServer) {
     try { appServer.close(); } catch { /* app is exiting */ }
     appServer = null;
@@ -419,12 +451,6 @@ ipcMain.handle('agent:unrestricted:set', async (_event, enabled) => {
   unrestrictedModeChoiceSaved = true;
   await persistWorkspace();
   return { enabled: unrestrictedAgentEnabled, canceled: false };
-});
-ipcMain.handle('external:open', async (_event, rawUrl) => {
-  const url = new URL(String(rawUrl || ''));
-  if (!['https:', 'http:'].includes(url.protocol)) throw new Error('Only HTTP/HTTPS links can be opened externally.');
-  await shell.openExternal(url.href);
-  return true;
 });
 ipcMain.handle('workspace:choose', async () => {
   const picked = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
