@@ -7,7 +7,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --win nsis portable",
+    "dist": "electron-builder --win nsis portable --publish never",
     "check": "node --check main.cjs && node --check preload.cjs && node scripts/check-renderer.cjs"
   },
   "devDependencies": {
