@@ -366,6 +366,8 @@ async function askDefaultBrowserPreference() {
   defaultBrowserPrompted = true;
   await persistWorkspace();
   if (choice.response === 1) {
+    app.setAsDefaultProtocolClient('http');
+    app.setAsDefaultProtocolClient('https');
     try { await shell.openExternal('ms-settings:defaultapps'); } catch (error) { console.warn('[IsaiahSearch] Could not open Default Apps:', error?.message || error); }
   }
 }
