@@ -43,7 +43,7 @@ footer{text-align:center;color:#71717a;font-size:11px;padding:16px}
 </main>
 <div class="composer"><div class="compose-inner"><textarea id="prompt" rows="1" placeholder="Message IsaiahAI..." aria-label="Message IsaiahAI"></textarea><button class="send" id="send" aria-label="Send message">↑</button></div><div class="status" id="status">Ready</div></div>
 <script>
-const API='https://isaiah-ai-acel.netlify.app/api';
+const API='https://isaiahsearch.netlify.app/api';
 const messagesEl=document.getElementById('messages'),promptEl=document.getElementById('prompt'),statusEl=document.getElementById('status'),sendBtn=document.getElementById('send');
 let history=[];
 function addMessage(role,text){const el=document.createElement('div');el.className='msg '+(role==='user'?'user':'assistant');const label=document.createElement('div');label.className='label';label.textContent=role==='user'?'You':'IsaiahAI';const body=document.createElement('div');body.textContent=text;el.append(label,body);messagesEl.append(el);window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});return body}
