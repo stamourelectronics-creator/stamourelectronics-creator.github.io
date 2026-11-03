@@ -806,6 +806,15 @@ async function loadHomeNews(){
    const imageUrl=String(item.thumbnail||item.enclosure?.link||imageMatch?.[1]||'');
    return {title:String(item.title||''),url:String(item.link||''),source:String(item.author||item.feedTitle||'News'),time:String(item.pubDate||''),imageUrl:imageUrl};
   }).filter(function(item){return item.title&&isHttpUrl(item.url);});
+  await Promise.all(news.slice(0,4).map(async function(item){
+   if(isHttpUrl(item.imageUrl))return;
+   try{
+    const preview=await fetch('https://api.microlink.io/?url='+encodeURIComponent(item.url),{headers:{'Accept':'application/json'},cache:'force-cache',signal:AbortSignal.timeout(10000)});
+    const meta=await preview.json().catch(function(){return {};});
+    const imageUrl=String(meta&&meta.data&&meta.data.image&&meta.data.image.url||'');
+    if(preview.ok&&isHttpUrl(imageUrl))item.imageUrl=imageUrl;
+   }catch(error){console.warn('[IsaiahSearch] Article image unavailable:',safeError(error));}
+  }));
   renderHomeNews(news);
   status.textContent=news.length?'Latest publisher headlines · updated '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'No publisher headlines were returned.';
  }catch(error){status.textContent='News is temporarily unavailable: '+safeError(error);renderHomeNews([]);}
