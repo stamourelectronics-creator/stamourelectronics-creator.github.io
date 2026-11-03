@@ -796,7 +796,6 @@ function renderHomeNews(items){
 async function loadHomeNews(){
  const status=$('homeNewsStatus');if(!status)return;
  try{
-  await apiReady;
   const feed='https://news.google.com/rss/search?'+new URLSearchParams({q:'Canada OR world OR technology latest news',hl:'en-CA',gl:'CA',ceid:'CA:en'});
   const response=await fetch('https://api.rss2json.com/v1/api.json?rss_url='+encodeURIComponent(feed),{headers:{'Accept':'application/json'},cache:'no-store',signal:AbortSignal.timeout(18000)});
   const data=await response.json().catch(function(){return {};});
