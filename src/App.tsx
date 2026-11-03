@@ -2279,10 +2279,10 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
               {/* Right Side: Circular Info Button (i), Share, or Action Pill */}
               <div className="flex items-center gap-2">
                 <a
-                  href="https://github.com/stamourelectronics-creator/stamourelectronics-creator.github.io/releases/latest/download/IsaiahSearch-Setup-1.2.1-x64.exe"
+                  href="https://github.com/stamourelectronics-creator/stamourelectronics-creator.github.io/releases/latest/download/IsaiahSearch-Setup-1.2.2-x64.exe"
                   target="_blank"
                   rel="noopener noreferrer"
-                  download="IsaiahSearch-Setup-1.2.1-x64.exe"
+                  download="IsaiahSearch-Setup-1.2.2-x64.exe"
                   aria-label="Download IsaiahSearch Windows installer"
                   title="Download IsaiahSearch browser for Windows"
                   className="w-9 h-9 rounded-full shadow-sm transition-all border flex items-center justify-center bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border-sky-400/30"
@@ -2358,10 +2358,10 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
 
               <div className="flex items-center gap-3">
                 <a
-                  href="https://github.com/stamourelectronics-creator/stamourelectronics-creator.github.io/releases/latest/download/IsaiahSearch-Setup-1.2.1-x64.exe"
+                  href="https://github.com/stamourelectronics-creator/stamourelectronics-creator.github.io/releases/latest/download/IsaiahSearch-Setup-1.2.2-x64.exe"
                   target="_blank"
                   rel="noopener noreferrer"
-                  download="IsaiahSearch-Setup-1.2.1-x64.exe"
+                  download="IsaiahSearch-Setup-1.2.2-x64.exe"
                   title="Download IsaiahSearch browser for Windows"
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-400/25 transition-all"
                 >
