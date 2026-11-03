@@ -56,7 +56,7 @@ jobs:
           name: IsaiahSearch Browser Windows build ${{ github.run_number }}
           body: |
             IsaiahSearch Browser for Windows x64.
-            Full-window browser with Firefox-inspired tabs, address bar, bookmark toolbar, top-site shortcuts, local clock/date and bookmark/recent widgets. Native Chromium tabs fill the browser window. IsaiahSearch Agent opens as a side drawer, inspects the current tab, opens websites in new tabs, accepts image/PDF/text files, and supports verified multi-step actions with real command output and exit-code feedback. System commands remain subject to Windows first-run warnings, UAC, workspace protections and the configured command approval mode.
+            Full-window IsaiahSearch browser with an original light new-tab dashboard, search, site shortcuts, current headlines and article imagery. Native Chromium tabs open inside the app. The full-screen IsaiahSearch Agent can research and inspect the current page, and proposes Windows actions with a Windows approval prompt before each command. The installer supports automatic GitHub release updates.
             AI availability depends on the configured hosted model providers.
           files: electron-agent/release/*
           make_latest: true
