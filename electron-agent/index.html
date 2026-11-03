@@ -200,7 +200,7 @@ main{height:100%;width:100%;min-height:0;flex:1;display:flex;margin:0;padding:0}
 </div></details></div>
 <div id="transcript" class="transcript"><div class="welcome"><img class="hero-icon" src="/assets/isaiahai-icon.svg" alt="IsaiahSearch"><div class="eyebrow">ISAIAHSEARCH BROWSER · AGENT · RESEARCH</div><h1>What can we get done?</h1><p>Ask a question, research a topic, or let IsaiahSearch Agent work with your computer. Your private workspace is prepared automatically. After you accept the first-run system-access warning, AI commands can run automatically; file-editor changes still require separate approval.</p><div class="prompt-grid"><button data-prompt="Research this topic using current web sources. Compare source quality and dates, then summarize the evidence."><strong>↗ Research a topic</strong><span>Search live sources and compare evidence</span></button><button data-prompt="Help me debug a project. Ask me to connect its folder, then inspect a relevant file and propose a safe fix."><strong>⌘ Debug my project</strong><span>Read selected files and suggest code edits</span></button><button data-prompt="Explain a difficult topic step by step, with examples and a concise takeaway."><strong>✧ Learn something</strong><span>Clear answers with useful examples</span></button></div></div></div>
 <div id="thinkingBar" class="thinking" hidden role="status" aria-live="polite"><span class="spinner"></span><span id="thinkingText">Preparing your request…</span><span class="pips"><i></i><i></i><i></i></span></div>
-<div class="composer"><div class="model-picker"><label for="modelSelect">Model</label><select id="modelSelect" aria-label="Choose IsaiahSearch model"><option value="isaiahai_7_super">IsaiahAI 7.0 SUPER</option><option value="breakaway_1_0">Breakaway 1.0</option></select><span id="modelHint">IsaiahAI 7.0 SUPER · OpenRouter</span></div><div id="attachmentTray" class="attachment-tray" hidden aria-live="polite"></div>
+<div class="composer"><div class="model-picker"><label for="modelSelect">Model</label><select id="modelSelect" aria-label="Choose IsaiahSearch model"><option value="isaiahai_7_super">IsaiahAI 7.0 SUPER</option><option value="isaiah_codepro">Isaiah CodePro · Heavy reasoning</option><option value="breakaway_1_0">Breakaway 1.0</option></select><span id="modelHint">IsaiahAI 7.0 SUPER · OpenRouter</span></div><div id="attachmentTray" class="attachment-tray" hidden aria-live="polite"></div>
 <form id="chatForm">
  <input id="attachmentInput" type="file" multiple hidden accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,.txt,.md,.markdown,.csv,.tsv,.json,.jsonl,.html,.htm,.xml,.css,.js,.jsx,.ts,.tsx,.py,.ps1,.bat,.cmd,.sh,.yml,.yaml,.toml,.ini,.log,.sql,.rs,.go,.java,.c,.cpp,.h,.cs">
  <button id="attachButton" class="attach-button" type="button" title="Attach images, PDFs, or text/code files" aria-label="Attach files">＋</button>
@@ -292,14 +292,14 @@ async function initializeApi(){
   console.warn('[IsaiahAI] Health check failed:',safeError(error));return null;
  }
 }
-function modelLabel(model){return model==='breakaway_1_0'?'Breakaway 1.0':'IsaiahAI 7.0 SUPER';}
+function modelLabel(model){return model==='breakaway_1_0'?'Breakaway 1.0':model==='isaiah_codepro'?'Isaiah CodePro':'IsaiahAI 7.0 SUPER';}
 function modelConfigured(model,health){
  if(health&&health.models&&typeof health.models[model]==='boolean')return health.models[model];
  return Boolean(health&&health.aiConfigured);
 }
 function updateModelStatus(){
  const model=$('modelSelect').value,name=modelLabel(model),configured=modelConfigured(model,apiHealth);
- $('modelHint').textContent=name+(configured?' · ready':(model==='breakaway_1_0'?' · Gemini key missing':' · OpenRouter key missing'));
+ $('modelHint').textContent=name+(configured?' · ready':(model==='breakaway_1_0'?' · Gemini key missing':model==='isaiah_codepro'?' · Groq key missing':' · OpenRouter key missing'));
  setApiStatus(apiHealth?(configured?'Online':'Model not configured'):'Offline',!!apiHealth&&configured);
 }
 $('modelSelect').addEventListener('change',updateModelStatus);
@@ -526,7 +526,7 @@ async function requestChatTurn(message,history,selectedModel,images,files,showSu
  let health=await apiReady;
  if(!health){apiReady=initializeApi();health=await apiReady;}
  if(!health||health.ok!==true)throw new Error('The IsaiahAI server is unreachable. Check your internet connection and retry.');
- if(!modelConfigured(selectedModel,health))throw new Error(selectedModel==='breakaway_1_0'?'Breakaway 1.0 needs the Gemini API key configured on the server.':'IsaiahAI 7.0 SUPER needs the OpenRouter API key configured on the server.');
+ if(!modelConfigured(selectedModel,health))throw new Error(selectedModel==='breakaway_1_0'?'Breakaway 1.0 needs the Gemini API key configured on the server.':selectedModel==='isaiah_codepro'?'Isaiah CodePro needs the Groq API key configured on the server.':'IsaiahAI 7.0 SUPER needs the OpenRouter API key configured on the server.');
  const response=await fetch(API+'/chat',{
   method:'POST',headers:{'Content-Type':'application/json'},
   body:JSON.stringify({message:message,history:history,model:selectedModel,selectedModel:selectedModel,chatMode:'general',searchWebEnabled:allowSearch,showThinking:showSummary,images:images,files:files}),
