@@ -19,7 +19,8 @@ let browserPanelVisible = false;
 let browserBounds = { x: 0, y: 0, width: 0, height: 0 };
 const settingsFile = path.join(app.getPath('userData'), 'agent-settings.json');
 function isAppProtocolUrl(value) {
-  return /^(?:(?:web\\+)?isaiahsearch|https?):\\/\\//i.test(String(value || ''));
+  try { return ['isaiahsearch:', 'web+isaiahsearch:', 'http:', 'https:'].includes(new URL(String(value || '')).protocol); }
+  catch { return false; }
 }
 let pendingProtocolUrls = (process.argv || []).filter(isAppProtocolUrl);
 function sendProtocolUrl(rawUrl) {
@@ -41,7 +42,7 @@ if (process.defaultApp && process.argv.length >= 2) {
 }
 app.on('open-url', (event, url) => { event.preventDefault(); sendProtocolUrl(url); });
 app.on('second-instance', (_event, argv) => {
-  const url = (argv || []).find(value => /^(web\+)?isaiahsearch:\/\//i.test(String(value)));
+  const url = (argv || []).find(isAppProtocolUrl);
   if (mainWindow && !mainWindow.isDestroyed()) { if (mainWindow.isMinimized()) mainWindow.restore(); mainWindow.show(); mainWindow.focus(); }
   if (url) sendProtocolUrl(url);
 });
