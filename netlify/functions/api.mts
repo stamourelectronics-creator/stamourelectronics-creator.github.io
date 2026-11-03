@@ -557,8 +557,11 @@ async function askOpenRouter(body: AnyRecord, systemInstruction: string, preferr
   // long-context reasoning model. Every listed endpoint is currently marked free.
   let candidates: string[];
   if (preferredModel === 'thinkingmachines/inkling:free') {
-    // IsaiahAI 7.0 SUPER is pinned to the exact model selected by the user.
-    candidates = [preferredModel];
+    // Keep IsaiahAI 7.0 SUPER on OpenRouter, but don't let one unavailable
+    // free endpoint take the entire assistant offline. Try capable fallbacks.
+    candidates = imageParts.length
+      ? [preferredModel, models.vision, 'google/gemma-4-31b-it:free', models.router]
+      : [preferredModel, models.reasoning, models.fast, models.router];
   } else if (preferredModel === models.router) {
     // Prefer the dynamic OpenRouter free router first; it selects a currently available
     // free model matching this request (including image support when needed).
@@ -756,7 +759,7 @@ Live web findings follow. Use them as evidence and cite useful URLs in Markdown.
     }
   }
   if (!content) {
-    const label = activeModel === 'breakaway_1_0' ? 'Breakaway 1.0 (Gemini)' : 'IsaiahAI 7.0 SUPER (OpenRouter)';
+    const label = activeModel === 'breakaway_1_0' ? 'Breakaway 1.0 (Gemini)' : activeModel === 'isaiah_codepro' ? 'IsaiahAI CodePro (Groq)' : 'IsaiahAI 7.0 SUPER (OpenRouter)';
     throw new Error(label + ' could not complete this request. ' + String(modelError?.message || 'The selected provider returned an empty answer.'));
   }
   const mergedSources: any[] = [];
