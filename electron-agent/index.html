@@ -776,6 +776,33 @@ function renderHomeWidgets(){
  if(recentRoot){recentRoot.replaceChildren();if(!recentSites.length){const empty=document.createElement('span');empty.className='widget-empty';empty.textContent='Your recent sites will appear here.';recentRoot.append(empty);}
   recentSites.slice(0,4).forEach(item=>{const button=document.createElement('button'),label=document.createElement('span'),arrow=document.createElement('b');label.textContent=item.title||new URL(item.url).hostname;arrow.textContent='↗';button.append(label,arrow);button.addEventListener('click',()=>navigateBrowser(item.url,{newTab:true}));recentRoot.append(button);});}
 }
+
+function renderHomeNews(items){
+ const root=$('homeNewsGrid');if(!root)return;root.replaceChildren();
+ (Array.isArray(items)?items:[]).slice(0,8).forEach(function(item){
+  if(!item||!isHttpUrl(String(item.url||''))||!String(item.title||'').trim())return;
+  const card=document.createElement('button');card.type='button';card.className='home-news-card';
+  const imageUrl=String(item.imageUrl||'');
+  if(isHttpUrl(imageUrl)){const image=document.createElement('img');image.src=imageUrl;image.alt='';image.loading='lazy';image.referrerPolicy='no-referrer';image.onerror=function(){image.remove();};card.append(image);}
+  const copy=document.createElement('span');copy.className='news-card-copy';
+  const title=document.createElement('strong');title.textContent=String(item.title).slice(0,180);
+  const meta=document.createElement('small');meta.textContent=String(item.source||item.siteName||'News')+(item.time?' · '+String(item.time):'');
+  copy.append(title,meta);card.append(copy);card.addEventListener('click',function(){navigateBrowser(item.url,{newTab:true});});root.append(card);
+ });
+ if(!root.children.length){const empty=document.createElement('div');empty.className='home-news-empty';empty.textContent='No current headlines are available. Try refreshing this page.';root.append(empty);}
+}
+async function loadHomeNews(){
+ const status=$('homeNewsStatus');if(!status)return;
+ try{
+  await apiReady;
+  const response=await fetch(API+'/news-feed',{headers:{'Accept':'application/json'},cache:'no-store',signal:AbortSignal.timeout(18000)});
+  const data=await response.json().catch(function(){return {};});
+  if(!response.ok)throw new Error(data.error||'News feed returned '+response.status);
+  const news=Array.isArray(data.news)?data.news:[];
+  renderHomeNews(news);
+  status.textContent=news.length?'Latest publisher headlines · '+(data.updatedAt?new Date(data.updatedAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'updated now'):'No publisher headlines were returned.';
+ }catch(error){status.textContent='News is temporarily unavailable: '+safeError(error);renderHomeNews([]);}
+}
 function renderBrowserBookmarks(){
  const bar=$('browserBookmarks');if(!bar)return;bar.replaceChildren();
  if(!browserBookmarks.length){const empty=document.createElement('span');empty.className='bookmark-empty';empty.textContent='Bookmark your favorite pages to keep them here';bar.append(empty);}
@@ -834,8 +861,8 @@ function closeBrowserTab(id){
 }
 function activatePanel(name){
  currentPanel='browser';const drawer=$('panel-chat');
- if(name==='chat'){drawer.classList.add('chat-open');setTimeout(()=>$('chatInput').focus(),70);}
- else{drawer.classList.remove('chat-open');if(!browserTabs.length)createBrowserTab('',true);setTimeout(()=>$('address').focus(),25);}
+ if(name==='chat'){drawer.classList.add('chat-open','chat-fullscreen');setTimeout(()=>$('chatInput').focus(),70);}
+ else{drawer.classList.remove('chat-open','chat-fullscreen');if(!browserTabs.length)createBrowserTab('',true);setTimeout(()=>$('address').focus(),25);}
  syncNativeBrowserView();requestAnimationFrame(updateBrowserBounds);
 }
 function openChat(){activatePanel('chat');}function closeChat(){activatePanel('browser');}
@@ -950,7 +977,7 @@ document.addEventListener('keydown',function(event){
  else if(mod&&event.shiftKey&&key==='a'){event.preventDefault();openChat();}
  else if(event.key==='Escape'&&$('panel-chat').classList.contains('chat-open'))closeChat();
 });
-createBrowserTab('',true);renderBrowserBookmarks();renderHomeWidgets();updateHomeClock();setInterval(updateHomeClock,15000);
+createBrowserTab('',true);renderBrowserBookmarks();renderHomeWidgets();updateHomeClock();loadHomeNews();setInterval(updateHomeClock,15000);
 })();
 </script>
 </body></html>
