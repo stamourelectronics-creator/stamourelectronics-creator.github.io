@@ -2222,24 +2222,22 @@ export function BrowserView({
     const body = { query: queryStr, results: resultsList, previousSummary: currentBrief };
     try {
       const response = await fetch('/api/search-summary-more-stream', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      if (!response.ok || response.headers.get('content-type')?.includes('text/html')) throw new Error('Deep report request failed');
-      const reader = response.body?.getReader(), decoder = new TextDecoder();
+      const responseType = response.headers.get('content-type') || '';
+      if (!response.ok || responseType.includes('text/html') || !responseType.includes('text/plain')) throw new Error('Deep report service returned an invalid response');
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('Deep report stream was unavailable');
+      const decoder = new TextDecoder();
       let complete = '';
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (requestId !== moreRequestIdRef.current) return;
-          if (done) break;
-          complete += decoder.decode(value, { stream: true });
-          setTypedDetailed(complete); setAddonSummary(complete);
-        }
-        complete += decoder.decode();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (requestId !== moreRequestIdRef.current) return;
+        if (done) break;
+        complete += decoder.decode(value, { stream: true });
+        setTypedDetailed(complete); setAddonSummary(complete);
       }
-      if (complete.trim()) {
-        if (requestId === moreRequestIdRef.current) { setTypedDetailed(complete); setAddonSummary(complete); }
-        return;
-      }
-      throw new Error('Empty deep report');
+      complete += decoder.decode();
+      if (!complete.trim()) throw new Error('Empty deep report');
+      if (requestId === moreRequestIdRef.current) { setTypedDetailed(complete); setAddonSummary(complete); }
     } catch {
       if (requestId !== moreRequestIdRef.current) return;
       try {
@@ -2251,10 +2249,10 @@ export function BrowserView({
       } catch { /* fall back to real source links */ }
       const links = (Array.isArray(resultsList) ? resultsList : []).slice(0, 12)
         .filter((item: any) => item && /^https?:\/\//i.test(String(item.url || '')))
-        .map((item: any, i: number) => `${i + 1}. **[${String(item.title || 'Search result').replace(/[\\[\\]]/g, '')}](${item.url})** — ${String(item.snippet || '').slice(0, 360)}`).join('\\n');
+        .map((item: any, i: number) => `${i + 1}. **[${String(item.title || 'Search result').replace(/[\\[\\]]/g, '')}](${item.url})** — ${String(item.snippet || '').slice(0, 360)}`).join('\n');
       const fallback = links
-        ? `## More research on ${queryStr}\\n\\nThe deeper AI report could not load this time, so here are the actual source pages returned for your search.\\n\\n${links}`
-        : `## More research on ${queryStr}\\n\\nIsaiahAI could not load a deeper report just now. Try again or continue in full chat.`;
+        ? `## More research on ${queryStr}\n\nThe deeper AI report could not load this time, so here are the actual source pages returned for your search.\n\n${links}`
+        : `## More research on ${queryStr}\n\nIsaiahAI could not load a deeper report just now. Try again or continue in full chat.`;
       if (requestId === moreRequestIdRef.current) { setAddonSummary(fallback); setTypedDetailed(fallback); }
     } finally { if (requestId === moreRequestIdRef.current) { setIsLoadingMore(false); setIsTypingMore(false); } }
   };
@@ -2352,9 +2350,11 @@ export function BrowserView({
       return { ...v, thumbnail, siteName, url };
     });
 
-    const processedNews = (data.news || []).map((n: any, idx: number) => {
-      const needsFallback = !n.imageUrl || n.imageUrl.includes('placeholder') || n.imageUrl.includes('black') || n.imageUrl.includes('example.com');
-      const imageUrl = needsFallback ? newsThumbnails[idx % newsThumbnails.length] : n.imageUrl;
+    // Keep only article-specific images supplied by the live news feed. Never swap in unrelated stock photos.
+    const processedNews = (data.news || []).map((n: any) => {
+      let imageUrl = typeof n.imageUrl === 'string' ? n.imageUrl.trim() : '';
+      try { const parsed = new URL(imageUrl); if (!['https:', 'http:'].includes(parsed.protocol)) imageUrl = ''; }
+      catch { imageUrl = ''; }
       return { ...n, imageUrl };
     });
 
@@ -2372,12 +2372,19 @@ export function BrowserView({
     };
   };
 
+  const openFullSearchAssistant = () => {
+    const query = activeSearch.trim() || searchQuery.trim();
+    const sources = (searchResults?.results || []).slice(0, 12).map((item, index) =>
+      `${index + 1}. ${String(item.title || 'Search result')} — ${item.url}\n${String(item.snippet || '').slice(0, 360)}`
+    ).join('\n\n');
+    const prompt = `You are IsaiahAI Search Assistant. Continue this search in the full-screen IsaiahAI chat and use IsaiahSearch's live web-search results as your starting evidence.\n\nSearch query: ${query}\n\nSearch Assist overview:\n${(briefSummary || typedSummary || '(The overview is still loading.)').slice(0, 5000)}\n\nIsaiahSearch results:\n${sources || '(No source results were available yet.)'}\n\nResearch the question carefully, prioritize recent and primary sources, compare evidence, and cite the actual pages you use. Answer the original query directly.`;
+    if (onContinueWithPrompt) onContinueWithPrompt(prompt);
+    else { try { sessionStorage.setItem('isaiah_search_assist_handoff', prompt); } catch { /* storage may be unavailable */ } onGoToChat(); }
+  };
+
   const handleToggleAssist = () => {
-    const nextState = !assistOpen;
-    setAssistOpen(nextState);
-    if (nextState && activeSearch && searchResults) {
-      fetchBriefSummary(activeSearch, searchResults.results);
-    }
+    if (activeSearch && searchResults) openFullSearchAssistant();
+    else onGoToChat();
   };
 
   const handleToggleExpand = () => {
@@ -3093,7 +3100,7 @@ export function BrowserView({
                 <button onClick={() => setActiveTab('Videos')} className={`whitespace-nowrap px-1 pb-3 border-b-2 text-sm cursor-pointer ${activeTab === 'Videos' ? 'border-indigo-600 text-indigo-600 font-semibold' : 'border-transparent text-zinc-500 hover:text-zinc-700 font-medium transition-colors'}`}>Videos</button>
                 <button onClick={() => setActiveTab('News')} className={`whitespace-nowrap px-1 pb-3 border-b-2 text-sm cursor-pointer ${activeTab === 'News' ? 'border-indigo-600 text-indigo-600 font-semibold' : 'border-transparent text-zinc-500 hover:text-zinc-700 font-medium transition-colors'}`}>News</button>
                 <button onClick={() => setActiveTab('More')} className={`whitespace-nowrap px-1 pb-3 border-b-2 text-sm cursor-pointer ${activeTab === 'More' ? 'border-indigo-600 text-indigo-600 font-semibold' : 'border-transparent text-zinc-500 hover:text-zinc-700 font-medium transition-colors'}`}>More</button>
-                <button onClick={() => setAssistOpen(!assistOpen)} className={`cursor-pointer whitespace-nowrap px-2 sm:px-3 py-1.5 flex items-center gap-1.5 rounded-full ${assistOpen ? 'bg-indigo-600 text-white shadow-md' : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-100'} font-semibold text-xs sm:text-sm ml-auto transition-all mb-1.5`}>
+                <button onClick={openFullSearchAssistant} className={`cursor-pointer whitespace-nowrap px-2 sm:px-3 py-1.5 flex items-center gap-1.5 rounded-full ${assistOpen ? 'bg-indigo-600 text-white shadow-md' : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-100'} font-semibold text-xs sm:text-sm ml-auto transition-all mb-1.5`}>
                   <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   <span className="hidden sm:inline">Search Assist</span>
                   <span className="sm:hidden">Assist</span>
@@ -3275,7 +3282,7 @@ export function BrowserView({
                         <Markdown components={{
                           a: ({ node, ...props }) => <a {...props} target="_blank" rel="noreferrer" className="text-indigo-600 underline underline-offset-2 break-words" />
                         }}>
-                          {typedSummary || briefSummary || "Click the 'Search Assist' button above to generate an AI summary."}
+                          {typedSummary || briefSummary || "Open the full-screen IsaiahAI chat to continue this search with your sources."}
                         </Markdown>
                       </div>
                       {isTypingBrief && (
@@ -3335,7 +3342,8 @@ export function BrowserView({
                       type="button"
                       onClick={onGoToChat}
                       className="w-8 h-8 rounded-full bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-500 hover:text-zinc-900 transition-all cursor-pointer shadow-sm"
-                      title="Go to Chat Workspace"
+                      title="Open full-screen IsaiahAI chat"
+                      onClick={openFullSearchAssistant}
                     >
                       <MessageSquare className="w-3.5 h-3.5" />
                     </button>
