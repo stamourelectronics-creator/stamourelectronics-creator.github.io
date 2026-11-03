@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="IsaiahSearch">
+  <defs>
+    <linearGradient id="isaiah-search" x1="12" y1="12" x2="112" y2="116" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#9872f0"/>
+      <stop offset="1" stop-color="#5c3cc5"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="32" y1="28" x2="80" y2="80" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff"/>
+      <stop offset="1" stop-color="#e9e3ff"/>
+    </linearGradient>
+  </defs>
+  <rect x="7" y="7" width="114" height="114" rx="34" fill="url(#isaiah-search)"/>
+  <circle cx="56" cy="55" r="27" fill="none" stroke="url(#glass)" stroke-width="10"/>
+  <path d="m76 76 25 25" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round"/>
+  <path d="m91 21 4.5 12.5L108 38l-12.5 4.5L91 55l-4.5-12.5L74 38l12.5-4.5L91 21Z" fill="#fff" opacity=".96"/>
+  <circle cx="47" cy="45" r="5" fill="#fff" opacity=".45"/>
+</svg>
