@@ -1,8 +1,8 @@
 {
   "name": "isaiahsearch-browser",
   "productName": "IsaiahSearch",
-  "version": "1.2.3",
-  "description": "IsaiahSearch full-window Windows browser with Firefox-style new tabs, persistent bookmarks, native Chromium pages, and an integrated AI browser agent.",
+  "version": "1.2.4",
+  "description": "IsaiahSearch full-window Windows browser with an original new-tab dashboard, native Chromium pages, and an integrated full-screen AI agent.",
   "main": "main.cjs",
   "license": "UNLICENSED",
   "scripts": {
@@ -46,7 +46,7 @@
       ],
       "artifactName": "IsaiahSearch-Setup-${version}-${arch}.${ext}",
       "icon": "build/icon.svg",
-      "requestedExecutionLevel": "requireAdministrator"
+      "requestedExecutionLevel": "asInvoker"
     },
     "nsis": {
       "oneClick": false,
@@ -65,7 +65,17 @@
           "web+isaiahsearch"
         ]
       }
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "stamourelectronics-creator",
+        "repo": "stamourelectronics-creator.github.io"
+      }
     ]
   },
-  "author": "Stamour Electronics"
+  "author": "Stamour Electronics",
+  "dependencies": {
+    "electron-updater": "^6.8.11"
+  }
 }
