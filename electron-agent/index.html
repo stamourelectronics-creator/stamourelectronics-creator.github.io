@@ -809,11 +809,13 @@ async function loadHomeNews(){
   }).filter(function(item){return item.title&&isHttpUrl(item.url);});
   await Promise.all(news.slice(0,4).map(async function(item){
    if(isHttpUrl(item.imageUrl))return;
+   const cacheKey='isaiahsearch_news_image_'+encodeURIComponent(item.url);
+   try{const cached=localStorage.getItem(cacheKey);if(isHttpUrl(cached)){item.imageUrl=cached;return;}}catch{}
    try{
     const preview=await fetch('https://api.microlink.io/?url='+encodeURIComponent(item.url),{headers:{'Accept':'application/json'},cache:'force-cache',signal:AbortSignal.timeout(10000)});
     const meta=await preview.json().catch(function(){return {};});
     const imageUrl=String(meta&&meta.data&&meta.data.image&&meta.data.image.url||'');
-    if(preview.ok&&isHttpUrl(imageUrl))item.imageUrl=imageUrl;
+    if(preview.ok&&isHttpUrl(imageUrl)){item.imageUrl=imageUrl;try{localStorage.setItem(cacheKey,imageUrl);}catch{}}
    }catch(error){console.warn('[IsaiahSearch] Article image unavailable:',safeError(error));}
   }));
   renderHomeNews(news);
