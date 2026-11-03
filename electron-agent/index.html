@@ -795,12 +795,18 @@ async function loadHomeNews(){
  const status=$('homeNewsStatus');if(!status)return;
  try{
   await apiReady;
-  const response=await fetch(API+'/news-feed',{headers:{'Accept':'application/json'},cache:'no-store',signal:AbortSignal.timeout(18000)});
+  const feed='https://news.google.com/rss/search?'+new URLSearchParams({q:'Canada OR world OR technology latest news',hl:'en-CA',gl:'CA',ceid:'CA:en'});
+  const response=await fetch('https://api.rss2json.com/v1/api.json?rss_url='+encodeURIComponent(feed),{headers:{'Accept':'application/json'},cache:'no-store',signal:AbortSignal.timeout(18000)});
   const data=await response.json().catch(function(){return {};});
-  if(!response.ok)throw new Error(data.error||'News feed returned '+response.status);
-  const news=Array.isArray(data.news)?data.news:[];
+  if(!response.ok||data.status==='error')throw new Error(data.message||'News feed returned '+response.status);
+  const news=(Array.isArray(data.items)?data.items:[]).slice(0,8).map(function(item){
+   const html=String(item.description||item.content||'');
+   const imageMatch=html.match(/<img[^>]+src=[\"']([^\"']+)/i);
+   const imageUrl=String(item.thumbnail||item.enclosure?.link||imageMatch?.[1]||'');
+   return {title:String(item.title||''),url:String(item.link||''),source:String(item.author||item.feedTitle||'News'),time:String(item.pubDate||''),imageUrl:imageUrl};
+  }).filter(function(item){return item.title&&isHttpUrl(item.url);});
   renderHomeNews(news);
-  status.textContent=news.length?'Latest publisher headlines · '+(data.updatedAt?new Date(data.updatedAt).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'updated now'):'No publisher headlines were returned.';
+  status.textContent=news.length?'Latest publisher headlines · updated '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'No publisher headlines were returned.';
  }catch(error){status.textContent='News is temporarily unavailable: '+safeError(error);renderHomeNews([]);}
 }
 function renderBrowserBookmarks(){
