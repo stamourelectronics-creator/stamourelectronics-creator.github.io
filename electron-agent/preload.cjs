@@ -2,7 +2,6 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('isaiahDesktop', {
   getAppConfig: () => ipcRenderer.invoke('app:config'),
-  openExternal: url => ipcRenderer.invoke('external:open', url),
   chooseWorkspace: () => ipcRenderer.invoke('workspace:choose'),
   clearWorkspace: () => ipcRenderer.invoke('workspace:clear'),
   getWorkspacePath: () => ipcRenderer.invoke('workspace:path'),
