@@ -18,9 +18,12 @@ let activeBrowserTabId = '';
 let browserPanelVisible = false;
 let browserBounds = { x: 0, y: 0, width: 0, height: 0 };
 const settingsFile = path.join(app.getPath('userData'), 'agent-settings.json');
-let pendingProtocolUrls = (process.argv || []).filter(value => /^(web\+)?isaiahsearch:\/\//i.test(String(value)));
+function isAppProtocolUrl(value) {
+  return /^(?:(?:web\\+)?isaiahsearch|https?):\\/\\//i.test(String(value || ''));
+}
+let pendingProtocolUrls = (process.argv || []).filter(isAppProtocolUrl);
 function sendProtocolUrl(rawUrl) {
-  if (!/^(web\+)?isaiahsearch:\/\//i.test(String(rawUrl || ''))) return;
+  if (!isAppProtocolUrl(rawUrl)) return;
   if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isLoading()) mainWindow.webContents.send('app:open-url', { url: String(rawUrl) });
   else pendingProtocolUrls.push(String(rawUrl));
 }
@@ -437,20 +440,10 @@ ipcMain.handle('agent:unrestricted:get', () => ({
   administratorRequested: process.platform === 'win32'
 }));
 ipcMain.handle('agent:unrestricted:set', async (_event, enabled) => {
-  const requested = enabled === true;
-  if (requested && !unrestrictedAgentEnabled) {
-    const accepted = await confirmAction(
-      'Enable unrestricted system agent?',
-      'IsaiahAI will automatically run its PowerShell and Command Prompt proposals as Administrator.',
-      'No separate approval dialog will appear for each AI-generated command while this mode is enabled. Commands may read, change, or delete files anywhere on this computer, install or remove software, edit the registry, change services, and alter Windows settings. Web pages and files can contain malicious instructions that try to influence the AI. Only enable this on a computer you control and disable it when finished. Windows UAC elevation is still required when the app starts.',
-      'Enable unrestricted mode'
-    );
-    if (!accepted) return { enabled: false, canceled: true };
-  }
-  unrestrictedAgentEnabled = requested;
+  unrestrictedAgentEnabled = false;
   unrestrictedModeChoiceSaved = true;
   await persistWorkspace();
-  return { enabled: unrestrictedAgentEnabled, canceled: false };
+  return { enabled: false, canceled: enabled === true };
 });
 ipcMain.handle('workspace:choose', async () => {
   const picked = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
