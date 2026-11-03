@@ -1,0 +1,26 @@
+name: Build IsaiahSearch iOS
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "ios/**"
+      - ".github/workflows/ios-build.yml"
+
+jobs:
+  simulator-build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build iOS Simulator app
+        run: |
+          xcodebuild -project ios/IsaiahSearch.xcodeproj -scheme IsaiahSearch -sdk iphonesimulator -configuration Release -derivedDataPath build/ios CODE_SIGNING_ALLOWED=NO
+      - name: Package simulator app
+        run: |
+          cd build/ios/Build/Products/Release-iphonesimulator
+          /usr/bin/zip -r IsaiahSearch-iOS-Simulator.zip IsaiahSearch.app
+      - uses: actions/upload-artifact@v4
+        with:
+          name: IsaiahSearch-iOS-Simulator
+          path: build/ios/Build/Products/Release-iphonesimulator/IsaiahSearch-iOS-Simulator.zip
+          if-no-files-found: error
