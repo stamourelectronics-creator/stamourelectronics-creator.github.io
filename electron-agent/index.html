@@ -968,7 +968,7 @@ browserResizeObserver.observe($('browserCanvas'));
 window.addEventListener('resize',updateBrowserBounds);
 function switchToBrowser(url){activatePanel('browser');if(url)navigateBrowser(url,{newTab:true});}
 function routeProtocolUrl(rawUrl){
- try{const url=new URL(String(rawUrl||''));if(!['isaiahsearch:','web+isaiahsearch:'].includes(url.protocol))return;
+ try{const original=String(rawUrl||'');if(isHttpUrl(original)){navigateBrowser(original,{newTab:true});return;}const url=new URL(original);if(!['isaiahsearch:','web+isaiahsearch:'].includes(url.protocol))return;
   if(url.hostname==='open'){const target=url.searchParams.get('url');if(target&&isHttpUrl(target))navigateBrowser(target,{newTab:true});else showBrowserHome();}
   else if(url.hostname==='search'){const query=url.searchParams.get('q')||url.searchParams.get('query')||'';if(query)searchBrowser(query);else showBrowserHome();}
   else showBrowserHome();
