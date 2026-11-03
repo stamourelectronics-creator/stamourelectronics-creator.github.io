@@ -659,7 +659,7 @@ async function askGemini(body: AnyRecord, systemInstruction: string, webSearch: 
   throw lastError || new Error('No Gemini model was available.');
 }
 
-async function makeThinkingSummary(question: string, answer: string, provider: 'Gemini' | 'OpenRouter'): Promise<string> {
+async function makeThinkingSummary(question: string, answer: string, provider: 'Gemini' | 'OpenRouter' | 'Groq'): Promise<string> {
   const system = 'Write a short, user-facing reasoning summary, not hidden chain-of-thought. In 1–3 sentences, explain the main factors, evidence, or approach visible from the question and final answer. Do not reveal private internal reasoning, hidden deliberation, tokens, or a verbatim thought transcript.';
   const prompt = `Question: ${question.slice(0, 5000)}\n\nFinal answer: ${answer.slice(0, 8000)}\n\nProvide only the concise user-facing summary.`;
   try {
@@ -717,7 +717,7 @@ Live web findings follow. Use them as evidence and cite useful URLs in Markdown.
   if (files.some((item: any) => typeof item?.text === 'string' && item.text.length > 220000)) throw new Error('A text attachment is too large. Keep each text file under 220 KB.');
   let content = '';
   let thinking = '';
-  let provider: 'Gemini' | 'OpenRouter';
+  let provider: 'Gemini' | 'OpenRouter' | 'Groq';
   let modelUsed = '';
   let modelError: any = null;
 
