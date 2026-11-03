@@ -128,6 +128,7 @@ export function BrowserView({
   });
   const [showSavedSources, setShowSavedSources] = useState(false);
   const [summaryCopied, setSummaryCopied] = useState(false);
+  const [newsPreviewImages, setNewsPreviewImages] = useState<Record<string, string>>({});
 
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [localPlacesData, setLocalPlacesData] = useState<{
