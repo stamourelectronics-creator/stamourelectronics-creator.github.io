@@ -2279,7 +2279,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
               {/* Right Side: Circular Info Button (i), Share, or Action Pill */}
               <div className="flex items-center gap-2">
                 <a
-                  href="https://github.com/stamourelectronics-creator/stamourelectronics-creator.github.io/releases/latest/download/IsaiahSearch-Setup-1.3.0-x64.exe"
+                  href="https://github.com/stamourelectronics-creator/stamourelectronics-creator.github.io/releases/download/isaiahsearch-browser-build-127/IsaiahSearch-Setup-1.3.0-x64.exe"
                   target="_blank"
                   rel="noopener noreferrer"
                   download="IsaiahSearch-Setup-1.3.0-x64.exe"
@@ -2358,7 +2358,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
 
               <div className="flex items-center gap-3">
                 <a
-                  href="https://github.com/stamourelectronics-creator/stamourelectronics-creator.github.io/releases/latest/download/IsaiahSearch-Setup-1.3.0-x64.exe"
+                  href="https://github.com/stamourelectronics-creator/stamourelectronics-creator.github.io/releases/download/isaiahsearch-browser-build-127/IsaiahSearch-Setup-1.3.0-x64.exe"
                   target="_blank"
                   rel="noopener noreferrer"
                   download="IsaiahSearch-Setup-1.3.0-x64.exe"
