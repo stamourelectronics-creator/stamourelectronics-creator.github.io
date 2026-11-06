@@ -220,6 +220,9 @@ ipcMain.handle('browser:create', async (_event, payload) => {
     }
   });
   view.webContents.on('before-input-event', toggleFullscreenShortcut);
+  // A new WebContentsView must start hidden; the renderer explicitly activates it after navigation is ready.
+  view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+  view.setVisible(false);
   mainWindow.contentView.addChildView(view);
   browserViews.set(tabId, view);
   const userAgent = view.webContents.getUserAgent().replace(/\sElectron\/[^\s]+/g, '');
