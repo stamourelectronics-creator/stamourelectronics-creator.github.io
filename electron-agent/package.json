@@ -1,8 +1,8 @@
 {
   "name": "isaiahsearch-browser",
   "productName": "IsaiahSearch",
-  "version": "1.3.0",
-  "description": "IsaiahSearch full-window Windows browser with an integrated IsaiahAI CodePro agent, local Windows shell bridge, and native Chromium pages.",
+  "version": "1.4.0",
+  "description": "IsaiahSearch full-window Windows browser with integrated IsaiahAI CodePro powered by Cloudflare Workers AI GLM-4.7-Flash and native Chromium tabs.",
   "main": "main.cjs",
   "license": "UNLICENSED",
   "scripts": {
