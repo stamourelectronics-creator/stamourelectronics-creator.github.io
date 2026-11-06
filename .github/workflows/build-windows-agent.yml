@@ -36,10 +36,10 @@ jobs:
         run: |
           try {
             $health = Invoke-RestMethod -Uri 'https://codepro-gateway-production.up.railway.app/health' -TimeoutSec 15
-            if ($health.ok -and $health.groqConfigured -and $health.model -eq 'openai/gpt-oss-120b') {
-              Write-Host 'IsaiahAI CodePro gateway is online and GPT-OSS-120B is configured.'
+            if ($health.ok -and $health.cloudflareConfigured -and $health.model -eq '@cf/zai-org/glm-4.7-flash') {
+              Write-Host 'IsaiahAI CodePro gateway is online and Cloudflare Workers AI GLM-4.7-Flash is configured.'
             } else {
-              Write-Warning 'CodePro gateway responded but the expected model is not configured.'
+              Write-Warning 'CodePro gateway responded but Cloudflare Workers AI token/model is not configured.'
             }
           } catch { Write-Warning ('CodePro health check failed: ' + $_.Exception.Message) }
       - name: Check hosted AI API availability
@@ -68,7 +68,7 @@ jobs:
           name: IsaiahSearch Browser Windows build ${{ github.run_number }}
           body: |
             IsaiahSearch Browser for Windows x64.
-            Full-window IsaiahSearch browser with native Chromium tabs and a built-in IsaiahAI CodePro agent powered by GPT-OSS-120B. CodePro can research, inspect the active page, and use the local Windows Shell Bridge for multi-step PowerShell/CMD workflows. Shell agent mode requires explicit opt-in, runs as the current Windows user, streams real command output, and separately confirms high-impact operations. The installer supports automatic GitHub release updates.
+            Full-window IsaiahSearch browser with native Chromium tabs and a built-in IsaiahAI CodePro agent powered by Cloudflare Workers AI GLM-4.7-Flash. CodePro can research, inspect the active page, and use the local Windows Shell Bridge for multi-step PowerShell/CMD workflows. Shell agent mode requires explicit opt-in, runs as the current Windows user, streams real command output, and separately confirms high-impact operations. The installer supports automatic GitHub release updates.
             AI availability depends on the configured hosted model providers.
           files: electron-agent/release/*
           make_latest: true
