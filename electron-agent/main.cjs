@@ -47,12 +47,13 @@ app.on('second-instance', (_event, argv) => {
   if (url) sendProtocolUrl(url);
 });
 const DEFAULT_API_BASE_URL = 'https://isaiahsearch.netlify.app/api';
+const DEFAULT_CODEPRO_API_BASE_URL = 'https://codepro-gateway-production.up.railway.app';
 async function loadSavedWorkspace() {
   let candidate = '';
   try {
     const saved = JSON.parse(await fs.readFile(settingsFile, 'utf8'));
     candidate = typeof saved.workspaceRoot === 'string' ? saved.workspaceRoot : '';
-    unrestrictedAgentEnabled = false;
+    unrestrictedAgentEnabled = saved.unrestrictedAgentEnabled === true;
     unrestrictedModeChoiceSaved = true;
     defaultBrowserPrompted = saved.defaultBrowserPrompted === true;
   } catch { /* first launch or reset: use the private default workspace */ }
@@ -73,7 +74,7 @@ async function loadSavedWorkspace() {
 }
 async function persistWorkspace() {
   await fs.mkdir(path.dirname(settingsFile), { recursive: true });
-  await fs.writeFile(settingsFile, JSON.stringify({ workspaceRoot, unrestrictedAgentEnabled: false, unrestrictedModeChoiceSaved: true, defaultBrowserPrompted }, null, 2), { encoding: 'utf8', mode: 0o600 });
+  await fs.writeFile(settingsFile, JSON.stringify({ workspaceRoot, unrestrictedAgentEnabled: unrestrictedAgentEnabled === true, unrestrictedModeChoiceSaved: true, defaultBrowserPrompted }, null, 2), { encoding: 'utf8', mode: 0o600 });
 }
 const skippedDirs = new Set(['.git', 'node_modules', 'dist', 'build', 'release', '.next', '.cache', '.idea', '.vscode']);
 const textExtensions = new Set(['.txt', '.md', '.json', '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.css', '.html', '.htm', '.py', '.rs', '.go', '.java', '.cs', '.xml', '.yml', '.yaml', '.toml', '.ini', '.sh', '.bat', '.ps1', '.sql', '.svg', '.env.example']);
@@ -390,13 +391,20 @@ app.on('before-quit', () => {
 
 ipcMain.handle('app:config', () => {
   const configured = String(process.env.ISAIAH_API_BASE_URL || DEFAULT_API_BASE_URL).trim();
+  let apiBaseUrl = DEFAULT_API_BASE_URL;
   try {
     const parsed = new URL(configured);
     if (parsed.protocol !== 'https:') throw new Error('The AI API must use HTTPS.');
-    return { apiBaseUrl: parsed.href.replace(/\/$/, '') };
-  } catch {
-    return { apiBaseUrl: DEFAULT_API_BASE_URL };
-  }
+    apiBaseUrl = parsed.href.replace(/\/$/, '');
+  } catch { /* use the default hosted API */ }
+  const codeProConfigured = String(process.env.ISAIAH_CODEPRO_API_BASE_URL || DEFAULT_CODEPRO_API_BASE_URL).trim();
+  let codeProApiBaseUrl = DEFAULT_CODEPRO_API_BASE_URL;
+  try {
+    const parsed = new URL(codeProConfigured);
+    if (parsed.protocol !== 'https:') throw new Error('The CodePro API must use HTTPS.');
+    codeProApiBaseUrl = parsed.href.replace(/\/$/, '');
+  } catch { /* use the default Railway CodePro API */ }
+  return { apiBaseUrl, codeProApiBaseUrl };
 });
 
 function requireWorkspace() {
@@ -440,13 +448,23 @@ async function confirmAction(title, message, detail, confirmLabel) {
 }
 ipcMain.handle('agent:unrestricted:get', () => ({
   enabled: unrestrictedAgentEnabled,
-  administratorRequested: process.platform === 'win32'
+  runsAsAdministrator: false
 }));
 ipcMain.handle('agent:unrestricted:set', async (_event, enabled) => {
-  unrestrictedAgentEnabled = false;
+  const wantsEnabled = enabled === true;
+  if (wantsEnabled && !unrestrictedAgentEnabled) {
+    const approved = await confirmAction(
+      'Enable the Windows shell agent?',
+      'Allow IsaiahAI CodePro to run PowerShell or Command Prompt steps automatically?',
+      'Commands will run locally as your current Windows user, not as Administrator. The agent can read and change files your account can access and can launch programs. Output and exit codes are returned to the AI before it chooses the next step. High-impact disk, registry, boot, security, shutdown, and similar commands will still require a separate confirmation. You can turn this setting off at any time.',
+      'Enable Windows shell'
+    );
+    if (!approved) return { enabled: false, canceled: true, runsAsAdministrator: false };
+  }
+  unrestrictedAgentEnabled = wantsEnabled;
   unrestrictedModeChoiceSaved = true;
   await persistWorkspace();
-  return { enabled: false, canceled: enabled === true };
+  return { enabled: unrestrictedAgentEnabled, canceled: false, runsAsAdministrator: false };
 });
 ipcMain.handle('workspace:choose', async () => {
   const picked = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
@@ -556,6 +574,16 @@ ipcMain.handle('workspace:run-preset', async (_event, presetKey) => {
   }
   return runProcess(preset.bin, preset.args, root);
 });
+function isHighImpactCommand(command) {
+  const checks = [
+    /\b(?:format(?:\.com)?|diskpart|Clear-Disk|Format-Volume|Remove-Partition|Initialize-Disk|Set-Disk)\b/i,
+    /\b(?:reg(?:\.exe)?\s+(?:delete|add)|Remove-ItemProperty|Set-ItemProperty)\b/i,
+    /\b(?:Set-MpPreference|Add-MpPreference|bcdedit|Disable-WindowsOptionalFeature)\b/i,
+    /\b(?:Stop-Computer|Restart-Computer|shutdown(?:\.exe)?|sc(?:\.exe)?\s+delete)\b/i,
+    /\b(?:cipher\s+\/w|vssadmin\s+delete|wbadmin\s+delete)\b/i
+  ];
+  return checks.some(pattern => pattern.test(String(command || '')));
+}
 ipcMain.handle('workspace:run-custom-command', async (_event, payload) => {
   const root = requireWorkspace();
   const command = String(payload?.command || '').trim();
@@ -564,9 +592,16 @@ ipcMain.handle('workspace:run-custom-command', async (_event, payload) => {
   if (!command || command.length > 12000) throw new Error('Enter a command up to 12,000 characters.');
   if (!['powershell', 'cmd'].includes(selectedShell)) throw new Error('Choose PowerShell or Command Prompt.');
   const shellLabel = selectedShell === 'powershell' ? 'Windows PowerShell' : 'Command Prompt';
+  const highImpact = isHighImpactCommand(command);
   const detail = command + '\n\nWorking directory: ' + root +
-    '\n\nThis command runs with the permissions granted to IsaiahSearch Agent (the app requests Windows Administrator elevation). It may change the entire computer.';
-  if (!unrestrictedAgentEnabled && !await confirmAction('Approve terminal command?', 'IsaiahSearch Agent is requesting permission to run this command in ' + shellLabel + '.', detail + '\n\nNo command runs until you approve this exact request.', 'Run this command')) {
+    '\n\nCommands run as your current Windows user, never silently elevated to Administrator. ' +
+    (highImpact ? 'This command matches a high-impact system-change pattern and always requires a separate approval.' : 'Review the command and its effects before enabling automatic shell mode.');
+  if ((highImpact || !unrestrictedAgentEnabled) && !await confirmAction(
+    highImpact ? 'Confirm high-impact Windows command' : 'Approve terminal command?',
+    highImpact ? 'This command may change important Windows settings or system state.' : 'IsaiahAI CodePro is requesting permission to run this command in ' + shellLabel + '.',
+    detail + '\n\nNo command runs until you approve this exact request.',
+    highImpact ? 'Run high-impact command' : 'Run this command'
+  )) {
     return { canceled: true, exitCode: null, output: 'Command canceled by user.' };
   }
   const stream = chunk => {
