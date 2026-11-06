@@ -54,8 +54,11 @@ if (!html.includes("function extractBrowserProposal") || !html.includes("inspect
 if (!html.includes("BOOKMARK_KEY") || !html.includes("RECENT_KEY") || !html.includes("id=\"shortcutGrid\"")) {
   throw new Error('The browser home page must include bookmarks, recent-site, and top-site widgets.');
 }
-if (!html.includes("classList.add('chat-open')") && !html.includes('classList.add("chat-open")')) {
-  throw new Error('The integrated AI chat must open as a slide-over browser panel.');
+if (!html.includes("classList.add('chat-open','chat-fullscreen')") || !html.includes("currentPanel=name==='chat'?'chat':'browser'")) {
+  throw new Error('The integrated AI chat must open full-screen and suspend the native Chromium panel.');
+}
+if (!html.includes("setBrowserViewActive(tab.id,false)") || !html.includes("tab.id===activeBrowserTabId&&currentPanel==='browser'")) {
+  throw new Error('Chromium must stay hidden during navigation and only appear after the page is ready.');
 }
 if (!html.includes("dataTransfer") || !html.includes("application/pdf")) {
   throw new Error('Chat attachments and drag/drop support are missing.');
