@@ -11,7 +11,7 @@ IsaiahSearch is a full-window Windows browser built with Electron and native Chr
 
 ## Integrated IsaiahSearch Agent
 - Agent mode is enabled by default.
-- IsaiahAI CodePro can inspect the active browser page, open websites in native tabs, search the web, and use a remote Python code interpreter.
+- IsaiahAI CodePro can inspect the active browser page and open websites in native tabs. It can complete desktop tasks through the local Windows Shell Bridge. Browser search results are opened in native tabs and inspected by the agent; no remote Python code interpreter is bundled into this Cloudflare-backed configuration.
 - Page inspection is read-only and bounded to URL, title, meta description, visible text, and a limited list of links. Page text is treated as untrusted source material.
 - Attach images, PDFs, and supported text/source files in chat.
 - CodePro has a local Windows Shell Bridge for PowerShell and Command Prompt. After the user explicitly enables Windows shell agent mode, CodePro can run a sequence of commands as the current Windows user, stream terminal output, inspect exit codes, and choose the next step. When shell agent mode is off, each command requires explicit approval.
