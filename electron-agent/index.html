@@ -618,7 +618,7 @@ async function sendChat(prompt){
    setApiStatus('Online',true);
    const browserProposal=agentMode?extractBrowserProposal(answer):null;
     if(browserProposal){
-     if(actionCount>=6){answer='The browser agent reached its 10-action safety limit. The next website was not opened.';break;}
+     if(actionCount>=10){answer='The browser agent reached its 10-action safety limit. The next website was not opened.';break;}
      actionCount++;
      const executionId='browser-'+Date.now()+'-'+(++agentRunSequence);
      const progress=appendAgentProgress('Step '+actionCount+' · opening browser tab','Opening '+browserProposal.url+' in a new native Chromium tab.',executionId);
@@ -938,9 +938,9 @@ async function navigateBrowser(raw,options){
  if(tab.id===activeBrowserTabId){$('address').value=url.href;$('browserHome').hidden=true;$('browserCanvas').hidden=false;$('browserNote').hidden=false;$('browserNote').textContent='Loading '+url.hostname+' in Chromium…';}
  renderBrowserTabs();updateBookmarkButton();
  try{
-  if(!tab.nativeCreated){await window.isaiahDesktop.createBrowserView({tabId:tab.id});tab.nativeCreated=true;}
-  // Keep native Chromium hidden while navigating; expose it only after loadURL resolves.
+  // Deactivate existing native views BEFORE creating or navigating a tab, so a blank Chromium surface never flashes.
   await window.isaiahDesktop.setBrowserViewActive(tab.id,false);
+  if(!tab.nativeCreated){await window.isaiahDesktop.createBrowserView({tabId:tab.id});tab.nativeCreated=true;}
   await window.isaiahDesktop.navigateBrowserView(tab.id,url.href);
   tab.loading=false;
   if(tab.id===activeBrowserTabId&&currentPanel==='browser')syncNativeBrowserView();
