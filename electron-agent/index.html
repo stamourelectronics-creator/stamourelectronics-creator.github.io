@@ -295,7 +295,7 @@ async function initializeApi(){
   try{
    const response=await fetch(CODEPRO_API+'/health',{method:'GET',headers:{'Accept':'application/json'},cache:'no-store',signal:AbortSignal.timeout(7000)});
    const data=await response.json().catch(()=>({}));
-   if(!response.ok||data.ok!==true||!data.groqConfigured)throw new Error(data.error||'The CodePro server did not report GPT-OSS-120B ready ('+response.status+').');
+   if(!response.ok||data.ok!==true||!data.cloudflareConfigured)throw new Error(data.error||'The CodePro server did not report Cloudflare Workers AI ready ('+response.status+').');
    codeProHealth=data;
   }catch(error){codeProHealth=null;console.warn('[IsaiahAI CodePro] Health check failed:',safeError(error));}
   try{
@@ -313,13 +313,13 @@ async function initializeApi(){
 
 function modelLabel(model){return model==='breakaway_1_0'?'Breakaway 1.0':model==='isaiah_codepro'?'IsaiahAI CodePro':'IsaiahAI 7.0 SUPER';}
 function modelConfigured(model,health){
-  if(model==='isaiah_codepro')return Boolean(codeProHealth&&codeProHealth.ok===true&&codeProHealth.groqConfigured===true);
+  if(model==='isaiah_codepro')return Boolean(codeProHealth&&codeProHealth.ok===true&&codeProHealth.cloudflareConfigured===true);
   if(health&&health.models&&typeof health.models[model]==='boolean')return health.models[model];
   return Boolean(health&&health.aiConfigured);
 }
 function updateModelStatus(){
   const model=$('modelSelect').value,name=modelLabel(model),configured=modelConfigured(model,model==='isaiah_codepro'?codeProHealth:apiHealth);
-  $('modelHint').textContent=name+(configured?' · ready':(model==='breakaway_1_0'?' · Gemini key missing':model==='isaiah_codepro'?' · Groq server unavailable':' · OpenRouter key missing'));
+  $('modelHint').textContent=name+(configured?' · ready':(model==='breakaway_1_0'?' · Gemini key missing':model==='isaiah_codepro'?' · Cloudflare Free model unavailable':' · OpenRouter key missing'));
   const online=model==='isaiah_codepro'?Boolean(codeProHealth&&codeProHealth.ok):Boolean(apiHealth&&configured);
   setApiStatus(online?(configured?'Online':'Model not configured'):'Offline',online&&configured);
 }
@@ -549,7 +549,7 @@ async function requestChatTurn(message,history,selectedModel,images,files,showSu
   if(!health){apiReady=initializeApi();health=await apiReady;}
   if(!health||health.ok!==true)throw new Error('The IsaiahAI server is unreachable. Check your internet connection and retry.');
   if(selectedModel==='isaiah_codepro'){
-   if(!codeProHealth||codeProHealth.ok!==true||!codeProHealth.groqConfigured)throw new Error('The IsaiahAI CodePro Railway server is offline or its Groq model is not configured.');
+   if(!codeProHealth||codeProHealth.ok!==true||!codeProHealth.cloudflareConfigured)throw new Error('The IsaiahAI CodePro Cloudflare Workers AI gateway is offline or its Cloudflare token is not configured.');
    const response=await fetch(CODEPRO_API+'/api/chat',{
     method:'POST',
     headers:{'Content-Type':'application/json','Accept':'application/json'},
@@ -560,7 +560,7 @@ async function requestChatTurn(message,history,selectedModel,images,files,showSu
    const data=await response.json().catch(function(){return {};});
    if(!response.ok)throw new Error((data.error||'IsaiahAI CodePro is temporarily unavailable.')+' (HTTP '+response.status+')');
    const answer=String(data.content||'').trim();if(!answer)throw new Error('IsaiahAI CodePro returned an empty answer.');
-   return {...data,selectedProvider:'Groq · GPT-OSS-120B'};
+   return {...data,selectedProvider:'Cloudflare Workers AI · GLM-4.7-Flash'};
   }
   if(!modelConfigured(selectedModel,health))throw new Error(selectedModel==='breakaway_1_0'?'Breakaway 1.0 needs the Gemini API key configured on the server.':'IsaiahAI 7.0 SUPER needs the OpenRouter API key configured on the server.');
   const response=await fetch(API+'/chat',{
@@ -912,7 +912,7 @@ function closeBrowserTab(id){
  else renderBrowserTabs();
 }
 function activatePanel(name){
- currentPanel='browser';const drawer=$('panel-chat');
+ currentPanel=name==='chat'?'chat':'browser';const drawer=$('panel-chat');
  if(name==='chat'){drawer.classList.add('chat-open','chat-fullscreen');setTimeout(()=>$('chatInput').focus(),70);}
  else{drawer.classList.remove('chat-open','chat-fullscreen');if(!browserTabs.length)createBrowserTab('',true);setTimeout(()=>$('address').focus(),25);}
  syncNativeBrowserView();requestAnimationFrame(updateBrowserBounds);
@@ -939,8 +939,11 @@ async function navigateBrowser(raw,options){
  renderBrowserTabs();updateBookmarkButton();
  try{
   if(!tab.nativeCreated){await window.isaiahDesktop.createBrowserView({tabId:tab.id});tab.nativeCreated=true;}
-  if(tab.id===activeBrowserTabId)syncNativeBrowserView();
+  // Keep native Chromium hidden while navigating; expose it only after loadURL resolves.
+  await window.isaiahDesktop.setBrowserViewActive(tab.id,false);
   await window.isaiahDesktop.navigateBrowserView(tab.id,url.href);
+  tab.loading=false;
+  if(tab.id===activeBrowserTabId&&currentPanel==='browser')syncNativeBrowserView();
  }catch(error){
   tab.loading=false;
   if(tab.id===activeBrowserTabId){$('browserNote').hidden=false;$('browserNote').textContent='Chromium could not load this page. '+safeError(error)+' You can use Open outside to continue.';}
@@ -969,22 +972,27 @@ $('homeBtn').addEventListener('click',showBrowserHome);
 $('newBrowserTab').addEventListener('click',function(){createBrowserTab('',true);});
 $('backBtn').addEventListener('click',function(){const tab=activeBrowserTab();if(tab?.nativeCreated)window.isaiahDesktop.browserBack(tab.id).catch(function(){});});
 $('forwardBtn').addEventListener('click',function(){const tab=activeBrowserTab();if(tab?.nativeCreated)window.isaiahDesktop.browserForward(tab.id).catch(function(){});});
-$('reloadBtn').addEventListener('click',function(){const tab=activeBrowserTab();if(tab?.nativeCreated)window.isaiahDesktop.browserReload(tab.id).catch(function(error){$('browserNote').hidden=false;$('browserNote').textContent=safeError(error);});else showBrowserHome();});
+$('reloadBtn').addEventListener('click',function(){const tab=activeBrowserTab();if(tab?.nativeCreated){$('browserCanvas').hidden=false;$('browserNote').hidden=false;$('browserNote').textContent='Reloading '+(tab.title||'website')+'…';window.isaiahDesktop.browserReload(tab.id).catch(function(error){$('browserCanvas').hidden=true;$('browserNote').hidden=false;$('browserNote').textContent=safeError(error);});}else showBrowserHome();});
 $('newWindowBtn').addEventListener('click',function(){const url=$('address').value;if(!isHttpUrl(url))return;window.isaiahDesktop.openExternal(url).catch(function(error){$('browserNote').hidden=false;$('browserNote').textContent=safeError(error);});});
 function updateBrowserBounds(){
  const canvas=$('browserCanvas'),tab=activeBrowserTab();
  if(currentPanel!=='browser'||!tab||!tab.url||canvas.hidden){window.isaiahDesktop.setBrowserViewBounds({x:0,y:0,width:0,height:0});return;}
  const rect=canvas.getBoundingClientRect();
- const drawerOpen=$('panel-chat').classList.contains('chat-open'),drawerWidth=drawerOpen?Math.min(490,Math.round(window.innerWidth*.96)):0;
- window.isaiahDesktop.setBrowserViewBounds({x:rect.left,y:rect.top,width:Math.max(0,rect.width-drawerWidth),height:rect.height});
+ window.isaiahDesktop.setBrowserViewBounds({x:rect.left,y:rect.top,width:Math.max(0,rect.width),height:Math.max(0,rect.height)});
 }
 function syncNativeBrowserView(){
  const tab=activeBrowserTab(),visible=currentPanel==='browser'&&!!tab&&!!tab.url&&!!tab.nativeCreated;
  $('browserCanvas').hidden=!(currentPanel==='browser'&&!!tab&&!!tab.url);
- window.isaiahDesktop.setBrowserViewActive(tab?.id||'',visible).then(function(){requestAnimationFrame(updateBrowserBounds);}).catch(function(error){
-  if(visible){$('browserNote').hidden=false;$('browserNote').textContent='Chromium view could not be activated: '+safeError(error);}
+ if(!visible){
+  window.isaiahDesktop.setBrowserViewBounds({x:0,y:0,width:0,height:0});
+  window.isaiahDesktop.setBrowserViewActive(tab?.id||'',false).catch(function(){});
+  return;
+ }
+ // Set native bounds before revealing the Chromium surface to avoid a full-window white flash.
+ updateBrowserBounds();
+ window.isaiahDesktop.setBrowserViewActive(tab.id,true).then(function(){requestAnimationFrame(updateBrowserBounds);}).catch(function(error){
+  $('browserCanvas').hidden=true;$('browserNote').hidden=false;$('browserNote').textContent='Chromium view could not be activated: '+safeError(error);
  });
- if(!visible)window.isaiahDesktop.setBrowserViewBounds({x:0,y:0,width:0,height:0});
 }
 if(typeof window.isaiahDesktop.onBrowserEvent==='function'){
  window.isaiahDesktop.onBrowserEvent(function(event){
@@ -1000,10 +1008,17 @@ if(typeof window.isaiahDesktop.onBrowserEvent==='function'){
    if(event.title)tab.title=String(event.title).slice(0,70);renderBrowserTabs();
   }else if(event.type==='loading'){
    tab.loading=!!event.loading;
-   if(activeBrowserTabId===tab.id){$('browserNote').hidden=!tab.loading;$('browserNote').textContent=tab.loading?'Loading '+(tab.title||'website')+' in Chromium…':'';}
+   if(activeBrowserTabId===tab.id){
+    $('browserNote').hidden=!tab.loading;$('browserNote').textContent=tab.loading?'Loading '+(tab.title||'website')+' in Chromium…':'';
+    if(tab.loading){window.isaiahDesktop.setBrowserViewActive(tab.id,false).catch(function(){});window.isaiahDesktop.setBrowserViewBounds({x:0,y:0,width:0,height:0});}
+    else if(currentPanel==='browser')syncNativeBrowserView();
+   }
   }else if(event.type==='error'){
    tab.loading=false;
-   if(activeBrowserTabId===tab.id){$('browserNote').hidden=false;$('browserNote').textContent='Chromium could not load this page. '+String(event.errorDescription||'Unknown browser error')+' You can use Open outside to continue.';}
+   if(activeBrowserTabId===tab.id){
+    window.isaiahDesktop.setBrowserViewActive(tab.id,false).catch(function(){});window.isaiahDesktop.setBrowserViewBounds({x:0,y:0,width:0,height:0});$('browserCanvas').hidden=true;
+    $('browserNote').hidden=false;$('browserNote').textContent='Chromium could not load this page. '+String(event.errorDescription||'Unknown browser error')+'. Press Reload to try again.';
+   }
   }
  });
 }
