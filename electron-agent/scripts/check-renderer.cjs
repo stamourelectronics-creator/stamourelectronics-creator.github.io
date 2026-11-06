@@ -30,7 +30,7 @@ for (const required of [
   'attachmentTray',
   'prepareAttachment',
   'requestChatTurn',
-  'maxActions=6',
+  'maxActions=10',
   'onAgentCommandOutput',
   'setAgentProgress',
   'createBrowserView',
