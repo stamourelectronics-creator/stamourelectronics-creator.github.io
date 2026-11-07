@@ -3,9 +3,9 @@
 IsaiahSearch is a full-window Windows browser built with Electron and native Chromium WebContentsView. The browser is the main app, with an integrated IsaiahSearch AI agent.
 
 ## Browser interface
-- Starts directly in an original IsaiahSearch new-tab dashboard with a centered search bar, custom IsaiahSearch mark, shortcut tiles, clock, bookmarks, recent sites, and a photo-led Popular Today news section.
+- Starts directly in an original IsaiahSearch new-tab dashboard with a centered search bar, custom IsaiahSearch mark, official website favicons, clock, bookmarks, recent sites, and a photo-led Popular Today news section. The desktop process fetches the RSS feed and publisher preview images so browser-renderer CORS limits do not leave the news panel stuck loading.
 - Native Chromium tabs fill the browser window. Website navigation stays inside IsaiahSearch.
-- The AI button opens the full-screen IsaiahAI CodePro agent chat, with Cloudflare Workers AI GLM-4.7-Flash as the CodePro model.
+- The AI button opens the full-screen IsaiahAI CodePro agent chat. CodePro uses Cloudflare Workers AI GLM-4.7-Flash when its token is configured and automatically falls back to Groq when Cloudflare is unavailable. Breakaway 1.0 keeps the hosted Gemini route as its preferred provider and uses a separate Groq backup route on the desktop app when Gemini is unavailable.
 - Bookmarks and recently visited sites are stored locally on this Windows device.
 - Shortcuts: F11 full screen, Ctrl+T new tab, Ctrl+L address bar, Ctrl+D bookmark, Ctrl+W close tab, Ctrl+Shift+A open AI chat, Esc close chat.
 
@@ -27,4 +27,4 @@ The installed Windows version checks the public IsaiahSearch GitHub Releases fee
 Install Node.js 22 or newer, then run npm install, npm run check, and npm run dist from this folder. The Windows x64 installer and portable EXE are written to release/. GitHub Actions performs the same build and publishes the Windows assets.
 
 ## AI API and privacy
-IsaiahAI CodePro uses the Railway gateway at https://codepro-gateway-production.up.railway.app and Cloudflare Workers AI GLM-4.7-Flash. The Cloudflare API token is stored only in Railway's private environment variables and is never embedded in the installer. The standard Workers Free plan provides 10,000 Neurons per day; once this allocation is used, Workers AI requests pause until the daily reset at 00:00 UTC. IsaiahAI 7.0 SUPER and Breakaway 1.0 continue using the existing hosted AI API. Usage depends on the configured providers and their quotas.
+IsaiahAI CodePro and the desktop Breakaway 1.0 backup route use the Railway gateway at https://codepro-gateway-production.up.railway.app. Cloudflare Workers AI is the CodePro primary when a token is configured; Groq is the automatic fallback. Breakaway prefers the hosted Gemini API and can fall back to its isolated Groq route. Provider credentials remain server-side and are never embedded in the installer. IsaiahAI 7.0 SUPER continues using the hosted API. Provider usage is subject to the configured services and their quotas.
