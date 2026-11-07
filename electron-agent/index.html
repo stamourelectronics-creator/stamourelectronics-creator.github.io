@@ -1006,7 +1006,7 @@ async function navigateBrowser(raw,options){
  if(!tab)return;
  tab.url=url.href;tab.loading=true;
  try{tab.title=url.hostname.replace(/^www\./,'')||'New Tab';}catch{tab.title='New Tab';}
- if(tab.id===activeBrowserTabId){$('address').value=url.href;$('browserHome').hidden=true;$('browserCanvas').hidden=false;$('browserNote').hidden=false;$('browserNote').textContent='Loading '+url.hostname+' in Chromium…';}
+ if(tab.id===activeBrowserTabId){$('address').value=url.href;$('browserHome').hidden=true;$('browserCanvas').hidden=false;$('browserNote').hidden=false;$('browserNote').textContent='Loading '+url.hostname+'…';}
  renderBrowserTabs();updateBookmarkButton();
  try{
   // Deactivate existing native views BEFORE creating or navigating a tab, so a blank Chromium surface never flashes.
@@ -1089,7 +1089,7 @@ if(typeof window.isaiahDesktop.onBrowserEvent==='function'){
   }else if(event.type==='loading'){
    tab.loading=!!event.loading;
    if(activeBrowserTabId===tab.id){
-    $('browserNote').hidden=!tab.loading;$('browserNote').textContent=tab.loading?''Loading '+(tab.title||'page')+'…':'';
+    $('browserNote').hidden=!tab.loading;$('browserNote').textContent=tab.loading?'Loading '+(tab.title||'page')+'…':'';
     if(tab.loading){window.isaiahDesktop.setBrowserViewActive(tab.id,false).catch(function(){});window.isaiahDesktop.setBrowserViewBounds({x:0,y:0,width:0,height:0});}
     else if(currentPanel==='browser')syncNativeBrowserView();
    }
