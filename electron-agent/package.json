@@ -1,8 +1,8 @@
 {
   "name": "isaiahsearch-browser",
   "productName": "IsaiahSearch",
-  "version": "1.4.0",
-  "description": "IsaiahSearch full-window Windows browser with integrated IsaiahAI CodePro powered by Cloudflare Workers AI GLM-4.7-Flash and native Chromium tabs.",
+  "version": "1.4.1",
+  "description": "IsaiahSearch full-window Windows browser with integrated IsaiahAI CodePro, Breakaway 1.0 backup routing, native Chromium tabs, and automatic GitHub release updates.",
   "main": "main.cjs",
   "license": "UNLICENSED",
   "scripts": {
