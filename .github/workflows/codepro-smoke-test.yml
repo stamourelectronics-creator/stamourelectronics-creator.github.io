@@ -1,0 +1,49 @@
+name: IsaiahAI CodePro live smoke test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/codepro-smoke-test.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-codepro:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check gateway and active provider
+        shell: pwsh
+        run: |
+          $base = 'https://codepro-gateway-production.up.railway.app'
+          $health = Invoke-RestMethod -Uri "$base/health" -TimeoutSec 20
+          if (-not $health.ok -or -not $health.providerReady) {
+            throw 'CodePro gateway health did not report an active provider.'
+          }
+          Write-Host ("Gateway online. Active provider: " + $health.provider + "; model: " + $health.model)
+
+      - name: Send a real public-desktop CodePro chat request
+        shell: pwsh
+        run: |
+          $base = 'https://codepro-gateway-production.up.railway.app'
+          $payload = @{
+            message = 'Reply with the exact text CODEPRO_SMOKE_OK and nothing else.'
+            history = @()
+            stream = $false
+          } | ConvertTo-Json -Depth 8 -Compress
+
+          # Intentionally omit Authorization. The Windows installer cannot
+          # safely contain the shared gateway token; public requests are
+          # protected by the server-side per-IP rate limit.
+          $result = Invoke-RestMethod -Method Post -Uri "$base/api/chat" -ContentType 'application/json' -Body $payload -TimeoutSec 120
+          if ([string]::IsNullOrWhiteSpace([string]$result.content)) {
+            throw 'The CodePro endpoint returned an empty answer.'
+          }
+          if ($result.brand -ne 'IsaiahAI CodePro') {
+            throw ('Unexpected response brand: ' + [string]$result.brand)
+          }
+          Write-Host ("CodePro chat succeeded using provider " + [string]$result.provider + " and model " + [string]$result.model + ".")
+          Write-Host ("Response length: " + ([string]$result.content).Length + " characters.")
