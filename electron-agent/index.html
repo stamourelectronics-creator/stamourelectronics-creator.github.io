@@ -341,13 +341,18 @@ async function initializeApi(){
 function modelLabel(model){return model==='breakaway_1_0'?'Breakaway 1.0':model==='isaiah_codepro'?'IsaiahAI CodePro':'IsaiahAI 7.0 SUPER';}
 function modelConfigured(model,health){
   if(model==='isaiah_codepro')return Boolean(codeProHealth&&codeProHealth.ok===true&&codeProHealth.cloudflareConfigured===true);
+  if(model==='breakaway_1_0')return Boolean((health&&health.models&&health.models.breakaway_1_0===true)||(codeProHealth&&codeProHealth.ok===true&&codeProHealth.breakawayConfigured===true));
   if(health&&health.models&&typeof health.models[model]==='boolean')return health.models[model];
   return Boolean(health&&health.aiConfigured);
 }
 function updateModelStatus(){
   const model=$('modelSelect').value,name=modelLabel(model),configured=modelConfigured(model,model==='isaiah_codepro'?codeProHealth:apiHealth);
-  $('modelHint').textContent=name+(configured?' · ready':(model==='breakaway_1_0'?' · Gemini key missing':model==='isaiah_codepro'?' · Cloudflare Free model unavailable':' · OpenRouter key missing'));
-  const online=model==='isaiah_codepro'?Boolean(codeProHealth&&codeProHealth.ok):Boolean(apiHealth&&configured);
+  let detail='';
+  if(configured&&model==='breakaway_1_0'&&!(apiHealth&&apiHealth.models&&apiHealth.models.breakaway_1_0))detail=' · Groq backup ready';
+  else if(configured&&model==='isaiah_codepro'&&codeProHealth&&codeProHealth.provider)detail=' · '+codeProHealth.provider;
+  else if(!configured)detail=model==='breakaway_1_0'?' · provider unavailable':model==='isaiah_codepro'?' · gateway unavailable':' · OpenRouter key missing';
+  $('modelHint').textContent=name+(configured?' · ready':' · unavailable')+detail;
+  const online=model==='isaiah_codepro'?Boolean(codeProHealth&&codeProHealth.ok):model==='breakaway_1_0'?Boolean(configured&&((apiHealth&&apiHealth.ok)||(codeProHealth&&codeProHealth.ok))):Boolean(apiHealth&&configured);
   setApiStatus(online?(configured?'Online':'Model not configured'):'Offline',online&&configured);
 }
 
@@ -571,12 +576,27 @@ if(typeof window.isaiahDesktop.onAgentCommandOutput==='function'){
   const transcript=$('transcript');transcript.scrollTop=transcript.scrollHeight;
  });
 }
+async function requestBreakawayBackup(message,history,images,files){
+ if((Array.isArray(images)&&images.length)||(Array.isArray(files)&&files.length)){
+  throw new Error('Breakaway 1.0 is using its text-only backup provider because the Gemini service is unavailable. Remove the attachments or restore the Gemini provider to process images and files.');
+ }
+ if(!codeProHealth||codeProHealth.ok!==true||!codeProHealth.breakawayConfigured)throw new Error('Breakaway 1.0 has no available Gemini or backup provider right now.');
+ const response=await fetch(CODEPRO_API+'/api/breakaway',{
+  method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},
+  body:JSON.stringify({message:message,history:history}),
+  signal:AbortSignal.timeout(130000),cache:'no-store'
+ });
+ const data=await response.json().catch(function(){return {};});
+ if(!response.ok)throw new Error((data.error||'Breakaway 1.0 is temporarily unavailable.')+' (HTTP '+response.status+')');
+ const answer=String(data.content||'').trim();if(!answer)throw new Error('Breakaway 1.0 returned an empty answer.');
+ return {...data,selectedProvider:data.selectedProvider||data.provider||'Groq fallback'};
+}
 async function requestChatTurn(message,history,selectedModel,images,files,showSummary,allowSearch){
   let health=await apiReady;
   if(!health){apiReady=initializeApi();health=await apiReady;}
   if(!health||health.ok!==true)throw new Error('The IsaiahAI server is unreachable. Check your internet connection and retry.');
   if(selectedModel==='isaiah_codepro'){
-   if(!codeProHealth||codeProHealth.ok!==true||!codeProHealth.cloudflareConfigured)throw new Error('The IsaiahAI CodePro Cloudflare Workers AI gateway is offline or its Cloudflare token is not configured.');
+   if(!codeProHealth||codeProHealth.ok!==true||!codeProHealth.cloudflareConfigured)throw new Error('The IsaiahAI CodePro gateway is unavailable. Check your internet connection and retry.');
    const response=await fetch(CODEPRO_API+'/api/chat',{
     method:'POST',
     headers:{'Content-Type':'application/json','Accept':'application/json'},
@@ -587,18 +607,29 @@ async function requestChatTurn(message,history,selectedModel,images,files,showSu
    const data=await response.json().catch(function(){return {};});
    if(!response.ok)throw new Error((data.error||'IsaiahAI CodePro is temporarily unavailable.')+' (HTTP '+response.status+')');
    const answer=String(data.content||'').trim();if(!answer)throw new Error('IsaiahAI CodePro returned an empty answer.');
-   return {...data,selectedProvider:'Cloudflare Workers AI · GLM-4.7-Flash'};
+   return {...data,selectedProvider:data.selectedProvider||data.provider||'Configured CodePro provider'};
   }
-  if(!modelConfigured(selectedModel,health))throw new Error(selectedModel==='breakaway_1_0'?'Breakaway 1.0 needs the Gemini API key configured on the server.':'IsaiahAI 7.0 SUPER needs the OpenRouter API key configured on the server.');
-  const response=await fetch(API+'/chat',{
-   method:'POST',headers:{'Content-Type':'application/json'},
-   body:JSON.stringify({message:message,history:history,model:selectedModel,selectedModel:selectedModel,chatMode:'general',searchWebEnabled:allowSearch,showThinking:showSummary,images:images,files:files}),
-   signal:AbortSignal.timeout(65000)
-  });
-  const data=await response.json().catch(function(){return {};});
-  if(!response.ok)throw new Error((data.error||modelLabel(selectedModel)+' is temporarily unavailable.')+' (HTTP '+response.status+')');
-  const answer=String(data.content||'').trim();if(!answer)throw new Error('The selected model returned an empty answer.');
-  return data;
+  if(selectedModel==='breakaway_1_0'&&!(apiHealth&&apiHealth.models&&apiHealth.models.breakaway_1_0===true)){
+   return await requestBreakawayBackup(message,history,images,files);
+  }
+  if(!modelConfigured(selectedModel,health))throw new Error(selectedModel==='breakaway_1_0'?'Breakaway 1.0 is not configured on an available provider.':'IsaiahAI 7.0 SUPER needs the OpenRouter API key configured on the server.');
+  try{
+   const response=await fetch(API+'/chat',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({message:message,history:history,model:selectedModel,selectedModel:selectedModel,chatMode:'general',searchWebEnabled:allowSearch,showThinking:showSummary,images:images,files:files}),
+    signal:AbortSignal.timeout(65000)
+   });
+   const data=await response.json().catch(function(){return {};});
+   if(!response.ok)throw new Error((data.error||modelLabel(selectedModel)+' is temporarily unavailable.')+' (HTTP '+response.status+')');
+   const answer=String(data.content||'').trim();if(!answer)throw new Error('The selected model returned an empty answer.');
+   return data;
+  }catch(error){
+   if(selectedModel==='breakaway_1_0'&&codeProHealth&&codeProHealth.breakawayConfigured&&!(Array.isArray(images)&&images.length)&&!(Array.isArray(files)&&files.length)){
+    console.warn('[Breakaway 1.0] Gemini request failed; using the configured backup provider:',safeError(error));
+    return await requestBreakawayBackup(message,history,images,files);
+   }
+   throw error;
+  }
 }
 
 async function sendChat(prompt){
