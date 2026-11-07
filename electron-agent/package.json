@@ -1,7 +1,7 @@
 {
   "name": "isaiahsearch-browser",
   "productName": "IsaiahSearch",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "IsaiahSearch full-window Windows browser with integrated IsaiahAI CodePro, Breakaway 1.0 backup routing, native Chromium tabs, and automatic GitHub release updates.",
   "main": "main.cjs",
   "license": "UNLICENSED",
