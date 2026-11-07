@@ -21,6 +21,11 @@ for (const required of [
   'runShellCommand({shell:proposal.shell,command:proposal.command,executionId:executionId})',
   'showThinkingToggle',
   'isaiahai-icon.svg',
+  'isaiahsearch-icon.svg',
+  'getHomeNews',
+  'requestBreakawayBackup',
+  '/api/breakaway',
+  'google.com/s2/favicons',
   'ISAIAHSEARCH BROWSER · AGENT · RESEARCH',
   'value="isaiahai_7_super"',
   'value="breakaway_1_0"',
@@ -78,5 +83,14 @@ if (/<webview\b/i.test(html) || /webviewTag:\s*true/.test(mainSource)) {
 }
 if (/puter\.ai\.(chat|txt2img)|js\.puter\.com\/v2/i.test(html)) {
   throw new Error('Puter AI client routes must not be included in IsaiahAI Agent.');
+}
+if (html.includes('in Chromium…')) {
+  throw new Error('The user-facing browser loading status must not expose the Chromium implementation name.');
+}
+if (!html.includes("id=\"homeNewsGrid\"") || !html.includes("async function loadHomeNews")) {
+  throw new Error('The browser home page must load its live news cards.');
+}
+if (!mainSource.includes("'/assets/isaiahsearch-icon.svg'") || !mainSource.includes("ipcMain.handle('news:load-home'")) {
+  throw new Error('The main process must serve the IsaiahSearch brand asset and native news feed.');
 }
 console.log('IsaiahSearch browser renderer syntax and feature checks passed.');
