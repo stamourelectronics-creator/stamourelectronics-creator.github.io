@@ -188,6 +188,33 @@ main{height:100%;width:100%;min-height:0;flex:1;display:flex;margin:0;padding:0}
 .newtab-logo{content:url('/assets/isaiahsearch-icon.svg')}
 /* Legacy classList.add('chat-open') slide-over was replaced by the chat-fullscreen state. */
 body{background:#f7f5fb;color:#201a32}.browser-tabs{background:#eee9f7;border-color:#e2dbee}.browser-tab{background:#f7f4fb;color:#625a75;border-color:#e2dbee}.browser-tab.active{background:#fff;color:#241d39;border-color:#d9cfee;box-shadow:inset 0 2px #8a6ae0}.toolbar{background:#f5f2fa;border-color:#e6e0ef}.toolbar .nav-btn{color:#71658f}.address-wrap{background:#fff;border-color:#e5deef}.address-wrap input{color:#27203a}.address-wrap input::placeholder{color:#91899e}.browser-bookmarks{background:#f5f2fa;border-color:#e9e3ef}.bookmark-chip{color:#6d6480}.browser-home{background:#f7f5fb;padding:20px 26px 24px}.newtab-shell{width:min(1180px,100%)}.newtab-top{margin-bottom:clamp(22px,4vh,42px)}.newtab-brand strong{color:#211936}.newtab-brand span{color:#8a7ba6}.clock-widget{padding:12px 16px;border-radius:16px;background:#fff;border:1px solid #eee9f5;box-shadow:0 4px 18px #46365e0b}.clock-widget strong{color:#27203b}.clock-widget span{color:#837a92}.newtab-eyebrow{color:#8461d4}.newtab-hero h1{color:#211936}.newtab-hero>p{color:#7c748d}.search-form{max-width:760px;border:1px solid #ece6f3;border-radius:999px;padding:7px 9px 7px 20px;background:#fff;box-shadow:0 6px 22px #3c2c5b0d}.search-form input{color:#28203b}.search-form input::placeholder{color:#91899d}.search-lens{color:#7056b7}.search-form button{border-radius:999px;background:#7652d4;color:white}.home-section-heading h2{font-size:14px;color:#29213d}.home-section-heading span{color:#9288a2}.shortcut-grid{grid-template-columns:repeat(8,minmax(0,1fr));gap:12px}.site-shortcut{background:#fff;border:1px solid #eee9f4;border-radius:17px;color:#514965;box-shadow:0 3px 14px #3c2c5b08}.site-shortcut:hover{background:#fff;color:#261d3c;border-color:#d9cbf2}.site-shortcut-icon{background:#f2edfb;color:#7654c8}.home-widgets{gap:14px;margin:0 0 24px}.home-widget{background:#fff;border:1px solid #eee9f4;border-radius:17px;box-shadow:0 4px 16px #382a5009}.widget-heading strong{color:#2c2441}.widget-heading small{color:#91879f}.home-widget p{color:#797187}.widget-list button{color:#655b78;background:#faf9fc}.widget-list button:hover{background:#f3effa;color:#35294d}.widget-empty{color:#9b93a6}.widget-action{background:#f0eafa;color:#6944bc;border-color:#e4d9f7}.newtab-footer{color:#a19aac;border-color:#ece7f2}.home-news{margin:0 0 20px}.home-news-status{min-height:18px;margin:-2px 0 10px;color:#92899e;font-size:10px}.home-news-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.home-news-card{display:flex;flex-direction:column;min-width:0;overflow:hidden;padding:0;text-align:left;background:#fff;border:1px solid #eee9f4;border-radius:16px;box-shadow:0 4px 16px #382a5009;color:#2a223b}.home-news-card img{width:100%;height:126px;object-fit:cover;background:#eeeaf3}.home-news-card .news-card-copy{display:flex;flex:1;flex-direction:column;gap:6px;padding:11px 12px 12px}.home-news-card strong{font-size:11px;line-height:1.45;color:#2a223b}.home-news-card small{font-size:9px;color:#8b8199;margin-top:auto}.home-news-empty{grid-column:1/-1;padding:16px;border-radius:13px;background:#fff;border:1px dashed #ded5eb;color:#82788f;font-size:11px}#panel-chat.chat-drawer.chat-open.chat-fullscreen{left:0;right:0;top:0;bottom:0;width:100vw;max-width:none;height:100dvh;border:0;border-radius:0;box-shadow:none}@media(max-width:850px){.shortcut-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.home-news-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.home-news-card img{height:116px}}@media(max-width:560px){.browser-home{padding:15px 12px 12px}.home-widgets{grid-template-columns:1fr}.home-news-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.home-news-card img{height:92px}.home-news-card .news-card-copy{padding:9px}.home-news-card strong{font-size:10px}}
+
+/* IsaiahSearch desktop polish: clear address text, crisp native shortcuts and editorial news cards. */
+.browser-tabs{height:43px;min-height:43px;padding:5px 10px 0;background:linear-gradient(180deg,#f0ecf7,#e9e4f2);border-bottom:1px solid #d8d0e6}
+.browser-tab{min-width:118px;max-width:235px;height:37px;border-radius:13px 13px 0 0;padding:0 10px;background:#f7f4fb;border:1px solid #e1d9eb}
+.browser-tab.active{background:#fff;border-color:#d5cbe5;box-shadow:inset 0 2px #8a6ae0}
+.toolbar{min-height:54px;padding:7px 12px;background:linear-gradient(180deg,#111c2e,#0b1526);border-bottom:1px solid #26354d;gap:9px}
+.toolbar .nav-btn{color:#c4cde0}
+.address-wrap{height:40px;min-height:40px;background:#101d31;border:1px solid #405678;border-radius:14px;box-shadow:inset 0 1px 3px #0005,0 2px 10px #0002;transition:border-color .18s,box-shadow .18s}
+.address-wrap:focus-within{border-color:#70d7f5;box-shadow:0 0 0 3px #55cfee20,0 5px 18px #0003}
+#address{color:#f7f9ff!important;-webkit-text-fill-color:#f7f9ff!important;caret-color:#79e4ff!important;font-weight:550;letter-spacing:.012em}
+#address::placeholder{color:#9baec7!important;-webkit-text-fill-color:#9baec7!important;opacity:1}
+#address::selection,#browserSearchInput::selection{background:#7254c9;color:#fff}
+#browserSearchInput{color:#f7f9ff!important;-webkit-text-fill-color:#f7f9ff!important;caret-color:#b8a2ff!important;font-weight:550;letter-spacing:.012em}
+#browserSearchInput::placeholder{color:#9baac0!important;-webkit-text-fill-color:#9baac0!important;opacity:1}
+.search-form{background:linear-gradient(135deg,#101d31,#17233b);border:1px solid #405779;border-radius:20px;box-shadow:0 18px 45px #221b3820,inset 0 1px #ffffff15}
+.search-form:focus-within{border-color:#8c74d4;box-shadow:0 0 0 4px #9173df22,0 18px 45px #221b3820}
+.site-shortcut-icon{width:38px;height:38px;border-radius:12px;background:#fff;display:grid;place-items:center;box-shadow:inset 0 0 0 1px #e8e3ef,0 2px 7px #241b3710;overflow:hidden}
+.site-shortcut-icon img{display:block;width:29px;height:29px;object-fit:contain;background:#fff;border-radius:7px}
+.site-shortcut{transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
+.site-shortcut:hover{transform:translateY(-3px);box-shadow:0 8px 20px #33244c13;border-color:#cfc2e5}
+.home-news-card{transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.home-news-card:hover{transform:translateY(-3px);border-color:#d7c9ef;box-shadow:0 10px 24px #34234d18}
+.home-news-card img{display:block;width:100%;height:132px;object-fit:cover;background:#eeeaf3}
+.home-news-card .news-card-copy strong{font-size:12px;line-height:1.5}
+.browser-note{position:relative;z-index:4;background:#f0eafb;color:#57427e;border-bottom:1px solid #e1d8ef;padding:6px 13px;font-size:11px}
+@media(max-width:650px){.toolbar{gap:6px;padding:6px 8px}.address-wrap{height:39px}.home-news-card img{height:104px}}
+
 </style></head><body>
 
 <main>
@@ -224,12 +251,12 @@ body{background:#f7f5fb;color:#201a32}.browser-tabs{background:#eee9f7;border-co
 <div id="browserNote" class="browser-note" hidden role="status" aria-live="polite"></div>
 <div id="browserHome" class="browser-home">
 <div class="newtab-shell">
-<div class="newtab-top"><div class="newtab-brand"><img src="/assets/isaiahai-icon.svg" alt="" class="newtab-logo"><div><strong>IsaiahSearch</strong><span>YOUR BROWSER. YOUR SPACE.</span></div></div><div class="clock-widget"><strong id="homeClock">--:--</strong><span id="homeDate">Loading local date…</span></div></div>
+<div class="newtab-top"><div class="newtab-brand"><img src="/assets/isaiahsearch-icon.svg" alt="IsaiahSearch" class="newtab-logo"><div><strong>IsaiahSearch</strong><span>YOUR BROWSER. YOUR SPACE.</span></div></div><div class="clock-widget"><strong id="homeClock">--:--</strong><span id="homeDate">Loading local date…</span></div></div>
 <div class="newtab-hero"><div class="newtab-eyebrow">A LITTLE SPACE TO EXPLORE</div><h1>Where to next?</h1><p>Open a website, find something new, or ask your built-in AI agent to help.</p>
 <form id="browserSearchForm" class="search-form"><span class="search-lens" aria-hidden="true">⌕</span><input id="browserSearchInput" aria-label="Search the web" placeholder="Search the web or enter a question…" autocomplete="off"><button type="submit">Search ↗</button></form>
 <div id="browserSearchStatus" class="muted" style="margin-top:10px;font-size:11px" aria-live="polite"></div><div id="browserResults" class="browser-results"></div></div>
 <section class="home-section"><div class="home-section-heading"><h2>Top sites</h2><span>QUICK ACCESS</span></div><div id="shortcutGrid" class="shortcut-grid">
-<button class="site-shortcut" data-open-url="https://www.youtube.com/"><span class="site-shortcut-icon youtube">▶</span><span>YouTube</span></button><button class="site-shortcut" data-open-url="https://www.wikipedia.org/"><span class="site-shortcut-icon wiki">W</span><span>Wikipedia</span></button><button class="site-shortcut" data-open-url="https://github.com/"><span class="site-shortcut-icon github">⌘</span><span>GitHub</span></button><button class="site-shortcut" data-open-url="https://www.reddit.com/"><span class="site-shortcut-icon reddit">r</span><span>Reddit</span></button><button class="site-shortcut" data-open-url="https://mail.google.com/"><span class="site-shortcut-icon mail">✉</span><span>Gmail</span></button><button class="site-shortcut" data-open-url="https://www.google.com/"><span class="site-shortcut-icon google">G</span><span>Google</span></button>
+<button class="site-shortcut" data-open-url="https://www.youtube.com/"><span class="site-shortcut-icon"><img src="https://www.google.com/s2/favicons?sz=64&amp;domain=www.youtube.com" alt="" loading="lazy" referrerpolicy="no-referrer"></span><span>YouTube</span></button><button class="site-shortcut" data-open-url="https://www.wikipedia.org/"><span class="site-shortcut-icon"><img src="https://www.google.com/s2/favicons?sz=64&amp;domain=www.wikipedia.org" alt="" loading="lazy" referrerpolicy="no-referrer"></span><span>Wikipedia</span></button><button class="site-shortcut" data-open-url="https://github.com/"><span class="site-shortcut-icon"><img src="https://www.google.com/s2/favicons?sz=64&amp;domain=github.com" alt="" loading="lazy" referrerpolicy="no-referrer"></span><span>GitHub</span></button><button class="site-shortcut" data-open-url="https://www.reddit.com/"><span class="site-shortcut-icon"><img src="https://www.google.com/s2/favicons?sz=64&amp;domain=www.reddit.com" alt="" loading="lazy" referrerpolicy="no-referrer"></span><span>Reddit</span></button><button class="site-shortcut" data-open-url="https://mail.google.com/"><span class="site-shortcut-icon"><img src="https://www.google.com/s2/favicons?sz=64&amp;domain=mail.google.com" alt="" loading="lazy" referrerpolicy="no-referrer"></span><span>Gmail</span></button><button class="site-shortcut" data-open-url="https://www.google.com/"><span class="site-shortcut-icon"><img src="https://www.google.com/s2/favicons?sz=64&amp;domain=www.google.com" alt="" loading="lazy" referrerpolicy="no-referrer"></span><span>Google</span></button>
 </div></section>
 <section class="home-widgets"><article class="home-widget bookmark-widget"><div class="widget-heading"><span class="widget-icon">★</span><div><strong>Your bookmarks</strong><small>Saved pages, ready when you are</small></div></div><div id="homeBookmarks" class="widget-list"><span class="widget-empty">Your saved bookmarks will appear here.</span></div></article>
 <article class="home-widget recent-widget"><div class="widget-heading"><span class="widget-icon">◷</span><div><strong>Recently visited</strong><small>Pick up where you left off</small></div></div><div id="recentSites" class="widget-list"><span class="widget-empty">Your recent sites will appear here.</span></div></article>
@@ -818,18 +845,42 @@ function renderHomeNews(items){
  (Array.isArray(items)?items:[]).slice(0,8).forEach(function(item){
   if(!item||!isHttpUrl(String(item.url||''))||!String(item.title||'').trim())return;
   const card=document.createElement('button');card.type='button';card.className='home-news-card';
-  const imageUrl=String(item.imageUrl||'');
-  if(isHttpUrl(imageUrl)){const image=document.createElement('img');image.src=imageUrl;image.alt='';image.loading='lazy';image.referrerPolicy='no-referrer';image.onerror=function(){image.remove();};card.append(image);}
+  let imageUrl=String(item.imageUrl||'');
+  if(!isHttpUrl(imageUrl)){
+   try{imageUrl='https://www.google.com/s2/favicons?sz=128&domain='+encodeURIComponent(new URL(item.url).hostname.replace(/^www\./,''));}catch{}
+  }
+  if(isHttpUrl(imageUrl)){
+   const image=document.createElement('img');image.src=imageUrl;image.alt='';image.loading='lazy';image.referrerPolicy='no-referrer';
+   image.onerror=function(){
+    if(image.dataset.fallback==='1'){image.remove();return;}
+    image.dataset.fallback='1';
+    try{image.src='https://www.google.com/s2/favicons?sz=128&domain='+encodeURIComponent(new URL(item.url).hostname.replace(/^www\./,''));}
+    catch{image.remove();}
+   };
+   card.append(image);
+  }
   const copy=document.createElement('span');copy.className='news-card-copy';
   const title=document.createElement('strong');title.textContent=String(item.title).slice(0,180);
   const meta=document.createElement('small');meta.textContent=String(item.source||item.siteName||'News')+(item.time?' · '+String(item.time):'');
   copy.append(title,meta);card.append(copy);card.addEventListener('click',function(){navigateBrowser(item.url,{newTab:true});});root.append(card);
  });
- if(!root.children.length){const empty=document.createElement('div');empty.className='home-news-empty';empty.textContent='No current headlines are available. Try refreshing this page.';root.append(empty);}
+ if(!root.children.length){const empty=document.createElement('div');empty.className='home-news-empty';empty.textContent='News is temporarily unavailable. Try again shortly.';root.append(empty);}
 }
 async function loadHomeNews(){
  const status=$('homeNewsStatus');if(!status)return;
  try{
+  if(window.isaiahDesktop&&typeof window.isaiahDesktop.getHomeNews==='function'){
+   try{
+    const nativeResult=await window.isaiahDesktop.getHomeNews();
+    const nativeNews=Array.isArray(nativeResult?.items)?nativeResult.items:[];
+    if(nativeNews.length){
+     renderHomeNews(nativeNews);
+     status.textContent='Latest publisher headlines · updated '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+     return;
+    }
+    if(nativeResult?.error)console.warn('[IsaiahSearch] Native news feed:',nativeResult.error);
+   }catch(error){console.warn('[IsaiahSearch] Native news bridge unavailable:',safeError(error));}
+  }
   const feed='https://news.google.com/rss/search?'+new URLSearchParams({q:'Canada OR world OR technology latest news',hl:'en-CA',gl:'CA',ceid:'CA:en'});
   const response=await fetch('https://api.rss2json.com/v1/api.json?rss_url='+encodeURIComponent(feed),{headers:{'Accept':'application/json'},cache:'no-store',signal:AbortSignal.timeout(18000)});
   const data=await response.json().catch(function(){return {};});
@@ -840,17 +891,6 @@ async function loadHomeNews(){
    const imageUrl=String(item.thumbnail||item.enclosure?.link||imageMatch?.[1]||'');
    return {title:String(item.title||''),url:String(item.link||''),source:String(item.author||item.feedTitle||'News'),time:String(item.pubDate||''),imageUrl:imageUrl};
   }).filter(function(item){return item.title&&isHttpUrl(item.url);});
-  await Promise.all(news.slice(0,4).map(async function(item){
-   if(isHttpUrl(item.imageUrl))return;
-   const cacheKey='isaiahsearch_news_image_'+encodeURIComponent(item.url);
-   try{const cached=localStorage.getItem(cacheKey);if(isHttpUrl(cached)){item.imageUrl=cached;return;}}catch{}
-   try{
-    const preview=await fetch('https://api.microlink.io/?url='+encodeURIComponent(item.url),{headers:{'Accept':'application/json'},cache:'force-cache',signal:AbortSignal.timeout(10000)});
-    const meta=await preview.json().catch(function(){return {};});
-    const imageUrl=String(meta&&meta.data&&meta.data.image&&meta.data.image.url||'');
-    if(preview.ok&&isHttpUrl(imageUrl)){item.imageUrl=imageUrl;try{localStorage.setItem(cacheKey,imageUrl);}catch{}}
-   }catch(error){console.warn('[IsaiahSearch] Article image unavailable:',safeError(error));}
-  }));
   renderHomeNews(news);
   status.textContent=news.length?'Latest publisher headlines · updated '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'No publisher headlines were returned.';
  }catch(error){status.textContent='News is temporarily unavailable: '+safeError(error);renderHomeNews([]);}
@@ -950,6 +990,15 @@ async function navigateBrowser(raw,options){
   throw error;
  }
 }
+document.querySelectorAll('.site-shortcut-icon img').forEach(function(image){
+ image.addEventListener('error',function(){
+  const host=image.closest('.site-shortcut');
+  const fallback=host?.querySelector('span:last-child')?.textContent||'?';
+  image.remove();
+  const icon=host?.querySelector('.site-shortcut-icon');
+  if(icon)icon.textContent=fallback.slice(0,1).toUpperCase();
+ },{once:true});
+});
 function searchBrowser(query){
  query=String(query||'').trim();if(!query)return;
  $('browserSearchInput').value=query;
@@ -1009,7 +1058,7 @@ if(typeof window.isaiahDesktop.onBrowserEvent==='function'){
   }else if(event.type==='loading'){
    tab.loading=!!event.loading;
    if(activeBrowserTabId===tab.id){
-    $('browserNote').hidden=!tab.loading;$('browserNote').textContent=tab.loading?'Loading '+(tab.title||'website')+' in Chromium…':'';
+    $('browserNote').hidden=!tab.loading;$('browserNote').textContent=tab.loading?''Loading '+(tab.title||'page')+'…':'';
     if(tab.loading){window.isaiahDesktop.setBrowserViewActive(tab.id,false).catch(function(){});window.isaiahDesktop.setBrowserViewBounds({x:0,y:0,width:0,height:0});}
     else if(currentPanel==='browser')syncNativeBrowserView();
    }
