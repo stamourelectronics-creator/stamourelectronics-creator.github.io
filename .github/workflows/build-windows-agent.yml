@@ -30,18 +30,24 @@ jobs:
       - name: Validate browser and agent source
         working-directory: electron-agent
         run: npm run check
-      - name: Verify CodePro production gateway
+      - name: Verify CodePro and Breakaway gateway
         shell: pwsh
         continue-on-error: true
         run: |
           try {
             $health = Invoke-RestMethod -Uri 'https://codepro-gateway-production.up.railway.app/health' -TimeoutSec 15
-            if ($health.ok -and $health.cloudflareConfigured -and $health.model -eq '@cf/zai-org/glm-4.7-flash') {
-              Write-Host 'IsaiahAI CodePro gateway is online and Cloudflare Workers AI GLM-4.7-Flash is configured.'
+            if ($health.ok -and $health.providerReady) {
+              if ($health.cloudflareTokenConfigured -and $health.model -eq '@cf/zai-org/glm-4.7-flash') {
+                Write-Host 'CodePro gateway is online with Cloudflare Workers AI GLM-4.7-Flash configured.'
+              } elseif ($health.groqFallbackConfigured) {
+                Write-Host 'CodePro gateway is online with its Groq fallback. Cloudflare token is not configured.'
+              }
+              if ($health.breakawayConfigured) { Write-Host ('Breakaway 1.0 backup route is ready: ' + $health.breakawayModel) }
+              else { Write-Warning 'Breakaway 1.0 backup route is not configured.' }
             } else {
-              Write-Warning 'CodePro gateway responded but Cloudflare Workers AI token/model is not configured.'
+              Write-Warning 'CodePro gateway responded but no AI provider is ready.'
             }
-          } catch { Write-Warning ('CodePro health check failed: ' + $_.Exception.Message) }
+          } catch { Write-Warning ('CodePro gateway health check failed: ' + $_.Exception.Message) }
       - name: Check hosted AI API availability
         shell: pwsh
         continue-on-error: true
@@ -68,7 +74,7 @@ jobs:
           name: IsaiahSearch Browser Windows build ${{ github.run_number }}
           body: |
             IsaiahSearch Browser for Windows x64.
-            Full-window IsaiahSearch browser with native Chromium tabs and a built-in IsaiahAI CodePro agent powered by Cloudflare Workers AI GLM-4.7-Flash. CodePro can research, inspect the active page, and use the local Windows Shell Bridge for multi-step PowerShell/CMD workflows. Shell agent mode requires explicit opt-in, runs as the current Windows user, streams real command output, and separately confirms high-impact operations. The installer supports automatic GitHub release updates.
+            Full-window IsaiahSearch browser with native tabs, live news cards, website favicons, and built-in IsaiahAI CodePro and Breakaway 1.0. CodePro uses Cloudflare Workers AI when configured and automatically falls back to Groq; Breakaway keeps Gemini primary and can use its separate Groq backup route when the hosted Gemini API is unavailable. The Windows Shell Bridge requires explicit opt-in, runs as the current Windows user, streams real command output, and separately confirms high-impact operations. The installer supports automatic GitHub release updates.
             AI availability depends on the configured hosted model providers.
           files: electron-agent/release/*
           make_latest: true
