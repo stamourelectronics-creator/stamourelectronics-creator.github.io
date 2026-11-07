@@ -322,7 +322,8 @@ async function initializeApi(){
   try{
    const response=await fetch(CODEPRO_API+'/health',{method:'GET',headers:{'Accept':'application/json'},cache:'no-store',signal:AbortSignal.timeout(7000)});
    const data=await response.json().catch(()=>({}));
-   if(!response.ok||data.ok!==true||!data.cloudflareConfigured)throw new Error(data.error||'The CodePro server did not report Cloudflare Workers AI ready ('+response.status+').');
+   const gatewayReady=data.providerReady===true||data.cloudflareConfigured===true;
+   if(!response.ok||data.ok!==true||!gatewayReady)throw new Error(data.error||'The CodePro gateway has no configured provider ('+response.status+').');
    codeProHealth=data;
   }catch(error){codeProHealth=null;console.warn('[IsaiahAI CodePro] Health check failed:',safeError(error));}
   try{
@@ -340,7 +341,7 @@ async function initializeApi(){
 
 function modelLabel(model){return model==='breakaway_1_0'?'Breakaway 1.0':model==='isaiah_codepro'?'IsaiahAI CodePro':'IsaiahAI 7.0 SUPER';}
 function modelConfigured(model,health){
-  if(model==='isaiah_codepro')return Boolean(codeProHealth&&codeProHealth.ok===true&&codeProHealth.cloudflareConfigured===true);
+  if(model==='isaiah_codepro')return Boolean(codeProHealth&&codeProHealth.ok===true&&(codeProHealth.providerReady===true||codeProHealth.cloudflareConfigured===true));
   if(model==='breakaway_1_0')return Boolean((health&&health.models&&health.models.breakaway_1_0===true)||(codeProHealth&&codeProHealth.ok===true&&codeProHealth.breakawayConfigured===true));
   if(health&&health.models&&typeof health.models[model]==='boolean')return health.models[model];
   return Boolean(health&&health.aiConfigured);
@@ -596,7 +597,7 @@ async function requestChatTurn(message,history,selectedModel,images,files,showSu
   if(!health){apiReady=initializeApi();health=await apiReady;}
   if(!health||health.ok!==true)throw new Error('The IsaiahAI server is unreachable. Check your internet connection and retry.');
   if(selectedModel==='isaiah_codepro'){
-   if(!codeProHealth||codeProHealth.ok!==true||!codeProHealth.cloudflareConfigured)throw new Error('The IsaiahAI CodePro gateway is unavailable. Check your internet connection and retry.');
+   if(!codeProHealth||codeProHealth.ok!==true||!(codeProHealth.providerReady===true||codeProHealth.cloudflareConfigured===true))throw new Error('The IsaiahAI CodePro gateway is unavailable. Check your internet connection and retry.');
    const response=await fetch(CODEPRO_API+'/api/chat',{
     method:'POST',
     headers:{'Content-Type':'application/json','Accept':'application/json'},
