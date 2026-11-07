@@ -615,7 +615,7 @@ async function askGemini(body: AnyRecord, systemInstruction: string, webSearch: 
   const attempts = [
     { model: 'gemini-4-argon', timeoutMs: 10500, highReasoning: true },
     { model: 'gemini-3.8-flash', timeoutMs: 6500, highReasoning: true },
-    { model: 'gemini-2.5-flash', timeoutMs: 4500, highReasoning: false },
+    { model: 'gemini-3.5-flash', timeoutMs: 4500, highReasoning: false },
   ];
   let lastError: any;
   const startedAt = Date.now();
