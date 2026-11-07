@@ -109,6 +109,7 @@ function createWindow() {
     const pathname = new URL(request.url || '/', 'http://localhost').pathname;
     const assetPaths = {
       '/assets/isaiahai-icon.svg': path.join(__dirname, 'assets', 'isaiahai-icon.svg'),
+      '/assets/isaiahsearch-icon.svg': path.join(__dirname, 'assets', 'isaiahsearch-icon.svg'),
     };
     try {
       if (assetPaths[pathname]) {
@@ -193,6 +194,164 @@ function applyBrowserViewState() {
     view.setVisible(visible);
   }
 }
+
+const HOME_NEWS_CACHE_MS = 10 * 60 * 1000;
+let homeNewsCache = { fetchedAt: 0, items: [] };
+
+function decodeNewsEntities(value) {
+  return String(value || '')
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, '$1')
+    .replace(/&#x([0-9a-f]+);/gi, (_match, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_match, dec) => String.fromCodePoint(parseInt(dec, 10)))
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&apos;|&#39;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function newsXmlTag(xml, name) {
+  const match = String(xml || '').match(new RegExp('<' + name + '(?:\\s[^>]*)?>([\\s\\S]*?)</' + name + '>', 'i'));
+  return match ? match[1] : '';
+}
+
+function newsAttribute(tag, name) {
+  const match = String(tag || '').match(new RegExp('\\b' + name + '\\s*=\\s*["\\x27]([^"\\x27]*)["\\x27]', 'i'));
+  return match ? decodeNewsEntities(match[1]) : '';
+}
+
+function safeNewsImageUrl(rawUrl, baseUrl) {
+  try {
+    const parsed = new URL(String(rawUrl || ''), baseUrl || undefined);
+    return parsed.protocol === 'https:' ? parsed.href : '';
+  } catch {
+    return '';
+  }
+}
+
+function findNewsMetaImage(html) {
+  const tags = String(html || '').match(/<meta\b[^>]*>/gi) || [];
+  for (const tag of tags) {
+    const key = (newsAttribute(tag, 'property') || newsAttribute(tag, 'name')).toLowerCase();
+    if (key === 'og:image' || key === 'og:image:url' || key === 'twitter:image' || key === 'twitter:image:src') {
+      const value = newsAttribute(tag, 'content');
+      if (value) return value;
+    }
+  }
+  const imageSource = String(html || '').match(/<link\b[^>]*rel=["\x27]image_src["\x27][^>]*>/i);
+  return imageSource ? newsAttribute(imageSource[0], 'href') : '';
+}
+
+async function fetchNewsArticlePreview(item) {
+  try {
+    const response = await fetch(item.url, {
+      redirect: 'follow',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; IsaiahSearch/1.4; +https://github.com/stamourelectronics-creator/stamourelectronics-creator.github.io)',
+        'Accept': 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.5'
+      },
+      signal: AbortSignal.timeout(5000)
+    });
+    const contentType = response.headers.get('content-type') || '';
+    if (!response.ok || !/text\/html|application\/xhtml\+xml/i.test(contentType)) return null;
+    const html = (await response.text()).slice(0, 500000);
+    const finalUrl = response.url || item.url;
+    const imageUrl = safeNewsImageUrl(findNewsMetaImage(html), finalUrl);
+    const siteNameTag = (html.match(/<meta\b[^>]*>/gi) || []).find(tag => (newsAttribute(tag, 'property') || newsAttribute(tag, 'name')).toLowerCase() === 'og:site_name');
+    const siteName = siteNameTag ? newsAttribute(siteNameTag, 'content') : '';
+    let faviconUrl = '';
+    try {
+      const host = new URL(finalUrl).hostname.replace(/^www\./, '');
+      faviconUrl = 'https://www.google.com/s2/favicons?sz=128&domain=' + encodeURIComponent(host);
+    } catch {}
+    return { imageUrl, siteName, faviconUrl };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchHomeNews() {
+  if (homeNewsCache.items.length && Date.now() - homeNewsCache.fetchedAt < HOME_NEWS_CACHE_MS) {
+    return homeNewsCache.items;
+  }
+
+  const feedUrl = 'https://news.google.com/rss/search?' + new URLSearchParams({
+    q: 'Canada OR world OR technology latest news',
+    hl: 'en-CA',
+    gl: 'CA',
+    ceid: 'CA:en'
+  }).toString();
+  const response = await fetch(feedUrl, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (compatible; IsaiahSearch/1.4)',
+      'Accept': 'application/rss+xml,application/xml,text/xml;q=0.9,*/*;q=0.5'
+    },
+    cache: 'no-store',
+    signal: AbortSignal.timeout(12000)
+  });
+  if (!response.ok) throw new Error('The news feed returned HTTP ' + response.status + '.');
+  const xml = (await response.text()).slice(0, 1500000);
+  const itemMatches = Array.from(xml.matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi)).slice(0, 8);
+  const items = itemMatches.map(match => {
+    const itemXml = match[1];
+    const title = decodeNewsEntities(newsXmlTag(itemXml, 'title'));
+    const url = safeNewsImageUrl(newsXmlTag(itemXml, 'link').replace(/<!\[CDATA\[|\]\]>/g, '').trim());
+    const source = decodeNewsEntities(newsXmlTag(itemXml, 'source')) || 'News';
+    const time = decodeNewsEntities(newsXmlTag(itemXml, 'pubDate'));
+    const imageTag = (itemXml.match(/<(?:media:content|media:thumbnail|enclosure)\b[^>]*>/i) || [])[0] || '';
+    let imageUrl = safeNewsImageUrl(newsAttribute(imageTag, 'url'));
+    if (!imageUrl) {
+      const description = String(newsXmlTag(itemXml, 'description')).replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, '$1');
+      const imageMatch = description.match(/<img\b[^>]*src=["\x27]([^"\x27]+)/i);
+      if (imageMatch) imageUrl = safeNewsImageUrl(imageMatch[1]);
+    }
+    return { title, url, source, time, imageUrl };
+  }).filter(item => item.title && item.url);
+
+  if (!items.length) throw new Error('The news feed did not contain any current headlines.');
+
+  await Promise.all(items.slice(0, 6).map(async item => {
+    let preview = null;
+    if (!item.imageUrl) preview = await fetchNewsArticlePreview(item);
+    if (preview) {
+      if (preview.imageUrl) item.imageUrl = preview.imageUrl;
+      if (preview.siteName) item.source = preview.siteName;
+      item.faviconUrl = preview.faviconUrl || '';
+    }
+    if (!item.imageUrl) {
+      try {
+        const host = new URL(item.url).hostname.replace(/^www\./, '');
+        item.imageUrl = 'https://www.google.com/s2/favicons?sz=128&domain=' + encodeURIComponent(host);
+      } catch {}
+    }
+  }));
+
+  for (const item of items) {
+    if (!item.imageUrl) {
+      try {
+        const host = new URL(item.url).hostname.replace(/^www\./, '');
+        item.imageUrl = 'https://www.google.com/s2/favicons?sz=128&domain=' + encodeURIComponent(host);
+      } catch {}
+    }
+  }
+
+  homeNewsCache = { fetchedAt: Date.now(), items };
+  return items;
+}
+
+ipcMain.handle('news:load-home', async () => {
+  try {
+    const items = await fetchHomeNews();
+    return { items, fetchedAt: homeNewsCache.fetchedAt };
+  } catch (error) {
+    return { items: [], error: String(error?.message || 'News could not be loaded.') };
+  }
+});
+
 function isAllowedBrowserUrl(rawUrl) {
   try {
     const parsed = new URL(String(rawUrl || ''));
