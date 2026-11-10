@@ -412,7 +412,7 @@ export default function App() {
   const [siriResponseText, setSiriResponseText] = useState<string>('');
   const [siriSpeaking, setSiriSpeaking] = useState<boolean>(false);
 
-  // Selected AI Model (IsaiahAI 7.0 SUPER, Isaiah AI 5.3, Isaiah Max 6.0, or Maw AI)
+  // Selected AI Model (IsaiahAI 7.0 SUPER, IsaiahAI 5.3 Flash, Isaiah Max 6.0, or Maw AI)
   const [selectedAiModel, setSelectedAiModel] = useState<'isaiah_5_3' | 'isaiah_max_6_0' | 'maw_ai' | 'isaiahai_7_super' | 'open_isaiah'>(() => {
     // One-time upgrade: make IsaiahAI 7.0 SUPER the default without overwriting later user choices.
     if (localStorage.getItem('isaiah_model_default_version') !== '7.0-super') {
@@ -1376,7 +1376,7 @@ export default function App() {
       : chatMode === 'code' ? 'Isaiah AI Code PR'
       : chatMode === 'code_extended' ? 'Code PR Extended'
       : chatMode === 'image' ? 'Isaiah AI Image Gen'
-      : selectedAiModel === 'isaiah_5_3' ? 'Isaiah AI 5.3'
+      : selectedAiModel === 'isaiah_5_3' ? 'IsaiahAI 5.3 Flash'
       : selectedAiModel === 'maw_ai' ? 'Maw AI'
       : selectedAiModel === 'isaiahai_7_super' ? 'IsaiahAI 7.0 SUPER'
       : selectedAiModel === 'open_isaiah' ? 'Open-Isaiah'
@@ -1961,10 +1961,10 @@ Your mission is to provide razor-sharp, production-grade code solutions and dire
                 : selectedAiModel === 'maw_ai'
                 ? `You are Maw AI, a smart, witty, and charming hybrid AI companion. You deliver high-quality, helpful, accurate, and articulate answers with lightning speed and personality.`
                 : selectedAiModel === 'isaiah_5_3'
-                ? `You are Isaiah AI 5.3 by St.Amour Electronics. You are an ultra-fast, responsive AI assistant with general intelligence.
+                ? `You are IsaiahAI 5.3 Flash by St.Amour Electronics. You are an ultra-fast, responsive AI assistant with general intelligence.
 The CEO of St.Amour Electronics is Isaiah St.Amour.
 Your mission is to provide lightning-fast, crisp, accurate, direct answers without unnecessary fluff or excessive delays.
-Identify exclusively as Isaiah AI 5.3. NEVER mention "Gemini" or "Google".`
+Identify exclusively as IsaiahAI 5.3 Flash. NEVER mention "Gemini" or "Google".`
                 : selectedAiModel === 'isaiahai_7_super'
                 ? `You are IsaiahAI 7.0 SUPER, an advanced AI assistant made by St.Amour Electronics. The CEO of St.Amour Electronics is Isaiah John St.Amour. Be accurate, helpful, thoughtful, and clear. Identify as IsaiahAI 7.0 SUPER by St.Amour Electronics.`
                 : selectedAiModel === 'open_isaiah'
@@ -2293,12 +2293,12 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
               {/* Right Side: Circular Info Button (i), Share, or Action Pill */}
               <div className="flex items-center gap-2">
                 <a
-                  href="https://github.com/stamourelectronics-creator/stamourelectronics-creator.github.io/releases/download/isaiahsearch-browser-build-138/IsaiahSearch-Setup-1.4.0-x64.exe"
+                  href="https://github.com/stamourelectronics-creator/stamourelectronics-creator.github.io/releases/download/isaiahsearch-browser-build-156/IsaiahSearch-Setup-1.4.3-x64.exe"
                   target="_blank"
                   rel="noopener noreferrer"
-                  download="IsaiahSearch-Setup-1.4.0-x64.exe"
-                  aria-label="Download IsaiahSearch 1.4.0 Windows installer"
-                  title="Download IsaiahSearch 1.4.0 browser for Windows"
+                  download="IsaiahSearch-Setup-1.4.3-x64.exe"
+                  aria-label="Download IsaiahSearch 1.4.3 Windows installer"
+                  title="Download IsaiahSearch 1.4.3 browser for Windows"
                   className="w-9 h-9 rounded-full shadow-sm transition-all border flex items-center justify-center bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border-sky-400/30"
                 >
                   <Download className="w-4 h-4" />
@@ -2372,11 +2372,11 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
 
               <div className="flex items-center gap-3">
                 <a
-                  href="https://github.com/stamourelectronics-creator/stamourelectronics-creator.github.io/releases/download/isaiahsearch-browser-build-138/IsaiahSearch-Setup-1.4.0-x64.exe"
+                  href="https://github.com/stamourelectronics-creator/stamourelectronics-creator.github.io/releases/download/isaiahsearch-browser-build-156/IsaiahSearch-Setup-1.4.3-x64.exe"
                   target="_blank"
                   rel="noopener noreferrer"
-                  download="IsaiahSearch-Setup-1.4.0-x64.exe"
-                  title="Download IsaiahSearch 1.4.0 browser for Windows"
+                  download="IsaiahSearch-Setup-1.4.3-x64.exe"
+                  title="Download IsaiahSearch 1.4.3 browser for Windows"
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-400/25 transition-all"
                 >
                   <Download className="w-3.5 h-3.5" />
@@ -2873,7 +2873,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                               let modelName = msg.modelDisplayName;
                               if (!modelName) {
                                 if (modelKey === 'maw_ai') modelName = 'Maw AI';
-                                else if (modelKey === 'isaiah_5_3') modelName = 'Isaiah AI 5.3';
+                                else if (modelKey === 'isaiah_5_3') modelName = 'IsaiahAI 5.3 Flash';
                                 else if (modelKey === 'isaiahai_7_super') modelName = 'IsaiahAI 7.0 SUPER';
                                 else if (modelKey === 'school') modelName = 'IsaiahAI School Mode';
                                 else if (modelKey === 'code') modelName = 'Isaiah AI Code PR';
@@ -3722,7 +3722,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                                   <span className="text-zinc-500">v8.0</span>
                                 </p>
 
-                                {/* Option 1: Isaiah AI 5.3 */}
+                                {/* Option 1: IsaiahAI 5.3 Flash */}
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -3740,7 +3740,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                                   <span className="text-base">⚡</span>
                                   <div className="flex-grow min-w-0">
                                     <div className={`font-semibold text-xs flex items-center justify-between ${isLight ? 'text-zinc-900' : 'text-white'}`}>
-                                      <span>Isaiah AI 5.3</span>
+                                      <span>IsaiahAI 5.3 Flash</span>
                                       <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono font-bold uppercase">Fast</span>
                                     </div>
                                     <div className="text-[9px] text-zinc-400 font-normal">Ultra-fast general intelligence</div>
@@ -4057,7 +4057,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                               <span className="text-zinc-500">v8.0</span>
                             </p>
 
-                            {/* Option 1: Isaiah AI 5.3 */}
+                            {/* Option 1: IsaiahAI 5.3 Flash */}
                             <button
                               type="button"
                               onClick={() => {
@@ -4075,7 +4075,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                               <span className="text-base">⚡</span>
                               <div className="flex-grow min-w-0">
                                 <div className="font-semibold text-xs text-white flex items-center justify-between">
-                                  <span>Isaiah AI 5.3</span>
+                                  <span>IsaiahAI 5.3 Flash</span>
                                   <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono font-bold uppercase">Fast</span>
                                 </div>
                                 <div className="text-[9px] text-zinc-400 font-normal">Ultra-fast responses & general intelligence</div>
