@@ -85,11 +85,25 @@ if (isFirebaseConfigured) {
 
 // Google Auth provider config with Google Docs & Google Drive scopes
 const googleProvider = new GoogleAuthProvider();
-googleProvider.addScope('https://www.googleapis.com/auth/documents');
-googleProvider.addScope('https://www.googleapis.com/auth/drive.file');
-googleProvider.addScope('https://www.googleapis.com/auth/drive.readonly');
+// Google Workspace scopes used by the mobile Workspace agent and web Gmail/Docs features.
+[
+  'https://www.googleapis.com/auth/gmail.readonly',
+  'https://www.googleapis.com/auth/gmail.send',
+  'https://www.googleapis.com/auth/calendar.events',
+  'https://www.googleapis.com/auth/calendar.readonly',
+  'https://www.googleapis.com/auth/documents',
+  'https://www.googleapis.com/auth/presentations',
+  'https://www.googleapis.com/auth/drive.file',
+  'https://www.googleapis.com/auth/drive.readonly',
+  'https://www.googleapis.com/auth/tasks',
+  'https://www.googleapis.com/auth/chat.spaces.readonly',
+  'https://www.googleapis.com/auth/chat.messages.readonly',
+  'https://www.googleapis.com/auth/chat.messages.create'
+].forEach((scope) => googleProvider.addScope(scope));
 googleProvider.setCustomParameters({
-  prompt: 'select_account',
+  prompt: 'consent',
+  access_type: 'offline',
+  include_granted_scopes: 'true',
 });
 
 export {
