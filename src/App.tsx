@@ -1888,7 +1888,7 @@ export default function App() {
         }));
 
         if (searchWebEnabled) {
-          setCurrentSearchPrompt(`St.Amour Intelligence: Activating Live Grounding Search for "${rawPrompt}"...`);
+          setCurrentSearchPrompt(`St.Amour Intelligence: Checking available live sources for "${rawPrompt}"...`);
         }
         
         let data: any;
@@ -2042,6 +2042,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
           images: data.imageUrl ? [data.imageUrl] : undefined,
           thinking: data.thinking,
           sources: data.sources,
+          searchUnavailable: Boolean(data.searchUnavailable),
           isSearch: isWebSearch && searchResults.length > 0,
           searchType: 'google',
           summaryQuery: rawPrompt,
@@ -2973,6 +2974,13 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                                     );
                                   })}
                                 </div>
+                              </div>
+                            )}
+
+                            {msg.searchUnavailable && (
+                              <div className={`flex items-start gap-2 rounded-xl border px-3 py-2 text-[11px] leading-relaxed ${isLight ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-amber-500/5 border-amber-500/20 text-amber-200/90'}`}>
+                                <Globe className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                                <span>Live web sources were not available for this free Gemini API request. This answer was generated without live search verification.</span>
                               </div>
                             )}
 
