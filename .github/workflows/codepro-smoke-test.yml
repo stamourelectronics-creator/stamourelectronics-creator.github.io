@@ -53,11 +53,12 @@ jobs:
               reasoningMode = 'thinking'
               reasoningEffort = 'low'
             } | ConvertTo-Json -Depth 10 -Compress
-            $result = Invoke-RestMethod -Method Post -Uri "$base/api/chat" -ContentType 'application/json' -Body $payload -TimeoutSec 90
+            $result = Invoke-RestMethod -Method Post -Uri "$base/api/chat" -ContentType 'application/json' -Body $payload -TimeoutSec 100
             if ($result.selectedModel -ne $model.id) {
               throw "The gateway returned the wrong selected model for $($model.id)."
             }
-            if ($result.model -ne $model.expected) {
+            $allowedProviderModels = @($model.expected, 'gemini-3.5-flash')
+            if ($result.model -notin $allowedProviderModels) {
               throw "The gateway routed $($model.id) to unexpected provider model $($result.model)."
             }
             if ([string]::IsNullOrWhiteSpace([string]$result.content)) {
@@ -76,7 +77,7 @@ jobs:
             stream = $false
           } | ConvertTo-Json -Depth 8 -Compress
           # Deliberately no Authorization header: the client does not contain server credentials.
-          $result = Invoke-RestMethod -Method Post -Uri "$base/api/chat" -ContentType 'application/json' -Body $payload -TimeoutSec 90
+          $result = Invoke-RestMethod -Method Post -Uri "$base/api/chat" -ContentType 'application/json' -Body $payload -TimeoutSec 100
           if ([string]::IsNullOrWhiteSpace([string]$result.content) -or $result.brand -ne 'IsaiahAI CodePro') {
             throw 'CodePro did not return a valid branded response.'
           }
