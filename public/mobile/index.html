@@ -7,51 +7,279 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="IsaiahSearch">
-<meta name="description" content="IsaiahSearch mobile AI assistant with web search and model selection.">
+<meta name="description" content="IsaiahSearch mobile AI with Google Workspace and IsaiahAI models.">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="/mobile/icon.svg">
 <title>IsaiahSearch Mobile</title>
 <style>
-:root{color-scheme:dark;--bg:#08090d;--line:#252a38;--muted:#969eae;--gold:#e8b85a;--text:#f7f8fc}
+:root{color-scheme:dark;--bg:#08090d;--panel:#11141d;--panel2:#171b27;--line:#292f42;--muted:#9aa4b8;--gold:#e8b85a;--text:#f7f8fc;--ok:#62d39b;--bad:#ff7777;--blue:#8ea6ff}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% -20%,#25233a 0,transparent 45%),var(--bg);color:var(--text);font:15px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100dvh}
-header{height:64px;display:flex;align-items:center;gap:12px;padding:0 16px;border-bottom:1px solid #252a38;position:sticky;top:0;background:#090a10ef;backdrop-filter:blur(22px);z-index:4}.brand{display:flex;align-items:center;gap:10px;font-weight:780;flex:1}.logo{width:34px;height:34px;border-radius:12px;background:linear-gradient(145deg,#8da8ff,#7451ce 65%,#222b65);display:grid;place-items:center;color:white;font-weight:900;box-shadow:0 4px 20px #6c65ff55}.pill{font-size:10px;color:#bdc8ff;border:1px solid #414b73;border-radius:99px;padding:5px 8px}#menuBtn{width:40px;height:40px;border:1px solid #252a38;background:#171923;color:#fff;border-radius:12px;font-size:20px}
-.layout{max-width:1100px;margin:auto;display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100dvh - 64px)}aside{border-right:1px solid #252a38;padding:16px 12px;background:#0d0f16}.sideNew{width:100%;padding:12px;border-radius:13px;background:#20243a;border:1px solid #3c456b;color:#f6f7ff;font-weight:700;text-align:left}.sideTitle{font-size:10px;color:#747e93;letter-spacing:1.2px;text-transform:uppercase;margin:24px 9px 10px}.sideNote{font-size:12px;color:#858da0;line-height:1.5;padding:0 9px}
-main{min-width:0;padding:16px 18px 150px;max-width:850px;width:100%;margin:auto}.welcome{text-align:center;padding:42px 10px 28px}.welcome h1{font-size:clamp(27px,5vw,38px);letter-spacing:-1.4px;margin:14px 0 8px}.welcome p{color:var(--muted);font-size:14px;line-height:1.55;margin:0 auto;max-width:460px}.install{margin:0 0 18px;padding:14px;border:1px solid #3b4162;background:linear-gradient(135deg,#1b2034,#11131c);border-radius:16px}.install strong{display:block;margin-bottom:5px}.install p{color:#c4c8d3;font-size:13px;line-height:1.45;margin:0 0 12px}
-button,select,textarea{font:inherit}.primary{border:0;background:var(--gold);color:#17120a;font-weight:750;border-radius:12px;padding:11px 14px}.secondary{background:#191c27;color:#eee;border:1px solid #252a38;border-radius:11px;padding:10px 12px}.toolbar{display:flex;gap:8px;align-items:center;margin:0 0 16px}.toolbar select{flex:1;min-width:0;background:#151925;color:white;border:1px solid #252a38;padding:11px;border-radius:12px}
-#messages{display:flex;flex-direction:column;gap:15px}.msg{max-width:94%;padding:14px 16px;border:1px solid #252a38;border-radius:18px;line-height:1.62;white-space:pre-wrap;overflow-wrap:anywhere;animation:rise .22s ease-out}.user{align-self:flex-end;background:linear-gradient(135deg,#252c46,#1d2234);border-color:#394568}.assistant{align-self:flex-start;background:linear-gradient(145deg,#171a24,#12151e)}.label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#aebaff;margin-bottom:6px;font-weight:700}
-.composer{position:fixed;bottom:0;left:0;right:0;padding:12px 14px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(transparent,#08090d 20%);z-index:3}.compose-inner{max-width:820px;margin:auto;display:flex;gap:8px;align-items:flex-end;background:#151925;border:1px solid #353c51;border-radius:20px;padding:8px;box-shadow:0 15px 55px #0009}textarea{flex:1;resize:none;max-height:150px;min-height:44px;border:0;outline:0;background:transparent;color:white;padding:11px 8px;line-height:1.4}.send{width:45px;height:45px;border:0;border-radius:15px;background:linear-gradient(145deg,#f1cc78,#d99d3d);color:#17120a;font-size:21px;font-weight:800}.status{font-size:12px;color:#a9b3cb;text-align:center;min-height:22px;padding-top:8px;display:flex;align-items:center;justify-content:center;gap:8px}.status.busy:before{content:"";width:7px;height:7px;border-radius:50%;background:#8ea6ff;box-shadow:0 0 12px #8ea6ff;animation:pulse 1s infinite}
-footer{text-align:center;color:#71798a;font-size:11px;padding:22px}.hidden{display:none!important}@keyframes rise{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}@keyframes pulse{50%{opacity:.35;transform:scale(.7)}}@media(max-width:700px){.layout{display:block}aside{position:fixed;z-index:5;inset:64px auto 0 0;width:min(285px,85vw);transform:translateX(-105%);transition:transform .24s ease;box-shadow:20px 0 60px #0008}.layout.nav-open aside{transform:translateX(0)}main{padding:12px 13px 145px}.welcome{padding:30px 8px 22px}.pill{display:none}}
+button,select,input,textarea{font:inherit}.hidden{display:none!important}
+header{height:64px;display:flex;align-items:center;gap:10px;padding:0 14px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#090a10ed;backdrop-filter:blur(22px);z-index:20}.brand{display:flex;align-items:center;gap:9px;font-weight:800;flex:1}.logo{width:34px;height:34px;border-radius:12px;background:linear-gradient(145deg,#8da8ff,#7451ce 65%,#222b65);display:grid;place-items:center;color:#fff;font-weight:900;box-shadow:0 4px 20px #6c65ff55}.pill{font-size:10px;color:#bdc8ff;border:1px solid #414b73;border-radius:99px;padding:5px 8px}.iconbtn{width:40px;height:40px;border:1px solid var(--line);background:#171923;color:#fff;border-radius:12px}
+.layout{max-width:1180px;margin:auto;display:grid;grid-template-columns:255px minmax(0,1fr);min-height:calc(100dvh - 64px)}aside{border-right:1px solid var(--line);padding:13px 12px;background:#0d0f16}main{min-width:0;padding:14px 17px 155px;max-width:980px;width:100%;margin:auto}.sideNew,.primary{width:100%;padding:11px 12px;border-radius:13px;background:#20243a;border:1px solid #3c456b;color:#f6f7ff;font-weight:750;text-align:left}.sideTitle{font-size:10px;color:#747e93;letter-spacing:1.2px;text-transform:uppercase;margin:20px 8px 9px}.sideNote{font-size:12px;color:#858da0;line-height:1.5;padding:0 8px}.modelList{display:grid;gap:6px}.modelList button{background:#151925;border:1px solid var(--line);color:#dce1ef;padding:9px;border-radius:10px;text-align:left;font-size:12px}.modelList button.active{border-color:#6d76a8;background:#202640;color:#fff}
+.welcome{text-align:center;padding:28px 10px 18px}.welcome h1{font-size:clamp(27px,5vw,38px);letter-spacing:-1.4px;margin:14px 0 8px}.welcome p{color:var(--muted);font-size:14px;line-height:1.55;margin:0 auto;max-width:560px}
+.toolbar{display:flex;gap:7px;align-items:center;margin:0 0 12px}.toolbar select{flex:1;min-width:0;background:#151925;color:#fff;border:1px solid var(--line);padding:11px;border-radius:12px}.secondary{background:#191c27;color:#eee;border:1px solid var(--line);border-radius:11px;padding:10px 12px}
+.authbar,.workspace{background:linear-gradient(145deg,#131722,#0f121a);border:1px solid var(--line);border-radius:17px;padding:12px;margin:0 0 12px}.authbar{display:flex;align-items:center;gap:10px}.authcopy{flex:1;min-width:0}.authcopy strong{display:block;font-size:13px}.authcopy span{display:block;color:var(--muted);font-size:11px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.google{background:#fff;color:#111;border:0;border-radius:10px;padding:9px 12px;font-weight:750;white-space:nowrap}.wsgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.service{background:#151925;border:1px solid var(--line);border-radius:13px;padding:11px;color:#fff;text-align:left;min-height:75px}.service b{display:block;font-size:12px}.service span{display:block;color:#8f99ad;font-size:10px;margin-top:4px}.service.active{border-color:#6570a8;background:#1d2233}.workspace-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}.workspace-head strong{font-size:13px}.workspace-head span{font-size:10px;color:#8f99ad}.wscontent{display:grid;gap:8px}.row{background:#0e1118;border:1px solid #252b3b;border-radius:11px;padding:10px;font-size:12px}.row strong{display:block}.row small{color:#8e98ab;display:block;margin-top:3px}.actionrow{display:flex;gap:7px;flex-wrap:wrap}.actionrow button{background:#20263a;border:1px solid #38415f;color:#e9ecf7;border-radius:10px;padding:8px 10px;font-size:11px}.formgrid{display:grid;gap:8px}.formgrid input,.formgrid textarea{width:100%;background:#0d1017;border:1px solid #293044;border-radius:10px;color:#fff;padding:10px;outline:0}.formgrid textarea{min-height:90px;resize:vertical}.statusline{font-size:11px;color:#9ca7bb;min-height:18px}.ok{color:var(--ok)}.bad{color:var(--bad)}
+#messages{display:flex;flex-direction:column;gap:13px}.msg{max-width:94%;padding:13px 15px;border:1px solid #252b3a;border-radius:18px;line-height:1.62;white-space:pre-wrap;overflow-wrap:anywhere}.user{align-self:flex-end;background:linear-gradient(135deg,#252c46,#1d2234);border-color:#394568}.assistant{align-self:flex-start;background:linear-gradient(145deg,#171a24,#12151e)}.label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#aebaff;margin-bottom:6px;font-weight:700}.workspace-warning{padding:9px 11px;border-radius:10px;background:#251f10;border:1px solid #5d4c22;color:#e9d9a6;font-size:11px;line-height:1.45}
+.composer{position:fixed;bottom:0;left:0;right:0;padding:10px 13px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(transparent,#08090d 20%);z-index:10}.compose-inner{max-width:930px;margin:auto;display:flex;gap:8px;align-items:flex-end;background:#151925;border:1px solid #353c51;border-radius:20px;padding:8px;box-shadow:0 15px 55px #0009}#prompt{flex:1;resize:none;max-height:150px;min-height:44px;border:0;outline:0;background:transparent;color:#fff;padding:11px 8px;line-height:1.4}.send{width:45px;height:45px;border:0;border-radius:15px;background:linear-gradient(145deg,#f1cc78,#d99d3d);color:#17120a;font-size:21px;font-weight:800}.status{font-size:12px;color:#a9b3cb;text-align:center;min-height:21px;padding-top:7px;display:flex;align-items:center;justify-content:center;gap:8px}.status.busy:before{content:"";width:7px;height:7px;border-radius:50%;background:#8ea6ff;box-shadow:0 0 12px #8ea6ff;animation:pulse 1s infinite}@keyframes pulse{50%{opacity:.35;transform:scale(.7)}}
+@media(max-width:700px){.layout{display:block}aside{position:fixed;z-index:19;inset:64px auto 0 0;width:min(285px,85vw);transform:translateX(-105%);transition:transform .24s ease;box-shadow:20px 0 60px #0008}.layout.nav-open aside{transform:translateX(0)}main{padding:10px 11px 150px}.welcome{padding:22px 7px 16px}.pill{display:none}.wsgrid{grid-template-columns:repeat(2,1fr)}.toolbar{position:sticky;top:64px;z-index:8;background:#090a10ed;padding:7px 0}.authbar{align-items:flex-start}.google{padding:8px 9px}.msg{max-width:97%}}
 </style>
 </head>
 <body>
-<header><button id="menuBtn" aria-label="Open menu">☰</button><div class="brand"><div class="logo">I</div><span>IsaiahSearch</span></div><span class="pill">MOBILE EDITION</span></header>
-<div class="layout" id="layout"><aside><button class="sideNew" id="sideNew">＋ &nbsp; New chat</button><div class="sideTitle">Your workspace</div><div class="sideNote">Your conversations stay in this session. Choose a model and start a new chat anytime.</div><div class="sideTitle">Models</div><div class="sideNote">IsaiahAI 7.0 SUPER<br><br>IsaiahAI CodePro<br><br>Breakaway 1.0</div></aside><main>
-<section class="welcome" id="welcome"><div class="logo" style="width:54px;height:54px;border-radius:18px;margin:auto;font-size:24px">I</div><h1>Your AI, on the go.</h1><p>Chat with IsaiahAI models, ask questions, and use web search from a mobile-first experience.</p></section>
-<section class="install" id="installCard"><strong>Install IsaiahSearch on your iPhone</strong><p>Open this page in Safari, tap Share, choose <b>Add to Home Screen</b>, turn on <b>Open as Web App</b>, then tap Add. The IsaiahSearch icon will appear on your Home Screen.</p><button class="primary" id="installHelp">Show install steps</button></section>
-<div class="toolbar"><select id="model" aria-label="Choose AI model"><option value="isaiahai_7_super">IsaiahAI 7.0 SUPER</option><option value="breakaway_1_0">Breakaway 1.0</option><option value="isaiah_codepro">IsaiahAI CodePro</option></select><button class="secondary" id="newChat">New chat</button></div>
-<div id="messages" aria-live="polite"></div><footer>IsaiahSearch Mobile · Powered by your IsaiahAI service</footer>
+<header><button id="menuBtn" class="iconbtn" aria-label="Open menu">☰</button><div class="brand"><div class="logo">I</div><span>IsaiahSearch</span></div><span class="pill">MOBILE EDITION</span><button id="workspaceBtn" class="iconbtn" aria-label="Workspace">▦</button></header>
+<div class="layout" id="layout">
+<aside>
+<button class="sideNew" id="sideNew">＋ &nbsp; New chat</button>
+<div class="sideTitle">Models</div>
+<div class="modelList">
+<button data-model="isaiah_5_3">IsaiahAI 5.3 Flash</button>
+<button data-model="isaiah_max_6_0">Isaiah Max 6.0</button>
+<button data-model="isaiahai_7_super">IsaiahAI 7.0 SUPER</button>
+<button data-model="isaiah_codepro">IsaiahAI CodePro</button>
+<button data-model="breakaway_1_0">Breakaway 1.0</button>
+<button data-model="open_isaiah">Open-Isaiah · Workspace</button>
+</div>
+<div class="sideTitle">Workspace</div><div class="sideNote">Open-Isaiah is optimized for Gmail, Calendar, Docs, Slides, Tasks, and Chat. Actions are shown for your approval before they change Google data.</div>
+</aside>
+<main>
+<section class="welcome" id="welcome"><div class="logo" style="width:54px;height:54px;border-radius:18px;margin:auto;font-size:24px">I</div><h1>Your AI, on the go.</h1><p>Use every IsaiahAI model from one mobile chat, then connect your Google Workspace account when you want IsaiahAI to read or change your Gmail, Calendar, Docs, Slides, Tasks, and Chat.</p></section>
+
+<section class="authbar">
+<div class="authcopy"><strong id="authStatus">Google Workspace: Not Connected</strong><span id="authEmail">Sign in to enable Workspace tools.</span></div>
+<button class="google" id="googleBtn">Sign in with Google</button>
+</section>
+
+<section class="workspace hidden" id="workspace">
+<div class="workspace-head"><strong>Google Workspace</strong><span id="workspaceStatus">Choose a service</span></div>
+<div class="wsgrid">
+<button class="service active" data-service="gmail"><b>✉ Gmail</b><span>Read and send email</span></button>
+<button class="service" data-service="calendar"><b>◷ Calendar</b><span>Events and scheduling</span></button>
+<button class="service" data-service="docs"><b>▤ Docs</b><span>Read and create documents</span></button>
+<button class="service" data-service="slides"><b>▥ Slides</b><span>Create presentations</span></button>
+<button class="service" data-service="tasks"><b>✓ Tasks</b><span>Manage task lists</span></button>
+<button class="service" data-service="chat"><b>☁ Chat</b><span>Spaces and messages</span></button>
+</div>
+<div class="wscontent" id="wscontent"></div>
+</section>
+
+<div class="toolbar"><select id="model" aria-label="Choose AI model">
+<option value="open_isaiah">Open-Isaiah · Workspace</option>
+<option value="isaiahai_7_super">IsaiahAI 7.0 SUPER</option>
+<option value="isaiah_codepro">IsaiahAI CodePro</option>
+<option value="isaiah_max_6_0">Isaiah Max 6.0</option>
+<option value="isaiah_5_3">IsaiahAI 5.3 Flash</option>
+<option value="breakaway_1_0">Breakaway 1.0</option>
+</select><button class="secondary" id="newChat">New chat</button></div>
+<div id="messages" aria-live="polite"></div>
+<footer>IsaiahSearch Mobile · IsaiahAI + Google Workspace</footer>
 </main></div>
-<div class="composer"><div class="compose-inner"><textarea id="prompt" rows="1" placeholder="Message IsaiahAI..." aria-label="Message IsaiahAI"></textarea><button class="send" id="send" aria-label="Send message">↑</button></div><div class="status" id="status">Ready</div></div>
-<script>
-const API='https://isaiahsearch.netlify.app/api';
-const messagesEl=document.getElementById('messages'),promptEl=document.getElementById('prompt'),statusEl=document.getElementById('status'),sendBtn=document.getElementById('send');
-let history=[];
-const layout=document.getElementById('layout');
-function resetChat(){history=[];messagesEl.replaceChildren();statusEl.textContent='New chat ready';document.getElementById('welcome').classList.remove('hidden');layout.classList.remove('nav-open');}
-document.getElementById('menuBtn').addEventListener('click',()=>layout.classList.toggle('nav-open'));
-document.getElementById('sideNew').addEventListener('click',resetChat);
-function addMessage(role,text){const el=document.createElement('div');el.className='msg '+(role==='user'?'user':'assistant');const label=document.createElement('div');label.className='label';label.textContent=role==='user'?'You':'IsaiahAI';const body=document.createElement('div');body.textContent=text;el.append(label,body);messagesEl.append(el);window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});return body}
-function showInstall(){alert('On your iPhone: open this page in Safari → tap Share → Add to Home Screen → enable Open as Web App → Add.');}
-document.getElementById('installHelp').addEventListener('click',showInstall);
-const installed=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
-if(installed)document.getElementById('installCard').classList.add('hidden');
-document.getElementById('newChat').addEventListener('click',resetChat);
-async function send(){const text=promptEl.value.trim();if(!text||sendBtn.disabled)return;promptEl.value='';promptEl.style.height='42px';document.getElementById('welcome').classList.add('hidden');layout.classList.remove('nav-open');addMessage('user',text);history.push({role:'user',content:text});sendBtn.disabled=true;statusEl.classList.add('busy');statusEl.textContent='Thinking…';const reply=addMessage('assistant','');const stageTimer=setTimeout(()=>{statusEl.textContent='Writing response…';},1800);try{const res=await fetch(API+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:document.getElementById('model').value,message:text,history:history.slice(0,-1),searchWebEnabled:true,showThinking:true})});const data=await res.json();if(!res.ok)throw new Error(data.error||data.message||'The AI service returned an error.');const answer=data.content||data.reply||data.response||data.message||'No response text was returned.';reply.textContent=typeof answer==='string'?answer:JSON.stringify(answer);history.push({role:'assistant',content:reply.textContent});statusEl.textContent='Ready';}catch(e){reply.textContent='I could not reach IsaiahAI: '+e.message;statusEl.textContent='Connection issue';}finally{clearTimeout(stageTimer);statusEl.classList.remove('busy');sendBtn.disabled=false;promptEl.focus();}}
-sendBtn.addEventListener('click',send);promptEl.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}});promptEl.addEventListener('input',()=>{promptEl.style.height='42px';promptEl.style.height=Math.min(promptEl.scrollHeight,140)+'px';});
-const installCard=document.getElementById('installCard');
-const isInstalled=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
-if(isInstalled)installCard.classList.add('hidden');
-if('serviceWorker'in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}
-if(!/iPhone|iPad|iPod/.test(navigator.userAgent)){installCard.querySelector('p').textContent='On iPhone, open this page in Safari, tap Share, choose Add to Home Screen, turn on Open as Web App, then tap Add. On other devices, use your browser’s Install or Add to Home Screen option.';}
+
+<div class="composer"><div class="compose-inner"><textarea id="prompt" rows="1" placeholder="Ask IsaiahAI…"></textarea><button class="send" id="send" aria-label="Send message">↑</button></div><div class="status" id="status">Ready</div></div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+const FIREBASE_CONFIG={
+ projectId:"gen-lang-client-0837934328",
+ appId:"1:787879295417:web:66981f75ae956da1325e68",
+ apiKey:"AIzaSyADwZZ6vMlpTgqjKEzGRyUQdNpzDdihlj8",
+ authDomain:"gen-lang-client-0837934328.firebaseapp.com",
+ storageBucket:"gen-lang-client-0837934328.firebasestorage.app",
+ messagingSenderId:"787879295417"
+};
+const firebaseApp=initializeApp(FIREBASE_CONFIG,"isaiah-workspace-mobile");
+const auth=getAuth(firebaseApp);
+const provider=new GoogleAuthProvider();
+const SCOPES=[
+ "https://www.googleapis.com/auth/gmail.readonly",
+ "https://www.googleapis.com/auth/gmail.send",
+ "https://www.googleapis.com/auth/calendar.events",
+ "https://www.googleapis.com/auth/calendar.readonly",
+ "https://www.googleapis.com/auth/documents",
+ "https://www.googleapis.com/auth/presentations",
+ "https://www.googleapis.com/auth/drive.readonly",
+ "https://www.googleapis.com/auth/drive.file",
+ "https://www.googleapis.com/auth/tasks",
+ "https://www.googleapis.com/auth/chat.spaces.readonly",
+ "https://www.googleapis.com/auth/chat.messages.readonly",
+ "https://www.googleapis.com/auth/chat.messages.create"
+];
+SCOPES.forEach(s=>provider.addScope(s));
+provider.setCustomParameters({prompt:"consent",access_type:"offline",include_granted_scopes:"true"});
+
+const API="https://codepro-gateway-production.up.railway.app";
+const state={token:null,user:null,history:[],service:"gmail",model:"open_isaiah"};
+
+const $=id=>document.getElementById(id);
+const authStatus=$("authStatus"),authEmail=$("authEmail"),googleBtn=$("googleBtn"),workspace=$("workspace"),wsContent=$("wscontent"),wsStatus=$("workspaceStatus");
+const messages=$("messages"),promptEl=$("prompt"),statusEl=$("status"),sendBtn=$("send"),modelEl=$("model"),layout=$("layout");
+
+function setStatus(text,busy=false){statusEl.textContent=text;statusEl.classList.toggle("busy",busy)}
+function escapeText(v){return String(v??"")}
+function addMessage(role,text){
+ const el=document.createElement("div");el.className="msg "+(role==="user"?"user":"assistant");
+ const label=document.createElement("div");label.className="label";label.textContent=role==="user"?"You":state.model==="open_isaiah"?"Open-Isaiah":"IsaiahAI";
+ const body=document.createElement("div");body.textContent=text;el.append(label,body);messages.append(el);window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"});return body;
+}
+function resetChat(){state.history=[];messages.replaceChildren();$("welcome").classList.remove("hidden");layout.classList.remove("nav-open");setStatus("New chat ready")}
+function workspacePrompt(){
+ return `You are Open-Isaiah Workspace Agent inside IsaiahSearch Mobile. You are the preferred model for Google Workspace tasks. You can help the user reason about Gmail, Calendar, Docs, Slides, Tasks, and Google Chat. The mobile app has direct Google OAuth access to those services. Treat the user's Google data as private. Never invent an email, event, document, slide, task, space, or message. Clearly separate a proposed action from a completed action. The app asks for user confirmation before a write operation. Be concise and action-oriented. When workspace context is provided, use it to answer accurately. If the requested action is not available in the current mobile workspace controls, explain exactly what is missing instead of pretending it happened.`;
+}
+function authHeaders(){return state.token?{Authorization:"Bearer "+state.token,"Content-Type":"application/json"}:{"Content-Type":"application/json"}}
+async function gfetch(url,options={}){if(!state.token)throw new Error("Sign in with Google first.");const headers={...(options.headers||{}),Authorization:"Bearer "+state.token};const res=await fetch(url,{...options,headers});const data=await res.json().catch(()=>({}));if(!res.ok){if(res.status===401){state.token=null;updateAuth();}throw new Error(data.error?.message||data.error_description||"Google API request failed.");}return data}
+function updateAuth(){
+ const connected=!!state.token&&!!state.user;
+ authStatus.textContent=connected?"Google Workspace: Connected":"Google Workspace: Not Connected";
+ authEmail.textContent=connected?(state.user.email||state.user.displayName||"Google account"):"Sign in to enable Workspace tools.";
+ googleBtn.textContent=connected?"Sign Out":"Sign in with Google";
+ workspace.classList.toggle("hidden",!connected);
+}
+async function finishGoogle(result){
+ const credential=GoogleAuthProvider.credentialFromResult(result);
+ if(!credential?.accessToken)throw new Error("Google sign-in succeeded but no Workspace access token was returned. Check the OAuth scopes and consent configuration.");
+ state.token=credential.accessToken;state.user=result.user;updateAuth();setStatus("Google Workspace connected");await renderWorkspace();
+}
+async function googleSignIn(){
+ try{
+  googleBtn.textContent="Opening Google…";
+  if(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)){
+   await signInWithRedirect(auth,provider);
+   return;
+  }
+  await finishGoogle(await signInWithPopup(auth,provider));
+ }catch(e){setStatus("Google sign-in failed");alert(e.message);googleBtn.textContent="Sign in with Google";}
+}
+async function googleSignOut(){await signOut(auth);state.token=null;state.user=null;updateAuth();wsContent.replaceChildren();setStatus("Google Workspace disconnected")}
+googleBtn.addEventListener("click",()=>state.token?googleSignOut():googleSignIn());
+getRedirectResult(auth).then(r=>{if(r)finishGoogle(r).catch(e=>{console.error(e);alert(e.message)})}).catch(e=>console.warn("Google redirect result:",e));
+onAuthStateChanged(auth,u=>{state.user=u||state.user;updateAuth()});
+
+function actionButton(label,fn){const b=document.createElement("button");b.textContent=label;b.onclick=fn;return b}
+function row(title,sub,link){const d=document.createElement("div");d.className="row";const b=document.createElement("strong");b.textContent=title;const s=document.createElement("small");s.textContent=sub||"";d.append(b,s);if(link){const a=document.createElement("a");a.href=link;a.target="_blank";a.rel="noreferrer";a.textContent="Open";a.style.color="#aebaff";a.style.fontSize="11px";d.append(a)}return d}
+function formField(placeholder,value,oninput,type="text"){const i=document.createElement(type==="textarea"?"textarea":"input");i.placeholder=placeholder;i.value=value||"";i.oninput=e=>oninput(e.target.value);return i}
+
+async function loadGmail(){
+ wsContent.replaceChildren();wsStatus.textContent="Gmail";
+ const head=document.createElement("div");head.className="statusline";head.textContent="Loading recent messages…";wsContent.append(head);
+ try{
+  const d=await gfetch("https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=10&q=in:anywhere");
+  const items=d.messages||[];wsContent.replaceChildren();
+  if(!items.length){wsContent.append(row("No messages found","Gmail returned no messages."));return}
+  for(const m of items.slice(0,8)){
+   const full=await gfetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/"+encodeURIComponent(m.id)+"?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date");
+   const h=Object.fromEntries((full.payload?.headers||[]).map(x=>[x.name,x.value]));
+   wsContent.append(row(h.Subject||"(No subject)",(h.From||"Unknown sender")+" · "+(h.Date||"")));
+  }
+  const actions=document.createElement("div");actions.className="actionrow";actions.append(actionButton("Compose email",()=>showGmailCompose()));wsContent.append(actions);
+ }catch(e){wsContent.replaceChildren(row("Gmail error",e.message))}
+}
+function showGmailCompose(){
+ wsContent.replaceChildren();wsStatus.textContent="Compose Gmail";
+ const box=document.createElement("div");box.className="formgrid";let to="",subject="",body="";
+ box.append(formField("Recipient email","",v=>to=v),formField("Subject","",v=>subject=v),formField("Email body","",v=>body=v,"textarea"));
+ const buttons=document.createElement("div");buttons.className="actionrow";buttons.append(actionButton("Send email",async()=>{if(!to.trim())return alert("Enter a recipient.");try{await sendGmail(to,subject,body);alert("Gmail message sent.");loadGmail()}catch(e){alert(e.message)}}),actionButton("Cancel",loadGmail));box.append(buttons);wsContent.append(box);
+}
+async function sendGmail(to,subject,body){
+ const raw=[`To: ${to.trim()}`,`Subject: =?utf-8?B?${btoa(unescape(encodeURIComponent(subject.trim())))}?=`,"MIME-Version: 1.0","Content-Type: text/plain; charset=utf-8","",body.trim()].join("\r\n");
+ const encoded=btoa(unescape(encodeURIComponent(raw))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+ return gfetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({raw:encoded})});
+}
+
+async function loadCalendar(){
+ wsContent.replaceChildren();wsStatus.textContent="Calendar";
+ try{
+  const d=await gfetch("https://www.googleapis.com/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=12&timeMin="+encodeURIComponent(new Date().toISOString()));
+  for(const e of d.items||[])wsContent.append(row(e.summary||"(Untitled event)",e.start?.dateTime||e.start?.date||""));
+  const actions=document.createElement("div");actions.className="actionrow";actions.append(actionButton("Create event",showCalendarCreate));wsContent.append(actions);
+ }catch(e){wsContent.append(row("Calendar error",e.message))}
+}
+function showCalendarCreate(){
+ wsContent.replaceChildren();wsStatus.textContent="Create Calendar event";
+ const box=document.createElement("div");box.className="formgrid";let title="",start="",end="",description="";
+ box.append(formField("Event title","",v=>title=v),formField("Start (2026-11-10T16:00:00-05:00)","",v=>start=v),formField("End (2026-11-10T17:00:00-05:00)","",v=>end=v),formField("Description","",v=>description=v,"textarea"));
+ const b=document.createElement("div");b.className="actionrow";b.append(actionButton("Create event",async()=>{try{await gfetch("https://www.googleapis.com/calendar/v3/calendars/primary/events",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({summary:title,start:{dateTime:start},end:{dateTime:end},description})});alert("Calendar event created.");loadCalendar()}catch(e){alert(e.message)}}),actionButton("Cancel",loadCalendar));box.append(b);wsContent.append(box);
+}
+
+async function loadDrive(kind){
+ wsContent.replaceChildren();wsStatus.textContent=kind==="docs"?"Docs":"Slides";
+ const mime=kind==="docs"?"application/vnd.google-apps.document":"application/vnd.google-apps.presentation";
+ try{
+  const q=encodeURIComponent("mimeType='"+mime+"' and trashed=false");
+  const d=await gfetch("https://www.googleapis.com/drive/v3/files?q="+q+"&orderBy=modifiedTime desc&pageSize=12&fields=files(id,name,mimeType,modifiedTime,webViewLink)");
+  for(const f of d.files||[])wsContent.append(row(f.name,f.modifiedTime?new Date(f.modifiedTime).toLocaleString():"",f.webViewLink));
+  const b=document.createElement("div");b.className="actionrow";b.append(actionButton(kind==="docs"?"Create document":"Create presentation",()=>createWorkspaceFile(kind)));wsContent.append(b);
+ }catch(e){wsContent.append(row((kind==="docs"?"Docs":"Slides")+" error",e.message))}
+}
+async function createWorkspaceFile(kind){
+ const title=prompt("Name your new "+(kind==="docs"?"Google Doc":"Google Slides presentation")+":");if(!title)return;
+ try{
+  const url=kind==="docs"?"https://docs.googleapis.com/v1/documents":"https://slides.googleapis.com/v1/presentations";
+  const d=await gfetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({title})});
+  alert("Created: "+(d.title||title));loadDrive(kind);
+ }catch(e){alert(e.message)}
+}
+
+async function loadTasks(){
+ wsContent.replaceChildren();wsStatus.textContent="Tasks";
+ try{
+  const lists=await gfetch("https://tasks.googleapis.com/tasks/v1/users/@me/lists?maxResults=20");const list=lists.items?.[0];
+  if(!list){wsContent.append(row("No task list","Google Tasks returned no lists."));return}
+  const d=await gfetch("https://tasks.googleapis.com/tasks/v1/lists/"+encodeURIComponent(list.id)+"/tasks?showCompleted=false&showHidden=false&maxResults=20");
+  for(const t of d.items||[])wsContent.append(row(t.title,t.due?"Due "+new Date(t.due).toLocaleString():""));
+  const b=document.createElement("div");b.className="actionrow";b.append(actionButton("Add task",async()=>{const title=prompt("Task title:");if(!title)return;try{await gfetch("https://tasks.googleapis.com/tasks/v1/lists/"+encodeURIComponent(list.id)+"/tasks",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({title})});loadTasks()}catch(e){alert(e.message)}}));wsContent.append(b);
+ }catch(e){wsContent.append(row("Tasks error",e.message))}
+}
+
+async function loadChat(){
+ wsContent.replaceChildren();wsStatus.textContent="Google Chat";
+ try{
+  const d=await gfetch("https://chat.googleapis.com/v1/spaces?pageSize=20");const spaces=d.spaces||[];
+  if(!spaces.length)wsContent.append(row("No Chat spaces","Google Chat returned no accessible spaces."));
+  for(const s of spaces){const b=actionButton(s.displayName||s.name,()=>loadChatMessages(s.name));b.className="service";wsContent.append(b)}
+ }catch(e){wsContent.append(row("Chat error",e.message))}
+}
+async function loadChatMessages(space){
+ wsContent.replaceChildren();wsStatus.textContent="Chat messages";
+ try{
+  const d=await gfetch("https://chat.googleapis.com/v1/"+space+"/messages?pageSize=20&orderBy=createTime%20DESC");
+  for(const m of (d.messages||[]))wsContent.append(row(m.sender?.displayName||"Chat user",m.text||""));
+  const b=document.createElement("div");b.className="formgrid";let text="";
+  b.append(formField("Message this space","",v=>text=v));
+  const actions=document.createElement("div");actions.className="actionrow";actions.append(actionButton("Send",async()=>{if(!text.trim())return;try{await gfetch("https://chat.googleapis.com/v1/"+space+"/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:text.trim()})});loadChatMessages(space)}catch(e){alert(e.message)}}),actionButton("Back",loadChat));b.append(actions);wsContent.append(b);
+ }catch(e){wsContent.append(row("Chat error",e.message))}
+}
+
+async function renderWorkspace(){
+ if(!state.token)return;try{
+  if(state.service==="gmail")await loadGmail();
+  if(state.service==="calendar")await loadCalendar();
+  if(state.service==="docs")await loadDrive("docs");
+  if(state.service==="slides")await loadDrive("slides");
+  if(state.service==="tasks")await loadTasks();
+  if(state.service==="chat")await loadChat();
+ }catch(e){wsContent.replaceChildren(row("Workspace error",e.message))}
+}
+document.querySelectorAll(".service").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".service").forEach(x=>x.classList.remove("active"));b.classList.add("active");state.service=b.dataset.service;renderWorkspace()}));
+$("workspaceBtn").addEventListener("click",()=>{if(!state.token){alert("Sign in with Google first.");return}workspace.scrollIntoView({behavior:"smooth"});});
+function syncModel(m){state.model=m;modelEl.value=m;document.querySelectorAll(".modelList button").forEach(b=>b.classList.toggle("active",b.dataset.model===m))}
+modelEl.addEventListener("change",()=>syncModel(modelEl.value));document.querySelectorAll(".modelList button").forEach(b=>b.addEventListener("click",()=>syncModel(b.dataset.model)));syncModel("open_isaiah");
+
+async function send(){
+ const text=promptEl.value.trim();if(!text||sendBtn.disabled)return;
+ promptEl.value="";promptEl.style.height="42px";$("welcome").classList.add("hidden");layout.classList.remove("nav-open");addMessage("user",text);state.history.push({role:"user",content:text});sendBtn.disabled=true;setStatus(state.model==="open_isaiah"?"Open-Isaiah is working with your workspace context…":"Thinking…",true);
+ const reply=addMessage("assistant","");const timer=setTimeout(()=>setStatus("Writing response…",true),1800);
+ try{
+  const workspaceContext=state.model==="open_isaiah"&&state.token?{connected:true,service:state.service,account:state.user?.email||"",capabilities:["Gmail","Calendar","Docs","Slides","Tasks","Google Chat"],note:"The app can read and perform supported write actions after user confirmation."}:{connected:false};
+  const body={model:state.model,message:text,history:state.history.slice(0,-1),searchWebEnabled:true,showThinking:true,reasoningMode:"thinking",reasoningEffort:"high",workspaceContext};
+  if(state.model==="open_isaiah")body.systemInstruction=workspacePrompt();
+  const res=await fetch(API+"/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||data.message||"IsaiahAI returned an error.");
+  const answer=data.content||data.reply||data.response||data.message||"No response text was returned.";reply.textContent=typeof answer==="string"?answer:JSON.stringify(answer);state.history.push({role:"assistant",content:reply.textContent});setStatus(data.searchUnavailable?"Ready · live web verification unavailable for this free-tier request":"Ready");
+ }catch(e){reply.textContent="I could not reach IsaiahAI: "+e.message;setStatus("Connection issue")}finally{clearTimeout(timer);statusEl.classList.remove("busy");sendBtn.disabled=false;promptEl.focus()}
+}
+sendBtn.addEventListener("click",send);promptEl.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send()}});promptEl.addEventListener("input",()=>{promptEl.style.height="42px";promptEl.style.height=Math.min(promptEl.scrollHeight,140)+"px"});
+$("menuBtn").addEventListener("click",()=>layout.classList.toggle("nav-open"));$("sideNew").addEventListener("click",resetChat);$("newChat").addEventListener("click",resetChat);
+updateAuth();
 </script>
 </body></html>
