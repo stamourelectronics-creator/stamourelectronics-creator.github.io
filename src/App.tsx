@@ -413,14 +413,14 @@ export default function App() {
   const [siriSpeaking, setSiriSpeaking] = useState<boolean>(false);
 
   // Selected AI Model (IsaiahAI 7.0 SUPER, Isaiah AI 5.3, Isaiah Max 6.0, or Maw AI)
-  const [selectedAiModel, setSelectedAiModel] = useState<'isaiah_5_3' | 'isaiah_max_6_0' | 'maw_ai' | 'isaiahai_7_super'>(() => {
+  const [selectedAiModel, setSelectedAiModel] = useState<'isaiah_5_3' | 'isaiah_max_6_0' | 'maw_ai' | 'isaiahai_7_super' | 'open_isaiah'>(() => {
     // One-time upgrade: make IsaiahAI 7.0 SUPER the default without overwriting later user choices.
     if (localStorage.getItem('isaiah_model_default_version') !== '7.0-super') {
       localStorage.setItem('isaiah_selected_model', 'isaiahai_7_super');
       localStorage.setItem('isaiah_model_default_version', '7.0-super');
       return 'isaiahai_7_super';
     }
-    return (localStorage.getItem('isaiah_selected_model') as 'isaiah_5_3' | 'isaiah_max_6_0' | 'maw_ai' | 'isaiahai_7_super') || 'isaiahai_7_super';
+    return (localStorage.getItem('isaiah_selected_model') as 'isaiah_5_3' | 'isaiah_max_6_0' | 'maw_ai' | 'isaiahai_7_super' | 'open_isaiah') || 'isaiahai_7_super';
   });
   const [isSearchingWebActive, setIsSearchingWebActive] = useState<boolean>(false);
   const [activeSearchQuery, setActiveSearchQuery] = useState<string>('');
@@ -624,6 +624,12 @@ export default function App() {
   const [shareUrl, setShareUrl] = useState<string>('');
   const [shareNotice, setShareNotice] = useState<string | null>(null);
   const [showReasoningSummary, setShowReasoningSummary] = useState<boolean>(false);
+  const [reasoningMode, setReasoningMode] = useState<'auto' | 'thinking'>(() => localStorage.getItem('isaiah_reasoning_mode') === 'thinking' ? 'thinking' : 'auto');
+  const [reasoningEffort, setReasoningEffort] = useState<'low' | 'medium' | 'high'>(() => {
+    const stored = localStorage.getItem('isaiah_reasoning_effort');
+    return stored === 'low' || stored === 'medium' || stored === 'high' ? stored : 'medium';
+  });
+  const [reasoningControlsOpen, setReasoningControlsOpen] = useState<boolean>(false);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   
@@ -1373,6 +1379,7 @@ export default function App() {
       : selectedAiModel === 'isaiah_5_3' ? 'Isaiah AI 5.3'
       : selectedAiModel === 'maw_ai' ? 'Maw AI'
       : selectedAiModel === 'isaiahai_7_super' ? 'IsaiahAI 7.0 SUPER'
+      : selectedAiModel === 'open_isaiah' ? 'Open-Isaiah'
       : 'Isaiah Max 6.0';
 
     const userMsg: Message = {
@@ -1899,7 +1906,10 @@ export default function App() {
         }
 
         try {
-          const response = await fetch('/api/chat', {
+          const chatApiEndpoint = selectedAiModel === 'maw_ai'
+            ? '/api/chat'
+            : 'https://codepro-gateway-production.up.railway.app/api/chat';
+          const response = await fetch(chatApiEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1907,6 +1917,8 @@ export default function App() {
               history: chatHistoryMap,
               searchWebEnabled,
               showThinking: showReasoningSummary,
+              reasoningMode,
+              reasoningEffort,
               chatMode,
               model: selectedAiModel,
               selectedModel: selectedAiModel,
@@ -1955,6 +1967,8 @@ Your mission is to provide lightning-fast, crisp, accurate, direct answers witho
 Identify exclusively as Isaiah AI 5.3. NEVER mention "Gemini" or "Google".`
                 : selectedAiModel === 'isaiahai_7_super'
                 ? `You are IsaiahAI 7.0 SUPER, an advanced AI assistant made by St.Amour Electronics. The CEO of St.Amour Electronics is Isaiah John St.Amour. Be accurate, helpful, thoughtful, and clear. Identify as IsaiahAI 7.0 SUPER by St.Amour Electronics.`
+                : selectedAiModel === 'open_isaiah'
+                ? `You are Open-Isaiah, an open AI assistant in the IsaiahAI ecosystem. Be helpful, accurate, practical, transparent about uncertainty, and able to explain your work clearly. Identify as Open-Isaiah.`
                 : `You are Isaiah Max 6.0 by St.Amour Electronics, a state-of-the-art super-intelligent assistant. You possess high-precision cognitive abilities, multi-modal vision interfaces, and interactive software modules.
 The CEO of St.Amour Electronics is Isaiah St.Amour.
 CRITICAL MANDATE FOR ISAIAH MAX 6.0:
@@ -3596,6 +3610,55 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                         >
                           <Brain className="w-5 h-5" />
                         </button>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setReasoningControlsOpen(open => !open)}
+                        className={`p-1.5 rounded-full transition-colors cursor-pointer ${reasoningControlsOpen ? 'text-cyan-400 bg-cyan-500/10' : isLight ? 'text-zinc-500 hover:bg-zinc-200/50' : 'text-zinc-300 hover:bg-zinc-800/60'}`}
+                        title="Reasoning mode and effort"
+                        aria-label="Reasoning mode and effort"
+                        aria-expanded={reasoningControlsOpen}
+                      >
+                        <SlidersHorizontal className="w-5 h-5" />
+                      </button>
+                      {reasoningControlsOpen && (
+                        <div className={`absolute bottom-full right-0 mb-3 w-64 rounded-2xl border p-3 shadow-2xl z-[80] ${isLight ? 'bg-white border-zinc-200 text-zinc-900' : 'bg-zinc-950 border-zinc-800 text-zinc-100'}`}>
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-cyan-500 mb-2">Reasoning controls</div>
+                          <label className="block text-[10px] font-semibold mb-1" htmlFor="isaiah-reasoning-mode">Reasoning mode</label>
+                          <select
+                            id="isaiah-reasoning-mode"
+                            value={reasoningMode}
+                            onChange={event => {
+                              const value = event.target.value as 'auto' | 'thinking';
+                              setReasoningMode(value);
+                              localStorage.setItem('isaiah_reasoning_mode', value);
+                            }}
+                            className={`w-full rounded-lg border px-2 py-2 text-xs mb-3 ${isLight ? 'bg-zinc-50 border-zinc-200' : 'bg-zinc-900 border-zinc-700'}`}
+                          >
+                            <option value="auto">Automatic</option>
+                            <option value="thinking">Thinking mode</option>
+                          </select>
+                          <label className="block text-[10px] font-semibold mb-1" htmlFor="isaiah-reasoning-effort">Reasoning effort</label>
+                          <select
+                            id="isaiah-reasoning-effort"
+                            value={reasoningEffort}
+                            onChange={event => {
+                              const value = event.target.value as 'low' | 'medium' | 'high';
+                              setReasoningEffort(value);
+                              localStorage.setItem('isaiah_reasoning_effort', value);
+                            }}
+                            className={`w-full rounded-lg border px-2 py-2 text-xs ${isLight ? 'bg-zinc-50 border-zinc-200' : 'bg-zinc-900 border-zinc-700'}`}
+                          >
+                            <option value="low">Low — quicker</option>
+                            <option value="medium">Medium — balanced</option>
+                            <option value="high">High — deepest</option>
+                          </select>
+                          <p className={`text-[9px] mt-2 leading-relaxed ${isLight ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                            {reasoningMode === 'auto' ? 'Automatic mode lets Gemini choose how much to think. The effort setting applies in Thinking mode.' : 'Thinking mode applies your selected effort level to supported Gemini models.'}
+                          </p>
+                        </div>
+                      )}
+                    </div>
 
                         {/* 3. Zap button -> Turbo / Fast mode toggle */}
                         <button
@@ -3614,7 +3677,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                               ? 'text-amber-400'
                               : isLight ? 'text-zinc-600 hover:text-zinc-900' : 'text-zinc-400 hover:text-white'
                           }`}
-                          title={`Current model: ${selectedAiModel === 'isaiah_5_3' ? '5.3 Flash (Fast)' : selectedAiModel === 'maw_ai' ? 'Maw AI' : selectedAiModel === 'isaiahai_7_super' ? 'IsaiahAI 7.0 SUPER' : 'Max 6.0 (Smart)'} - Tap to toggle 5.3`}
+                          title={`Current model: ${selectedAiModel === 'isaiah_5_3' ? '5.3 Flash (Fast)' : selectedAiModel === 'maw_ai' ? 'Maw AI' : selectedAiModel === 'isaiahai_7_super' ? 'IsaiahAI 7.0 SUPER' : selectedAiModel === 'open_isaiah' ? 'Open-Isaiah' : 'Max 6.0 (Smart)'} - Tap to toggle 5.3`}
                         >
                           <Zap className="w-5 h-5 stroke-[1.8]" />
                         </button>
@@ -3636,7 +3699,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                           >
                             <span className="tracking-tight">
                               {chatMode === 'general'
-                                ? (selectedAiModel === 'isaiah_5_3' ? '5.3 Flash' : selectedAiModel === 'maw_ai' ? 'Maw AI' : selectedAiModel === 'isaiahai_7_super' ? '7.0 SUPER' : 'Max 6.0')
+                                ? (selectedAiModel === 'isaiah_5_3' ? '5.3 Flash' : selectedAiModel === 'maw_ai' ? 'Maw AI' : selectedAiModel === 'isaiahai_7_super' ? '7.0 SUPER' : selectedAiModel === 'open_isaiah' ? 'Open-Isaiah' : 'Max 6.0')
                                 : chatMode === 'school'
                                 ? 'School Mode'
                                 : chatMode === 'code'
@@ -3767,6 +3830,34 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                                     <div className="text-[9px] text-zinc-400 font-normal">Advanced reasoning and research</div>
                                   </div>
                                   {chatMode === 'general' && selectedAiModel === 'isaiahai_7_super' && (
+                                    <Check className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                                  )}
+                                </button>
+
+                                {/* Open-Isaiah */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedAiModel('open_isaiah');
+                                    localStorage.setItem('isaiah_selected_model', 'open_isaiah');
+                                    setChatMode('general');
+                                    setChatModeDropdownOpen(false);
+                                  }}
+                                  className={`w-full text-left px-2.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all cursor-pointer mt-1 ${
+                                    chatMode === 'general' && selectedAiModel === 'open_isaiah'
+                                      ? 'bg-amber-500/15 text-white border-l-2 border-amber-500'
+                                      : isLight ? 'text-zinc-700 hover:bg-zinc-100' : 'text-zinc-300 hover:text-white hover:bg-zinc-900/80'
+                                  }`}
+                                >
+                                  <span className="text-base">🌐</span>
+                                  <div className="flex-grow min-w-0">
+                                    <div className={`font-semibold text-xs flex items-center justify-between ${isLight ? 'text-zinc-900' : 'text-white'}`}>
+                                      <span>Open-Isaiah</span>
+                                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-mono font-bold uppercase">Open</span>
+                                    </div>
+                                    <div className="text-[9px] text-zinc-400 font-normal">Community API key pool</div>
+                                  </div>
+                                  {chatMode === 'general' && selectedAiModel === 'open_isaiah' && (
                                     <Check className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                                   )}
                                 </button>
@@ -4078,6 +4169,33 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                               )}
                             </button>
 
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedAiModel('open_isaiah');
+                                localStorage.setItem('isaiah_selected_model', 'open_isaiah');
+                                setChatMode('general');
+                                setChatModeDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-2.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all cursor-pointer mt-1 ${
+                                chatMode === 'general' && selectedAiModel === 'open_isaiah'
+                                  ? 'bg-amber-500/15 text-white border-l-2 border-amber-500'
+                                  : 'text-zinc-300 hover:text-white hover:bg-zinc-900/80'
+                              }`}
+                            >
+                              <span className="text-base">🌐</span>
+                              <div className="flex-grow min-w-0">
+                                <div className="font-semibold text-xs text-white flex items-center justify-between">
+                                  <span>Open-Isaiah</span>
+                                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-mono font-bold uppercase">Open</span>
+                                </div>
+                                <div className="text-[9px] text-zinc-400 font-normal">Community API key pool</div>
+                              </div>
+                              {chatMode === 'general' && selectedAiModel === 'open_isaiah' && (
+                                <Check className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                              )}
+                            </button>
+
                             <div className="border-t border-zinc-900/80 my-1 pt-1">
                               <p className="text-[8px] font-mono font-semibold text-zinc-500 px-2.5 py-0.5 uppercase tracking-wider">Specialized Modes</p>
                             </div>
@@ -4268,6 +4386,55 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                         >
                           <Brain className="w-5 h-5" />
                         </button>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setReasoningControlsOpen(open => !open)}
+                        className={`p-1.5 rounded-full transition-colors cursor-pointer ${reasoningControlsOpen ? 'text-cyan-400 bg-cyan-500/10' : isLight ? 'text-zinc-500 hover:bg-zinc-200/50' : 'text-zinc-300 hover:bg-zinc-800/60'}`}
+                        title="Reasoning mode and effort"
+                        aria-label="Reasoning mode and effort"
+                        aria-expanded={reasoningControlsOpen}
+                      >
+                        <SlidersHorizontal className="w-5 h-5" />
+                      </button>
+                      {reasoningControlsOpen && (
+                        <div className={`absolute bottom-full right-0 mb-3 w-64 rounded-2xl border p-3 shadow-2xl z-[80] ${isLight ? 'bg-white border-zinc-200 text-zinc-900' : 'bg-zinc-950 border-zinc-800 text-zinc-100'}`}>
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-cyan-500 mb-2">Reasoning controls</div>
+                          <label className="block text-[10px] font-semibold mb-1" htmlFor="isaiah-reasoning-mode">Reasoning mode</label>
+                          <select
+                            id="isaiah-reasoning-mode"
+                            value={reasoningMode}
+                            onChange={event => {
+                              const value = event.target.value as 'auto' | 'thinking';
+                              setReasoningMode(value);
+                              localStorage.setItem('isaiah_reasoning_mode', value);
+                            }}
+                            className={`w-full rounded-lg border px-2 py-2 text-xs mb-3 ${isLight ? 'bg-zinc-50 border-zinc-200' : 'bg-zinc-900 border-zinc-700'}`}
+                          >
+                            <option value="auto">Automatic</option>
+                            <option value="thinking">Thinking mode</option>
+                          </select>
+                          <label className="block text-[10px] font-semibold mb-1" htmlFor="isaiah-reasoning-effort">Reasoning effort</label>
+                          <select
+                            id="isaiah-reasoning-effort"
+                            value={reasoningEffort}
+                            onChange={event => {
+                              const value = event.target.value as 'low' | 'medium' | 'high';
+                              setReasoningEffort(value);
+                              localStorage.setItem('isaiah_reasoning_effort', value);
+                            }}
+                            className={`w-full rounded-lg border px-2 py-2 text-xs ${isLight ? 'bg-zinc-50 border-zinc-200' : 'bg-zinc-900 border-zinc-700'}`}
+                          >
+                            <option value="low">Low — quicker</option>
+                            <option value="medium">Medium — balanced</option>
+                            <option value="high">High — deepest</option>
+                          </select>
+                          <p className={`text-[9px] mt-2 leading-relaxed ${isLight ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                            {reasoningMode === 'auto' ? 'Automatic mode lets Gemini choose how much to think. The effort setting applies in Thinking mode.' : 'Thinking mode applies your selected effort level to supported Gemini models.'}
+                          </p>
+                        </div>
+                      )}
+                    </div>
 
                     {/* Live Voice Audio Session Button */}
                     <button
