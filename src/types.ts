@@ -35,6 +35,7 @@ export interface Message {
   googleSlideId?: string;
   thinking?: string;
   sources?: { title: string; uri: string }[];
+  searchUnavailable?: boolean;
   localFileEdited?: string;
 }
 
