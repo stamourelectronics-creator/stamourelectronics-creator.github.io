@@ -1,4 +1,4 @@
-name: IsaiahAI CodePro live smoke test
+name: IsaiahAI multi-model live smoke test
 
 on:
   push:
@@ -11,21 +11,62 @@ permissions:
   contents: read
 
 jobs:
-  test-codepro:
+  test-models:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
-      - name: Check gateway and active provider
+      - name: Check the shared gateway and model configuration
         shell: pwsh
         run: |
           $base = 'https://codepro-gateway-production.up.railway.app'
           $health = Invoke-RestMethod -Uri "$base/health" -TimeoutSec 20
           if (-not $health.ok -or -not $health.providerReady) {
-            throw 'CodePro gateway health did not report an active provider.'
+            throw 'The shared gateway did not report a configured provider.'
           }
-          Write-Host ("Gateway online. Active provider: " + $health.provider + "; model: " + $health.model)
+          foreach ($model in @('isaiah_5_3', 'isaiah_max_6_0', 'isaiahai_7_super', 'isaiah_codepro')) {
+            if (-not $health.models.$model) {
+              throw "Model readiness is false for $model."
+            }
+          }
+          if ($health.model -ne 'gemini-3.8-flash') {
+            throw "Unexpected active CodePro model: $($health.model)"
+          }
+          Write-Host ("Gateway online. CodePro provider: " + $health.provider + "; model: " + $health.model)
 
-      - name: Send a real public-desktop CodePro chat request
+      - name: Test IsaiahAI 5.3 Flash, Max 6.0 and 7.0 SUPER with reasoning controls
+        shell: pwsh
+        run: |
+          $base = 'https://codepro-gateway-production.up.railway.app'
+          $models = @(
+            @{ id = 'isaiah_5_3'; expected = 'gemini-3.5-flash-lite'; label = 'IsaiahAI 5.3 Flash' },
+            @{ id = 'isaiah_max_6_0'; expected = 'gemini-3.8-flash'; label = 'Isaiah Max 6.0' },
+            @{ id = 'isaiahai_7_super'; expected = 'gemini-3.8-flash'; label = 'IsaiahAI 7.0 SUPER' }
+          )
+          foreach ($model in $models) {
+            $payload = @{
+              message = 'Reply with the exact text MODEL_SMOKE_OK and nothing else.'
+              history = @()
+              model = $model.id
+              selectedModel = $model.id
+              systemInstruction = "You are $($model.label). For this connection test only, reply with the exact text MODEL_SMOKE_OK and nothing else."
+              searchWebEnabled = $false
+              reasoningMode = 'thinking'
+              reasoningEffort = 'low'
+            } | ConvertTo-Json -Depth 10 -Compress
+            $result = Invoke-RestMethod -Method Post -Uri "$base/api/chat" -ContentType 'application/json' -Body $payload -TimeoutSec 90
+            if ($result.selectedModel -ne $model.id) {
+              throw "The gateway returned the wrong selected model for $($model.id)."
+            }
+            if ($result.model -ne $model.expected) {
+              throw "The gateway routed $($model.id) to unexpected provider model $($result.model)."
+            }
+            if ([string]::IsNullOrWhiteSpace([string]$result.content)) {
+              throw "The selected model returned an empty response for $($model.id)."
+            }
+            Write-Host ("Passed: " + $model.label + " via " + $result.model)
+          }
+
+      - name: Test IsaiahAI CodePro provider
         shell: pwsh
         run: |
           $base = 'https://codepro-gateway-production.up.railway.app'
@@ -34,16 +75,12 @@ jobs:
             history = @()
             stream = $false
           } | ConvertTo-Json -Depth 8 -Compress
-
-          # Intentionally omit Authorization. The Windows installer cannot
-          # safely contain the shared gateway token; public requests are
-          # protected by the server-side per-IP rate limit.
-          $result = Invoke-RestMethod -Method Post -Uri "$base/api/chat" -ContentType 'application/json' -Body $payload -TimeoutSec 120
-          if ([string]::IsNullOrWhiteSpace([string]$result.content)) {
-            throw 'The CodePro endpoint returned an empty answer.'
+          # Deliberately no Authorization header: the client does not contain server credentials.
+          $result = Invoke-RestMethod -Method Post -Uri "$base/api/chat" -ContentType 'application/json' -Body $payload -TimeoutSec 90
+          if ([string]::IsNullOrWhiteSpace([string]$result.content) -or $result.brand -ne 'IsaiahAI CodePro') {
+            throw 'CodePro did not return a valid branded response.'
           }
-          if ($result.brand -ne 'IsaiahAI CodePro') {
-            throw ('Unexpected response brand: ' + [string]$result.brand)
+          if ($result.provider -ne 'Gemini') {
+            throw "CodePro did not use Gemini. Actual provider: $($result.provider)"
           }
-          Write-Host ("CodePro chat succeeded using provider " + [string]$result.provider + " and model " + [string]$result.model + ".")
-          Write-Host ("Response length: " + ([string]$result.content).Length + " characters.")
+          Write-Host ("Passed: IsaiahAI CodePro via " + $result.model)
