@@ -1,4 +1,5 @@
 name: IsaiahAI multi-model live smoke test
+# Retest after the bounded Gemini fallback deployment is stable.
 
 on:
   push:
