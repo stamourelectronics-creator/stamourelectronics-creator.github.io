@@ -50,7 +50,8 @@ jobs:
               model = $model.id
               selectedModel = $model.id
               systemInstruction = "You are $($model.label). For this connection test only, reply with the exact text MODEL_SMOKE_OK and nothing else."
-              searchWebEnabled = $false
+              # The public website automatically attempts live search for normal chat.
+            searchWebEnabled = $true
               reasoningMode = 'thinking'
               reasoningEffort = 'low'
             } | ConvertTo-Json -Depth 10 -Compress
@@ -65,7 +66,10 @@ jobs:
             if ([string]::IsNullOrWhiteSpace([string]$result.content)) {
               throw "The selected model returned an empty response for $($model.id)."
             }
-            Write-Host ("Passed: " + $model.label + " via " + $result.model)
+            if ($result.searchUnavailable -ne $true) {
+              throw "The free-tier route did not clearly report that live search was unavailable for $($model.id)."
+            }
+            Write-Host ("Passed: " + $model.label + " via " + $result.model + "; live-search limitation was surfaced honestly")
           }
 
       - name: Test IsaiahAI CodePro provider
