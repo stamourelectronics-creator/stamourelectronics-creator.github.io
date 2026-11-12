@@ -287,7 +287,7 @@ async function send(){
      const dataLine=frame.split("\\n").find(line=>line.startsWith("data:"));
      if(!dataLine)continue;let packet;try{packet=JSON.parse(dataLine.slice(5).trim())}catch{continue}
      const event=(eventLine||"").slice(6).trim();
-     if(event==="delta"&&packet.text){fullText+=packet.text;reply.textContent=fullText;messagesEl.scrollTop=messagesEl.scrollHeight;setStatus("Writing response…",true)}
+     if(event==="delta"&&packet.text){fullText+=packet.text;reply.textContent=fullText;messages.scrollTop=messages.scrollHeight;setStatus("Writing response…",true)}
      else if(event==="status"&&packet.message)setStatus(packet.message,true);
      else if(event==="error")throw new Error(packet.message||"The model stream failed.");
     }
