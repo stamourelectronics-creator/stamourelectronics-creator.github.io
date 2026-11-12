@@ -267,16 +267,39 @@ modelEl.addEventListener("change",()=>syncModel(modelEl.value));document.querySe
 
 async function send(){
  const text=promptEl.value.trim();if(!text||sendBtn.disabled)return;
- promptEl.value="";promptEl.style.height="42px";$("welcome").classList.add("hidden");layout.classList.remove("nav-open");addMessage("user",text);state.history.push({role:"user",content:text});sendBtn.disabled=true;setStatus(state.model==="open_isaiah"?"Open-Isaiah is working with your workspace context…":"Thinking…",true);
- const reply=addMessage("assistant","");const timer=setTimeout(()=>setStatus("Writing response…",true),1800);
+ promptEl.value="";promptEl.style.height="42px";$("welcome").classList.add("hidden");layout.classList.remove("nav-open");addMessage("user",text);state.history.push({role:"user",content:text});sendBtn.disabled=true;setStatus(state.model==="open_isaiah"?"Open-Isaiah is connecting…":"Thinking…",true);
+ const reply=addMessage("assistant","");let fullText="";
  try{
   const workspaceContext=state.model==="open_isaiah"&&state.token?{connected:true,service:state.service,account:state.user?.email||"",capabilities:["Gmail","Calendar","Docs","Slides","Tasks","Google Chat"],note:"The app can read and perform supported write actions after user confirmation."}:{connected:false};
-  const body={model:state.model,message:text,history:state.history.slice(0,-1),searchWebEnabled:true,showThinking:true,reasoningMode:"thinking",reasoningEffort:"high",workspaceContext};
+  const body={model:state.model,message:text,history:state.history.slice(0,-1),searchWebEnabled:true,showThinking:true,reasoningMode:state.model==="isaiahai_7_super"?"auto":"thinking",reasoningEffort:state.model==="isaiahai_7_super"?"low":"medium",workspaceContext,stream:true};
   if(state.model==="open_isaiah")body.systemInstruction=workspacePrompt();
   const res=await fetch(API+"/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-  const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||data.message||"IsaiahAI returned an error.");
-  const answer=data.content||data.reply||data.response||data.message||"No response text was returned.";reply.textContent=typeof answer==="string"?answer:JSON.stringify(answer);state.history.push({role:"assistant",content:reply.textContent});setStatus(data.searchUnavailable?"Ready · live web verification unavailable for this free-tier request":"Ready");
- }catch(e){reply.textContent="I could not reach IsaiahAI: "+e.message;setStatus("Connection issue")}finally{clearTimeout(timer);statusEl.classList.remove("busy");sendBtn.disabled=false;promptEl.focus()}
+  if(!res.ok){const data=await res.json().catch(()=>({}));throw new Error(data.error||data.message||"IsaiahAI returned an error.");}
+  const contentType=res.headers.get("content-type")||"";
+  if(contentType.includes("text/event-stream")&&res.body){
+   const reader=res.body.getReader(),decoder=new TextDecoder();let buffer="";
+   while(true){
+    const {value,done}=await reader.read();if(done)break;
+    buffer+=decoder.decode(value,{stream:true});let splitAt;
+    while((splitAt=buffer.indexOf("\\n\\n"))!==-1){
+     const frame=buffer.slice(0,splitAt);buffer=buffer.slice(splitAt+2);
+     const eventLine=frame.split("\\n").find(line=>line.startsWith("event:"));
+     const dataLine=frame.split("\\n").find(line=>line.startsWith("data:"));
+     if(!dataLine)continue;let packet;try{packet=JSON.parse(dataLine.slice(5).trim())}catch{continue}
+     const event=(eventLine||"").slice(6).trim();
+     if(event==="delta"&&packet.text){fullText+=packet.text;reply.textContent=fullText;messagesEl.scrollTop=messagesEl.scrollHeight;setStatus("Writing response…",true)}
+     else if(event==="status"&&packet.message)setStatus(packet.message,true);
+     else if(event==="error")throw new Error(packet.message||"The model stream failed.");
+    }
+   }
+   if(!fullText.trim())throw new Error("The model finished without returning any text.");
+  }else{
+   const data=await res.json();fullText=data.content||data.reply||data.response||data.message||"No response text was returned.";reply.textContent=fullText;
+   if(data.searchUnavailable)setStatus("Ready · live web verification unavailable for this free-tier request");
+  }
+  state.history.push({role:"assistant",content:fullText});setStatus("Ready");
+ }catch(e){reply.textContent=fullText?fullText+"\\n\\n[Connection interrupted: "+e.message+"]":"I could not reach IsaiahAI: "+e.message;setStatus("Connection issue")}
+ finally{statusEl.classList.remove("busy");sendBtn.disabled=false;promptEl.focus()}
 }
 sendBtn.addEventListener("click",send);promptEl.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send()}});promptEl.addEventListener("input",()=>{promptEl.style.height="42px";promptEl.style.height=Math.min(promptEl.scrollHeight,140)+"px"});
 $("menuBtn").addEventListener("click",()=>layout.classList.toggle("nav-open"));$("sideNew").addEventListener("click",resetChat);$("newChat").addEventListener("click",resetChat);
