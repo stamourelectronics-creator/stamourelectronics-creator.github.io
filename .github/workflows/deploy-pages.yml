@@ -60,6 +60,12 @@ jobs:
           GITHUB_PAGES: 'true'
           VITE_NETLIFY_IFRAME_WRAPPER: 'false'
           VITE_API_BASE_URL: 'https://isaiahsearch.netlify.app'
+      - name: Include IsaiahSearch mobile app
+        run: |
+          rm -rf dist/mobile
+          mkdir -p dist/mobile
+          cp -R public/mobile/. dist/mobile/
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
