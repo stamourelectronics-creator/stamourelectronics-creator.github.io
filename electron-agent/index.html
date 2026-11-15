@@ -822,6 +822,7 @@ async function withAutomaticRetries(label,operation,maxAttempts){
   try{return await operation(attempt);}catch(error){
    if(attempt>=total||!isTransientModelError(error))throw error;
    const wait=[1200,2600,4800][Math.min(attempt-1,2)];
+   if(thinkingTimer){clearInterval(thinkingTimer);thinkingTimer=null;}
    setThinking(label+' is busy. Retrying automatically in '+Math.ceil(wait/1000)+'s ('+attempt+'/'+total+')…');
    await new Promise(function(resolve){setTimeout(resolve,wait);});
   }
@@ -837,7 +838,7 @@ async function requestPuterChatTurn(message,history,images,files){
   let fullText='';const controller=new AbortController(),timeout=setTimeout(function(){controller.abort();},180000);
   try{
    const stream=await window.puter.ai.chat(messagesForPuter,{model:puterModelId,reasoning_effort:'none',stream:true,signal:controller.signal});
-   for await(const part of stream){if(part&&part.type==='text'&&typeof part.text==='string')fullText+=part.text;}
+   for await(const part of stream){if(typeof part==='string')fullText+=part;else if(part&&typeof part.text==='string')fullText+=part.text;}
   }finally{clearTimeout(timeout);}
   if(!fullText.trim())throw new Error('IsaiahAI 26 Thinking returned an empty answer.');
   return {content:fullText,selectedProvider:'IsaiahAI',selectedModel:'puter_gpt6_luna',model:'IsaiahAI 26 Thinking',thinkingSummary:'',sources:[]};
