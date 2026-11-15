@@ -24,6 +24,7 @@ const requiredHtml = [
   'id="recentSites"',
   'id="aiChatBtn"',
   'id="closeChatBtn"',
+  'id="railChatBtn"',
   'id="puterAccessPanel"',
   'id="puterSignInBtn"',
   'id="puterSignOutBtn"',
@@ -76,7 +77,8 @@ if (!html.includes("window.puter.auth.signIn()") ||
   throw new Error('Puter sign-in and GPT-6 Luna chat calls are missing.');
 }
 if (!html.includes("fetch(SEARCH_API+'/quick-search-links'") ||
-    !html.includes("let API='https://codepro-gateway-production.up.railway.app/api'")) {
+    !html.includes("let API='https://codepro-gateway-production.up.railway.app/api'") ||
+    !html.includes("SEARCH_API='https://codepro-gateway-production.up.railway.app/api'")) {
   throw new Error('Chat and browser-search requests must use their intended independent endpoints.');
 }
 if (/codeProHealth\\.provider(?!Ready)/.test(html) ||
@@ -131,4 +133,11 @@ if (!pkg.scripts['dist:linux'] || !pkg.scripts['dist:win']) {
 new vm.Script(fs.readFileSync(path.join(root, 'scripts', 'write-update-manifest.cjs'), 'utf8'), {
   filename: 'write-update-manifest.js'
 });
-console.log('IsaiahSearch Windows/Ubuntu renderer, Puter, model routing, retry, and updater checks passed.');
+if (!html.includes("$('closeChatBtn').addEventListener('click',closeChat)") ||
+    !html.includes("$('railChatBtn').addEventListener('click'")) {
+  throw new Error('Chat exit and Chat navigation controls must be wired before the browser UI initializes.');
+}
+if (html.includes("$('newWindowBtn').addEventListener")) {
+  throw new Error('The renderer must not bind a missing external-browser control.');
+}
+console.log('IsaiahSearch Windows/Ubuntu renderer, chat controls, Puter, model routing, retry, and updater checks passed.');
