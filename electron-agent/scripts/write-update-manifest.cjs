@@ -30,7 +30,7 @@ async function main() {
   pkg = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'));
   const platform = String(process.argv[2] || 'win').toLowerCase();
   if (platform === 'linux') {
-    await writeManifest(root, 'IsaiahSearch-' + pkg.version + '-x64.AppImage', 'latest-linux.yml');
+    await writeManifest(root, 'IsaiahSearch-' + pkg.version + '-x86_64.AppImage', 'latest-linux.yml');
     return;
   }
   if (platform === 'win' || platform === 'windows') {
