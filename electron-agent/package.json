@@ -79,7 +79,9 @@
       "artifactName": "IsaiahSearch-${version}-${arch}.${ext}",
       "category": "Network",
       "icon": "build/icon.png",
-      "maintainer": "Stamour Electronics"
+      "maintainer": "Stamour Electronics",
+      "desktopName": "IsaiahSearch",
+      "syncDesktopName": true
     },
     "protocols": [
       {
