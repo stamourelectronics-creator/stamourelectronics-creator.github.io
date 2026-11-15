@@ -46,7 +46,7 @@ app.on('second-instance', (_event, argv) => {
   if (mainWindow && !mainWindow.isDestroyed()) { if (mainWindow.isMinimized()) mainWindow.restore(); mainWindow.show(); mainWindow.focus(); }
   if (url) sendProtocolUrl(url);
 });
-const DEFAULT_API_BASE_URL = 'https://isaiahsearch.netlify.app/api';
+const DEFAULT_API_BASE_URL = 'https://codepro-gateway-production.up.railway.app';
 const DEFAULT_CODEPRO_API_BASE_URL = 'https://codepro-gateway-production.up.railway.app';
 async function loadSavedWorkspace() {
   let candidate = '';
@@ -497,6 +497,12 @@ ipcMain.handle('browser:close', (_event, tabId) => {
 
 function beginUpdateChecks() {
   if (!app.isPackaged) return;
+  // electron-updater can update Linux AppImage builds. Debian packages remain
+  // installable, but automatic replacement is only supported for AppImage.
+  if (process.platform === 'linux' && !process.env.APPIMAGE) {
+    console.info('[IsaiahSearch updater] Linux auto-updates are enabled for the AppImage build.');
+    return;
+  }
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.allowPrerelease = false;
@@ -550,6 +556,12 @@ app.on('before-quit', () => {
     appServer = null;
   }
 });
+
+ipcMain.handle('app:system-info', () => ({
+  platform: process.platform,
+  shell: process.platform === 'win32' ? 'powershell' : process.platform === 'linux' ? 'bash' : 'unsupported',
+  autoUpdateChannel: process.platform === 'linux' ? 'AppImage' : process.platform === 'win32' ? 'Windows installer' : 'unsupported'
+}));
 
 ipcMain.handle('app:config', () => {
   const configured = String(process.env.ISAIAH_API_BASE_URL || DEFAULT_API_BASE_URL).trim();
@@ -616,10 +628,10 @@ ipcMain.handle('agent:unrestricted:set', async (_event, enabled) => {
   const wantsEnabled = enabled === true;
   if (wantsEnabled && !unrestrictedAgentEnabled) {
     const approved = await confirmAction(
-      'Enable the Windows shell agent?',
-      'Allow IsaiahAI CodePro to run PowerShell or Command Prompt steps automatically?',
-      'Commands will run locally as your current Windows user, not as Administrator. The agent can read and change files your account can access and can launch programs. Output and exit codes are returned to the AI before it chooses the next step. High-impact disk, registry, boot, security, shutdown, and similar commands will still require a separate confirmation. You can turn this setting off at any time.',
-      'Enable Windows shell'
+      'Enable the local computer agent?',
+      process.platform === 'win32' ? 'Allow IsaiahAI CodePro to run PowerShell or Command Prompt steps automatically?' : 'Allow IsaiahAI CodePro to run Bash steps automatically on Ubuntu?',
+      'Commands run locally as your current user, never silently as Administrator or root. The agent can read and change files your account can access and launch programs. Real command output and exit codes are returned to the AI. High-impact disk, boot, registry, security, shutdown, and similar operations always need a separate confirmation. You can turn this setting off at any time.',
+      'Enable computer agent'
     );
     if (!approved) return { enabled: false, canceled: true, runsAsAdministrator: false };
   }
@@ -737,30 +749,43 @@ ipcMain.handle('workspace:run-preset', async (_event, presetKey) => {
   return runProcess(preset.bin, preset.args, root);
 });
 function isHighImpactCommand(command) {
-  const checks = [
+  const value = String(command || '');
+  const windowsChecks = [
     /\b(?:format(?:\.com)?|diskpart|Clear-Disk|Format-Volume|Remove-Partition|Initialize-Disk|Set-Disk)\b/i,
     /\b(?:reg(?:\.exe)?\s+(?:delete|add)|Remove-ItemProperty|Set-ItemProperty)\b/i,
     /\b(?:Set-MpPreference|Add-MpPreference|bcdedit|Disable-WindowsOptionalFeature)\b/i,
     /\b(?:Stop-Computer|Restart-Computer|shutdown(?:\.exe)?|sc(?:\.exe)?\s+delete)\b/i,
     /\b(?:cipher\s+\/w|vssadmin\s+delete|wbadmin\s+delete)\b/i
   ];
-  return checks.some(pattern => pattern.test(String(command || '')));
+  const linuxChecks = [
+    /\bsudo\b/i,
+    /\b(?:mkfs(?:\.[a-z0-9_-]+)?|wipefs|blkdiscard|fdisk|parted|sfdisk)\b/i,
+    /\bdd\b[^\n]*\bof=\/dev\//i,
+    /\brm\b[^\n]*(?:-r\S*f|-f\S*r|--recursive)/i,
+    /\b(?:shutdown|reboot|poweroff|halt)\b/i,
+    /\bsystemctl\s+(?:disable|mask|stop)\b/i,
+    /\b(?:userdel|groupdel|passwd|chown)\b/i
+  ];
+  return [...windowsChecks, ...(process.platform === 'linux' ? linuxChecks : [])].some(pattern => pattern.test(value));
 }
 ipcMain.handle('workspace:run-custom-command', async (_event, payload) => {
   const root = requireWorkspace();
   const command = String(payload?.command || '').trim();
-  const selectedShell = String(payload?.shell || 'powershell').toLowerCase();
+  const selectedShell = String(payload?.shell || (process.platform === 'linux' ? 'bash' : 'powershell')).toLowerCase();
   const executionId = String(payload?.executionId || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 100);
   if (!command || command.length > 12000) throw new Error('Enter a command up to 12,000 characters.');
-  if (!['powershell', 'cmd'].includes(selectedShell)) throw new Error('Choose PowerShell or Command Prompt.');
-  const shellLabel = selectedShell === 'powershell' ? 'Windows PowerShell' : 'Command Prompt';
+  const allowedShells = process.platform === 'win32' ? ['powershell', 'cmd'] : process.platform === 'linux' ? ['bash'] : [];
+  if (!allowedShells.includes(selectedShell)) throw new Error(process.platform === 'linux' ? 'Ubuntu uses the Bash shell bridge.' : 'Choose a supported local shell.');
+  if (process.platform === 'linux' && /\bsudo\b/i.test(command)) throw new Error('The local agent runs as your signed-in user. Privilege elevation with sudo is disabled.');
+  const shellLabel = selectedShell === 'powershell' ? 'PowerShell' : selectedShell === 'cmd' ? 'Command Prompt' : 'Bash';
   const highImpact = isHighImpactCommand(command);
+  const accountLabel = process.platform === 'linux' ? 'your current Ubuntu user' : 'your current Windows user';
   const detail = command + '\n\nWorking directory: ' + root +
-    '\n\nCommands run as your current Windows user, never silently elevated to Administrator. ' +
-    (highImpact ? 'This command matches a high-impact system-change pattern and always requires a separate approval.' : 'Review the command and its effects before enabling automatic shell mode.');
+    '\n\nCommands run as ' + accountLabel + ', never silently elevated. ' +
+    (highImpact ? 'This command matches a high-impact system-change pattern and always requires separate approval.' : 'Review the command and its effects before enabling automatic computer-agent mode.');
   if ((highImpact || !unrestrictedAgentEnabled) && !await confirmAction(
-    highImpact ? 'Confirm high-impact Windows command' : 'Approve terminal command?',
-    highImpact ? 'This command may change important Windows settings or system state.' : 'IsaiahAI CodePro is requesting permission to run this command in ' + shellLabel + '.',
+    highImpact ? 'Confirm high-impact system command' : 'Approve terminal command?',
+    highImpact ? 'This command may change important system settings or data.' : 'IsaiahAI CodePro is requesting permission to run this command in ' + shellLabel + '.',
     detail + '\n\nNo command runs until you approve this exact request.',
     highImpact ? 'Run high-impact command' : 'Run this command'
   )) {
@@ -773,6 +798,10 @@ ipcMain.handle('workspace:run-custom-command', async (_event, payload) => {
   };
   if (selectedShell === 'cmd') {
     return runProcess(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', command], root, 120000, stream);
+  }
+  if (selectedShell === 'bash') {
+    const bash = process.env.SHELL && /\/bash$/.test(process.env.SHELL) ? process.env.SHELL : '/bin/bash';
+    return runProcess(bash, ['-lc', command], root, 120000, stream);
   }
   return runProcess('powershell.exe', ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'RemoteSigned', '-Command', command], root, 120000, stream);
 });
