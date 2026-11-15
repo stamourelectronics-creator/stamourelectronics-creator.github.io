@@ -30,7 +30,7 @@ The local workspace is saved under the user's Documents folder by default:
 - Windows: `Documents/IsaiahSearch Workspace`
 - Ubuntu: `~/Documents/IsaiahSearch Workspace`
 
-The local agent runs as the current signed-in user. Windows supports PowerShell and Command Prompt; Ubuntu uses Bash. The bridge does not silently elevate to Administrator/root. High-impact disk, boot, registry, security, shutdown, and similar operations require a separate confirmation. Ubuntu shell execution blocks `sudo`.
+The local agent runs as the current signed-in user. Windows supports PowerShell and Command Prompt; Ubuntu uses Bash. The bridge does not silently elevate to Administrator/root; Ubuntu commands containing sudo, doas, or pkexec are blocked. High-impact disk, boot, registry, security, shutdown, deletion, and similar operations require a separate confirmation. Ubuntu shell execution blocks `sudo`.
 
 ## Building from source
 
