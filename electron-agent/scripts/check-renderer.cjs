@@ -79,8 +79,9 @@ if (!html.includes("fetch(SEARCH_API+'/quick-search-links'") ||
     !html.includes("let API='https://codepro-gateway-production.up.railway.app/api'")) {
   throw new Error('Chat and browser-search requests must use their intended independent endpoints.');
 }
-if (html.includes("codeProHealth.provider") || html.includes("selectedProvider:data.selectedProvider||data.provider")) {
-  throw new Error('The CodePro interface must not disclose provider branding.');
+if (/codeProHealth\\.provider(?!Ready)/.test(html) ||
+    !html.includes("selectedProvider:'IsaiahAI CodePro'")) {
+  throw new Error('The CodePro interface must keep the IsaiahAI name and hide the underlying provider.');
 }
 
 const main = fs.readFileSync(path.join(root, 'main.cjs'), 'utf8');
@@ -88,13 +89,8 @@ new vm.Script(main, { filename: 'electron-agent-main.js' });
 if (!main.includes("DEFAULT_API_BASE_URL = 'https://codepro-gateway-production.up.railway.app/api'")) {
   throw new Error('Desktop model requests must use the shared Railway /api route.');
 }
-if (!main.includes("if (selectedShell === 'bash')") ||
-    !main.includes("process.platform === 'linux'") ||
-    !main.includes("Don't run as root")) {
-  // The last phrase is intentionally not required; platform and Bash guards are the contract.
-  if (!main.includes("if (selectedShell === 'bash')") || !main.includes("process.platform === 'linux'")) {
-    throw new Error('Ubuntu Bash shell bridge is missing.');
-  }
+if (!main.includes("if (selectedShell === 'bash')") || !main.includes("process.platform === 'linux'")) {
+  throw new Error('Ubuntu Bash shell bridge is missing.');
 }
 if (!main.includes('APPIMAGE') || !main.includes('checkForUpdatesAndNotify')) {
   throw new Error('Linux AppImage automatic update checks are missing.');
