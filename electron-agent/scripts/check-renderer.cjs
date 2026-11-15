@@ -92,6 +92,9 @@ if (!main.includes("DEFAULT_API_BASE_URL = 'https://codepro-gateway-production.u
 if (!main.includes("if (selectedShell === 'bash')") || !main.includes("process.platform === 'linux'")) {
   throw new Error('Ubuntu Bash shell bridge is missing.');
 }
+if (!main.includes("sudo|doas|pkexec") || !main.includes("find\\b[^\\n]*\\s-delete")) {
+  throw new Error('Ubuntu privilege and destructive-command safeguards are missing.');
+}
 if (!main.includes('APPIMAGE') || !main.includes('checkForUpdatesAndNotify')) {
   throw new Error('Linux AppImage automatic update checks are missing.');
 }
