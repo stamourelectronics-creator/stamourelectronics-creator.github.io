@@ -9,7 +9,7 @@ on:
       - 'src/App.tsx'
   workflow_dispatch:
 concurrency:
-  group: isaiahsearch-desktop-${{ github.workflow }}
+  group: isaiahsearch-desktop-release-v2-${{ github.ref }}
   cancel-in-progress: true
 permissions:
   contents: write
