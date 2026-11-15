@@ -101,6 +101,11 @@ if (!main.includes('APPIMAGE') || !main.includes('checkForUpdatesAndNotify')) {
 if (!main.includes("ipcMain.handle('app:system-info'")) {
   throw new Error('The platform information IPC method is missing.');
 }
+if (!main.includes('DEFAULT_LOCAL_UI_PORT = 41737') ||
+    !main.includes("appServer.listen(preferredPort, 'localhost', loadLocalUi)") ||
+    !main.includes("appServer.listen(0, 'localhost', loadLocalUi)")) {
+  throw new Error('Puter must use a stable localhost origin with a safe temporary-port fallback.');
+}
 
 const preload = fs.readFileSync(path.join(root, 'preload.cjs'), 'utf8');
 new vm.Script(preload, { filename: 'electron-agent-preload.js' });
