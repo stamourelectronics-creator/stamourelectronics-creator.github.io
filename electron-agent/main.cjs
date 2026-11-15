@@ -46,6 +46,7 @@ app.on('second-instance', (_event, argv) => {
   if (mainWindow && !mainWindow.isDestroyed()) { if (mainWindow.isMinimized()) mainWindow.restore(); mainWindow.show(); mainWindow.focus(); }
   if (url) sendProtocolUrl(url);
 });
+const DEFAULT_LOCAL_UI_PORT = 41737;
 const DEFAULT_API_BASE_URL = 'https://codepro-gateway-production.up.railway.app/api';
 const DEFAULT_CODEPRO_API_BASE_URL = 'https://codepro-gateway-production.up.railway.app';
 async function loadSavedWorkspace() {
@@ -103,8 +104,8 @@ function createWindow() {
     }
   });
 
-  // Puter auth requires a real web origin, not file://. Serve only the bundled UI on a
-  // loopback-only ephemeral port so its sign-in callback has an origin to return to.
+  // Puter auth is stored per web origin. Keep a stable loopback origin across restarts
+  // so users do not need to sign in again every time IsaiahSearch opens.
   appServer = http.createServer(async (request, response) => {
     const pathname = new URL(request.url || '/', 'http://localhost').pathname;
     const assetPaths = {
@@ -143,12 +144,43 @@ function createWindow() {
   mainWindow.webContents.once('did-finish-load', flushProtocolUrls);
   mainWindow.setMenuBarVisibility(false);
   mainWindow.webContents.on('before-input-event', toggleFullscreenShortcut);
-  appServer.listen(0, 'localhost', () => {
+  const configuredPort = Number(process.env.ISAIAHSEARCH_LOCAL_PORT || DEFAULT_LOCAL_UI_PORT);
+  const preferredPort = Number.isInteger(configuredPort) && configuredPort >= 1024 && configuredPort <= 65535
+    ? configuredPort
+    : DEFAULT_LOCAL_UI_PORT;
+  const loadLocalUi = () => {
     const address = appServer.address();
     const port = address && typeof address === 'object' ? address.port : 0;
     appOrigin = 'http://localhost:' + port;
-    mainWindow.loadURL(appOrigin + '/');
-  });
+    if (port !== preferredPort) {
+      console.warn('[IsaiahSearch] The stable localhost port is busy; using a temporary port. Puter may ask you to sign in again next launch.');
+    }
+    mainWindow.loadURL(appOrigin + '/').catch(error => {
+      console.error('[IsaiahSearch] The local interface could not be opened:', error?.message || error);
+      dialog.showErrorBox('IsaiahSearch could not start', 'The local interface could not be opened. Restart IsaiahSearch and try again.');
+      app.quit();
+    });
+  };
+  let usedFallbackPort = false;
+  const onLocalServerError = error => {
+    if (error?.code === 'EADDRINUSE' && !usedFallbackPort) {
+      usedFallbackPort = true;
+      appServer.removeListener('error', onLocalServerError);
+      console.warn('[IsaiahSearch] Port ' + preferredPort + ' is already in use; falling back to a temporary localhost port.');
+      appServer.once('error', fallbackError => {
+        console.error('[IsaiahSearch] The fallback local server failed:', fallbackError?.message || fallbackError);
+        dialog.showErrorBox('IsaiahSearch could not start', 'The local interface server could not bind to localhost. Close conflicting apps and restart IsaiahSearch.');
+        app.quit();
+      });
+      appServer.listen(0, 'localhost', loadLocalUi);
+      return;
+    }
+    console.error('[IsaiahSearch] The local interface server failed:', error?.message || error);
+    dialog.showErrorBox('IsaiahSearch could not start', 'The local interface server could not start. Restart IsaiahSearch and try again.');
+    app.quit();
+  };
+  appServer.on('error', onLocalServerError);
+  appServer.listen(preferredPort, 'localhost', loadLocalUi);
 
   // Keep the app's local UI local. A sandboxed popup is allowed for OAuth flows;
   // ordinary website popups from the Browser tab are handled separately below.
