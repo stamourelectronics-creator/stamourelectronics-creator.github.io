@@ -83,7 +83,7 @@ const presets = {
   'npm-test': { bin: 'npm', args: ['test'], label: 'npm test' },
   'npm-build': { bin: 'npm', args: ['run', 'build'], label: 'npm run build' },
   'node-version': { bin: 'node', args: ['--version'], label: 'node --version' },
-  'python-version': { bin: 'python', args: ['--version'], label: 'python --version' }
+  'python-version': { bin: process.platform === 'linux' ? 'python3' : 'python', args: ['--version'], label: process.platform === 'linux' ? 'python3 --version' : 'python --version' }
 };
 
 function toggleFullscreenShortcut(event, input) {
@@ -758,12 +758,14 @@ function isHighImpactCommand(command) {
     /\b(?:cipher\s+\/w|vssadmin\s+delete|wbadmin\s+delete)\b/i
   ];
   const linuxChecks = [
-    /\bsudo\b/i,
+    /\b(?:sudo|doas|pkexec)\b/i,
     /\b(?:mkfs(?:\.[a-z0-9_-]+)?|wipefs|blkdiscard|fdisk|parted|sfdisk)\b/i,
     /\bdd\b[^\n]*\bof=\/dev\//i,
-    /\brm\b[^\n]*(?:-r\S*f|-f\S*r|--recursive)/i,
+    /\brm\b/i,
+    /\bfind\b[^\n]*\s-delete\b/i,
+    /\b(?:shred|truncate)\b/i,
     /\b(?:shutdown|reboot|poweroff|halt)\b/i,
-    /\bsystemctl\s+(?:disable|mask|stop)\b/i,
+    /\bsystemctl\s+(?:disable|mask|stop|enable|restart)\b/i,
     /\b(?:userdel|groupdel|passwd|chown)\b/i
   ];
   return [...windowsChecks, ...(process.platform === 'linux' ? linuxChecks : [])].some(pattern => pattern.test(value));
@@ -776,7 +778,7 @@ ipcMain.handle('workspace:run-custom-command', async (_event, payload) => {
   if (!command || command.length > 12000) throw new Error('Enter a command up to 12,000 characters.');
   const allowedShells = process.platform === 'win32' ? ['powershell', 'cmd'] : process.platform === 'linux' ? ['bash'] : [];
   if (!allowedShells.includes(selectedShell)) throw new Error(process.platform === 'linux' ? 'Ubuntu uses the Bash shell bridge.' : 'Choose a supported local shell.');
-  if (process.platform === 'linux' && /\bsudo\b/i.test(command)) throw new Error('The local agent runs as your signed-in user. Privilege elevation with sudo is disabled.');
+  if (process.platform === 'linux' && /\b(?:sudo|doas|pkexec)\b/i.test(command)) throw new Error('The local agent runs as your signed-in user. Privilege elevation through sudo, doas, or pkexec is disabled.');
   const shellLabel = selectedShell === 'powershell' ? 'PowerShell' : selectedShell === 'cmd' ? 'Command Prompt' : 'Bash';
   const highImpact = isHighImpactCommand(command);
   const accountLabel = process.platform === 'linux' ? 'your current Ubuntu user' : 'your current Windows user';
