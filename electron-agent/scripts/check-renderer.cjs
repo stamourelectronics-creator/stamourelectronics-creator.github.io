@@ -118,6 +118,9 @@ if (!linuxTargets.includes('AppImage') || !linuxTargets.includes('deb')) {
   throw new Error('Ubuntu AppImage and Debian package targets are required.');
 }
 if (!pkg.homepage) throw new Error('Package homepage metadata is required for Linux Debian packaging.');
+if (pkg.desktopName !== 'com.stamourelectronics.isaiahsearch' || pkg.build.linux.desktopName !== undefined) {
+  throw new Error('Linux desktopName must be stored at the package root, not inside build.linux.');
+}
 const updateManifestSource = fs.readFileSync(path.join(root, 'scripts', 'write-update-manifest.cjs'), 'utf8');
 if (!updateManifestSource.includes("'-x86_64.AppImage'")) {
   throw new Error('The Ubuntu updater manifest must target the x86_64 AppImage artifact.');
