@@ -440,8 +440,8 @@ export function SettingsModal({ settings, onSaveSettings, onClose }: SettingsMod
                   <span className={`text-[10px] font-mono ${isLight ? 'text-zinc-400' : 'text-slate-500'}`}>August 2026</span>
                 </div>
                 <ul className={`text-[11px] space-y-1 list-disc list-inside ${isLight ? 'text-zinc-500' : 'text-slate-400'}`}>
-                  <li>Restored primary Gemini AI chat execution ceiling (up to 35s) to eliminate chat timeouts.</li>
-                  <li>Configured multi-model fallback chain across gemini-2.5-flash and gemini-2.5-pro models.</li>
+                  <li>Restored the IsaiahAI chat response window (up to 35 seconds) to reduce timeouts.</li>
+                  <li>Configured an IsaiahAI fast-and-advanced model fallback chain to improve chat reliability.</li>
                   <li>Integrated Pollinations AI dynamic image synthesizer for zero-quota image generation.</li>
                 </ul>
               </div>
