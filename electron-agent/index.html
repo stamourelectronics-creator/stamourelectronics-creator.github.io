@@ -527,30 +527,27 @@ loadPuterSdk().then(function(){updatePuterUi();return refreshPuterAuth();}).catc
  $('puterSignInBtn').disabled=true;$('puterSignInBtn').textContent='Sign-in unavailable';$('puterModelStatus').textContent=safeError(error);
 });
 async function initializeApi(){
-  try{
-   const config=await window.isaiahDesktop.getAppConfig();
-   if(config&&typeof config.apiBaseUrl==='string'&&isHttpUrl(config.apiBaseUrl))API=config.apiBaseUrl.replace(/\/$/,'');
-   if(config&&typeof config.codeProApiBaseUrl==='string'&&isHttpUrl(config.codeProApiBaseUrl))CODEPRO_API=config.codeProApiBaseUrl.replace(/\/$/,'');
-  }catch(error){console.warn('[IsaiahAI] Using default hosted API endpoints:',safeError(error));}
-  try{
-   const response=await fetch(CODEPRO_API+'/health',{method:'GET',headers:{'Accept':'application/json'},cache:'no-store',signal:AbortSignal.timeout(7000)});
-   const data=await response.json().catch(()=>({}));
-   const gatewayReady=data.providerReady===true||data.cloudflareConfigured===true;
-   if(!response.ok||data.ok!==true||!gatewayReady)throw new Error(data.error||'The CodePro gateway has no configured provider ('+response.status+').');
-   codeProHealth=data;
-  }catch(error){codeProHealth=null;console.warn('[IsaiahAI CodePro] Health check failed:',safeError(error));}
-  try{
-   const response=await fetch(API+'/health',{method:'GET',headers:{'Accept':'application/json'},cache:'no-store',signal:AbortSignal.timeout(5000)});
-   const data=await response.json().catch(()=>({}));
-   if(!response.ok||data.ok!==true)throw new Error(data.error||'The hosted IsaiahAI service did not return a valid readiness response ('+response.status+').');
-   apiHealth=data;
-  }catch(error){apiHealth=null;console.warn('[IsaiahAI] Legacy hosted API health check failed:',safeError(error));}
-  updateModelStatus();
-  if(apiHealth&&apiHealth.ok===true)return apiHealth;
-  if(codeProHealth&&codeProHealth.ok===true)return {ok:true,aiConfigured:false,models:{isaiah_codepro:true}};
-  setApiStatus('Offline',false);$('modelHint').textContent='AI connection unavailable · send a message to retry.';
-  return null;
+ try{
+  const config=await window.isaiahDesktop.getAppConfig();
+  if(config&&typeof config.apiBaseUrl==='string'&&isHttpUrl(config.apiBaseUrl))API=config.apiBaseUrl.replace(/\/$/,'');
+  if(config&&typeof config.codeProApiBaseUrl==='string'&&isHttpUrl(config.codeProApiBaseUrl))CODEPRO_API=config.codeProApiBaseUrl.replace(/\/$/,'');
+ }catch(error){console.warn('[IsaiahAI] Using default hosted API endpoints:',safeError(error));}
+ try{
+  const response=await fetch(CODEPRO_API+'/health',{method:'GET',headers:{'Accept':'application/json'},cache:'no-store',signal:AbortSignal.timeout(9000)});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||data.ok!==true)throw new Error(data.error||'The shared IsaiahAI gateway did not return a valid readiness response ('+response.status+').');
+  codeProHealth=data;
+  apiHealth=data;
+ }catch(error){
+  codeProHealth=null;apiHealth=null;
+  console.warn('[IsaiahAI] Shared model gateway health check failed:',safeError(error));
  }
+ updateModelStatus();
+ if(apiHealth&&apiHealth.ok===true)return apiHealth;
+ setApiStatus('Offline',false);
+ $('modelHint').textContent='AI connection unavailable · sending will retry the connection.';
+ return null;
+}
 
 function modelLabel(model){
  const labels={isaiah_5_3:'IsaiahAI 5.3 Flash',isaiah_max_6_0:'Isaiah Max 6.0',isaiahai_7_super:'IsaiahAI 7.0 SUPER',isaiah_codepro:'IsaiahAI CodePro',breakaway_1_0:'Breakaway 1.0',open_isaiah:'Open-Isaiah',puter_gpt6_luna:'IsaiahAI 26 Thinking'};
