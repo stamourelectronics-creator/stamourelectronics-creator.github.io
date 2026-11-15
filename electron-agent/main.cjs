@@ -46,7 +46,7 @@ app.on('second-instance', (_event, argv) => {
   if (mainWindow && !mainWindow.isDestroyed()) { if (mainWindow.isMinimized()) mainWindow.restore(); mainWindow.show(); mainWindow.focus(); }
   if (url) sendProtocolUrl(url);
 });
-const DEFAULT_API_BASE_URL = 'https://codepro-gateway-production.up.railway.app';
+const DEFAULT_API_BASE_URL = 'https://codepro-gateway-production.up.railway.app/api';
 const DEFAULT_CODEPRO_API_BASE_URL = 'https://codepro-gateway-production.up.railway.app';
 async function loadSavedWorkspace() {
   let candidate = '';
