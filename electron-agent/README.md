@@ -1,30 +1,70 @@
-# IsaiahSearch Browser for Windows
+# IsaiahSearch Desktop
 
-IsaiahSearch is a full-window Windows browser built with Electron and native Chromium WebContentsView. The browser is the main app, with an integrated IsaiahSearch AI agent.
+IsaiahSearch Desktop is the Windows and Ubuntu version of the IsaiahSearch browser with an integrated IsaiahAI coding workspace.
 
-## Browser interface
-- Starts directly in an original IsaiahSearch new-tab dashboard with a centered search bar, custom IsaiahSearch mark, official website favicons, clock, bookmarks, recent sites, and a photo-led Popular Today news section. The desktop process fetches the RSS feed and publisher preview images so browser-renderer CORS limits do not leave the news panel stuck loading.
-- Native Chromium tabs fill the browser window. Website navigation stays inside IsaiahSearch.
-- The AI button opens the full-screen IsaiahAI CodePro agent chat. CodePro uses Cloudflare Workers AI GLM-4.7-Flash when its token is configured and automatically falls back to Groq when Cloudflare is unavailable. Breakaway 1.0 keeps the hosted Gemini route as its preferred provider and uses a separate Groq backup route on the desktop app when Gemini is unavailable.
-- Bookmarks and recently visited sites are stored locally on this Windows device.
-- Shortcuts: F11 full screen, Ctrl+T new tab, Ctrl+L address bar, Ctrl+D bookmark, Ctrl+W close tab, Ctrl+Shift+A open AI chat, Esc close chat.
+## Downloads
 
-## Integrated IsaiahSearch Agent
-- Agent mode is enabled by default.
-- IsaiahAI CodePro can inspect the active browser page and open websites in native tabs. It can complete desktop tasks through the local Windows Shell Bridge. Browser search results are opened in native tabs and inspected by the agent; no remote Python code interpreter is bundled into this Cloudflare-backed configuration.
-- Page inspection is read-only and bounded to URL, title, meta description, visible text, and a limited list of links. Page text is treated as untrusted source material.
-- Attach images, PDFs, and supported text/source files in chat.
-- CodePro has a local Windows Shell Bridge for PowerShell and Command Prompt. After the user explicitly enables Windows shell agent mode, CodePro can run a sequence of commands as the current Windows user, stream terminal output, inspect exit codes, and choose the next step. When shell agent mode is off, each command requires explicit approval.
-- Commands run as the current Windows user; the app does not request Administrator access. High-impact disk, registry, boot, security, shutdown, and similar operations always require a separate confirmation.
+The GitHub Releases workflow publishes:
 
-## Default browser
-On first launch, IsaiahSearch asks whether the user wants to make it the default browser. Choosing the option opens Windows Default Apps settings and registers HTTP/HTTPS handling for the user to confirm. The user remains in control of the Windows default-app selection.
+- Windows x64: NSIS installer and portable executable.
+- Ubuntu x64: AppImage and Debian `.deb` package.
 
-## Automatic updates
-The installed Windows version checks the public IsaiahSearch GitHub Releases feed when it starts and periodically while running. A downloaded update can be installed by restarting the app. The portable EXE is provided as a standalone download; install the setup version for automatic updates.
+The Ubuntu AppImage is the recommended Linux download because `electron-updater` can automatically download and apply GitHub release updates to AppImage installations. The `.deb` is provided for conventional package installation; update it by installing the next released `.deb`.
 
-## Build on Windows
-Install Node.js 22 or newer, then run npm install, npm run check, and npm run dist from this folder. The Windows x64 installer and portable EXE are written to release/. GitHub Actions performs the same build and publishes the Windows assets.
+## IsaiahAI models
 
-## AI API and privacy
-IsaiahAI CodePro and the desktop Breakaway 1.0 backup route use the Railway gateway at https://codepro-gateway-production.up.railway.app. Cloudflare Workers AI is the CodePro primary when a token is configured; Groq is the automatic fallback. Breakaway prefers the hosted Gemini API and can fall back to its isolated Groq route. Provider credentials remain server-side and are never embedded in the installer. IsaiahAI 7.0 SUPER continues using the hosted API. Provider usage is subject to the configured services and their quotas.
+The desktop app routes the regular IsaiahAI models through the shared Railway gateway. Provider credentials stay on the hosted server and are never included in the installer.
+
+IsaiahAI CodePro and Breakaway 1.0 use the dedicated gateway. Transient overload, rate-limit, service-busy, and network failures are retried automatically with bounded backoff. CodePro is presented under its IsaiahAI name; the app does not display the underlying provider.
+
+## IsaiahAI 26 Thinking
+
+The separate Puter Models section stays locked until the user signs in with Puter. After sign-in, IsaiahAI 26 Thinking becomes selectable and uses the `openai/gpt-6-luna` model with `reasoning_effort: "none"`. Its identity, instructions, and chat labels remain IsaiahAI-branded.
+
+Puter owns its account authentication and usage allowance. Users pay for or consume their own eligible Puter account resources; model limits and current account allowance are shown in the app. The application does not bundle a Puter credential or provider API key.
+
+## Local coding workspace
+
+The local workspace is saved under the user's Documents folder by default:
+
+- Windows: `Documents/IsaiahSearch Workspace`
+- Ubuntu: `~/Documents/IsaiahSearch Workspace`
+
+The local agent runs as the current signed-in user. Windows supports PowerShell and Command Prompt; Ubuntu uses Bash. The bridge does not silently elevate to Administrator/root; Ubuntu commands containing sudo, doas, or pkexec are blocked. High-impact disk, boot, registry, security, shutdown, deletion, and similar operations require a separate confirmation. Ubuntu shell execution blocks `sudo`.
+
+## Building from source
+
+Requires Node.js 22 or later.
+
+### Windows
+
+```powershell
+cd electron-agent
+npm install
+npm run check
+npm run dist:win
+```
+
+### Ubuntu
+
+Install the SVG icon converter once:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y librsvg2-bin
+```
+
+Then build:
+
+```bash
+cd electron-agent
+npm install
+npm run check
+npm run dist:linux
+```
+
+The Ubuntu build outputs an AppImage and a Debian package in `electron-agent/release`. The AppImage is the automatic-update channel.
+
+## Verification notes
+
+The release workflow runs the renderer syntax/feature checks plus JavaScript syntax checks on both runner platforms before producing release assets. Model/provider availability and Puter account quotas remain subject to their respective hosted services.

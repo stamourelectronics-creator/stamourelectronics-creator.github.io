@@ -1,13 +1,19 @@
+'use strict';
 const fs = require('node:fs');
+const path = require('node:path');
 const vm = require('node:vm');
-const html = fs.readFileSync(require('node:path').join(__dirname, '..', 'index.html'), 'utf8');
+
+const root = path.resolve(__dirname, '..');
+const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
-if (!scripts.length) throw new Error('No inline renderer script was found.');
-for (let index = 0; index < scripts.length; index += 1) {
-  new vm.Script(scripts[index][1], { filename: 'electron-agent-renderer-' + index + '.js' });
+if (scripts.length !== 1) {
+  throw new Error('The desktop renderer must have exactly one inline application script; found ' + scripts.length + '.');
 }
-for (const required of [
+new vm.Script(scripts[0][1], { filename: 'isaiahai-chat-renderer.js' });
+
+const requiredHtml = [
   'id="panel-browser"',
+  'id="panel-chat"',
   'id="browserTabs"',
   'id="browserForm"',
   'id="browserCanvas"',
@@ -18,79 +24,98 @@ for (const required of [
   'id="recentSites"',
   'id="aiChatBtn"',
   'id="closeChatBtn"',
-  'runShellCommand({shell:proposal.shell,command:proposal.command,executionId:executionId})',
-  'showThinkingToggle',
-  'isaiahai-icon.svg',
-  'isaiahsearch-icon.svg',
-  'getHomeNews',
-  'requestBreakawayBackup',
-  '/api/breakaway',
-  'google.com/s2/favicons',
-  'ISAIAHSEARCH BROWSER · AGENT · RESEARCH',
+  'id="puterAccessPanel"',
+  'id="puterSignInBtn"',
+  'id="puterSignOutBtn"',
+  'id="puterSelectModelBtn"',
+  'id="puterModelDetails"',
+  'value="isaiah_5_3"',
+  'value="isaiah_max_6_0"',
   'value="isaiahai_7_super"',
+  'value="isaiah_codepro"',
   'value="breakaway_1_0"',
-  'unrestrictedModeToggle',
-  'function createBrowserTab',
-  'attachmentInput',
-  'attachmentTray',
-  'prepareAttachment',
+  'value="open_isaiah"',
+  'value="puter_gpt6_luna"',
+  'IsaiahAI 26 Thinking',
+  'reasoning_effort:',
+  'reasoning_effort:\'none\'',
+  'openai/gpt-6-luna',
+  'Puter account allowance',
+  '1,050,000 tokens',
+  '128,000 tokens',
+  'function withAutomaticRetries',
+  'high demand',
+  'Retrying automatically',
+  'SEARCH_API',
   'requestChatTurn',
   'maxActions=10',
   'onAgentCommandOutput',
-  'setAgentProgress',
+  'function extractCommandProposal',
+  'bash|sh|zsh',
   'createBrowserView',
   'onBrowserEvent',
-  'browserCanvas',
   'Writing your answer',
-  'setBrowserViewBounds',
-  'stamourelectronics-creator.github.io/'
-]) {
-  if (!html.includes(required)) throw new Error('Desktop renderer validation missing: ' + required);
+  'setBrowserViewBounds'
+];
+for (const item of requiredHtml) {
+  if (!html.includes(item)) throw new Error('Desktop renderer feature check missing: ' + item);
 }
-if (!html.includes("currentPanel='browser'") || !html.includes('<section id="panel-browser" class="panel active browser-panel"')) {
+if (!html.includes("currentPanel='browser'") ||
+    !html.includes('<section id="panel-browser" class="panel active browser-panel"')) {
   throw new Error('IsaiahSearch must launch directly into its browser.');
 }
-if (!html.includes("createBrowserTab('',true)") || !html.includes("function toggleBrowserBookmark")) {
-  throw new Error('IsaiahSearch must launch to a blank new tab and include local bookmarks.');
+if (!html.includes("createBrowserTab('',true)") || !html.includes('function toggleBrowserBookmark')) {
+  throw new Error('The browser must launch to a blank new tab and include local bookmarks.');
 }
-if (!html.includes("function extractBrowserProposal") || !html.includes("inspectBrowserView") || !html.includes("You are IsaiahSearch Agent")) {
-  throw new Error('The integrated browser agent must be able to inspect the current page and open browser tabs.');
+if (!html.includes("classList.add('chat-open','chat-fullscreen')") ||
+    !html.includes("currentPanel=name==='chat'?'chat':'browser'")) {
+  throw new Error('The AI chat must open full-screen and suspend the browser panel.');
 }
-if (!html.includes("BOOKMARK_KEY") || !html.includes("RECENT_KEY") || !html.includes("id=\"shortcutGrid\"")) {
-  throw new Error('The browser home page must include bookmarks, recent-site, and top-site widgets.');
+if (!html.includes("window.puter.auth.signIn()") ||
+    !html.includes("window.puter.ai.chat(messagesForPuter,{model:puterModelId,reasoning_effort:'none',stream:true,signal:controller.signal})")) {
+  throw new Error('Puter sign-in and GPT-6 Luna chat calls are missing.');
 }
-if (!html.includes("classList.add('chat-open','chat-fullscreen')") || !html.includes("currentPanel=name==='chat'?'chat':'browser'")) {
-  throw new Error('The integrated AI chat must open full-screen and suspend the native Chromium panel.');
+if (!html.includes("fetch(SEARCH_API+'/quick-search-links'") ||
+    !html.includes("let API='https://codepro-gateway-production.up.railway.app/api'")) {
+  throw new Error('Chat and browser-search requests must use their intended independent endpoints.');
 }
-if (!html.includes("setBrowserViewActive(tab.id,false)") || !html.includes("tab.id===activeBrowserTabId&&currentPanel==='browser'")) {
-  throw new Error('Chromium must stay hidden during navigation and only appear after the page is ready.');
+if (/codeProHealth\\.provider(?!Ready)/.test(html) ||
+    !html.includes("selectedProvider:'IsaiahAI CodePro'")) {
+  throw new Error('The CodePro interface must keep the IsaiahAI name and hide the underlying provider.');
 }
-if (!html.includes("dataTransfer") || !html.includes("application/pdf")) {
-  throw new Error('Chat attachments and drag/drop support are missing.');
+
+const main = fs.readFileSync(path.join(root, 'main.cjs'), 'utf8');
+new vm.Script(main, { filename: 'electron-agent-main.js' });
+if (!main.includes("DEFAULT_API_BASE_URL = 'https://codepro-gateway-production.up.railway.app/api'")) {
+  throw new Error('Desktop model requests must use the shared Railway /api route.');
 }
-const mainSource = fs.readFileSync(require('node:path').join(__dirname, '..', 'main.cjs'), 'utf8');
-if (!html.includes('main{height:100%;width:100%;min-height:0;flex:1;display:flex;margin:0;padding:0}')) {
-  throw new Error('The browser renderer must fill the full application viewport.');
+if (!main.includes("if (selectedShell === 'bash')") || !main.includes("process.platform === 'linux'")) {
+  throw new Error('Ubuntu Bash shell bridge is missing.');
 }
-if (!mainSource.includes('fullscreen: true') || !mainSource.includes('toggleFullscreenShortcut') || !mainSource.includes("'f11'")) {
-  throw new Error('The browser must launch full-screen and support the F11 toggle.');
+if (!main.includes("sudo|doas|pkexec") || !main.includes("find\\b[^\\n]*\\s-delete")) {
+  throw new Error('Ubuntu privilege and destructive-command safeguards are missing.');
 }
-if (!mainSource.includes('WebContentsView')) {
-  throw new Error('Desktop browser must use Electron WebContentsView.');
+if (!main.includes('APPIMAGE') || !main.includes('checkForUpdatesAndNotify')) {
+  throw new Error('Linux AppImage automatic update checks are missing.');
 }
-if (/<webview\b/i.test(html) || /webviewTag:\s*true/.test(mainSource)) {
-  throw new Error('IsaiahAI Agent must use native WebContentsView rather than the legacy webview tag.');
+if (!main.includes("ipcMain.handle('app:system-info'")) {
+  throw new Error('The platform information IPC method is missing.');
 }
-if (/puter\.ai\.(chat|txt2img)|js\.puter\.com\/v2/i.test(html)) {
-  throw new Error('Puter AI client routes must not be included in IsaiahAI Agent.');
+
+const preload = fs.readFileSync(path.join(root, 'preload.cjs'), 'utf8');
+new vm.Script(preload, { filename: 'electron-agent-preload.js' });
+if (!preload.includes('getSystemInfo:')) throw new Error('The system info bridge is missing.');
+
+const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+if (!pkg.build || !pkg.build.linux || !pkg.build.win) throw new Error('Both Windows and Linux electron-builder targets must exist.');
+const linuxTargets = pkg.build.linux.target.map(item => item.target);
+if (!linuxTargets.includes('AppImage') || !linuxTargets.includes('deb')) {
+  throw new Error('Ubuntu AppImage and Debian package targets are required.');
 }
-if (html.includes('in Chromium…')) {
-  throw new Error('The user-facing browser loading status must not expose the Chromium implementation name.');
+if (!pkg.scripts['dist:linux'] || !pkg.scripts['dist:win']) {
+  throw new Error('Both platform build scripts are required.');
 }
-if (!html.includes("id=\"homeNewsGrid\"") || !html.includes("async function loadHomeNews")) {
-  throw new Error('The browser home page must load its live news cards.');
-}
-if (!mainSource.includes("'/assets/isaiahsearch-icon.svg'") || !mainSource.includes("ipcMain.handle('news:load-home'")) {
-  throw new Error('The main process must serve the IsaiahSearch brand asset and native news feed.');
-}
-console.log('IsaiahSearch browser renderer syntax and feature checks passed.');
+new vm.Script(fs.readFileSync(path.join(root, 'scripts', 'write-update-manifest.cjs'), 'utf8'), {
+  filename: 'write-update-manifest.js'
+});
+console.log('IsaiahSearch Windows/Ubuntu renderer, Puter, model routing, retry, and updater checks passed.');

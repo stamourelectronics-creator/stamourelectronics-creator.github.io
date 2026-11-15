@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('isaiahDesktop', {
   getAppConfig: () => ipcRenderer.invoke('app:config'),
+  getSystemInfo: () => ipcRenderer.invoke('app:system-info'),
   getHomeNews: () => ipcRenderer.invoke('news:load-home'),
   chooseWorkspace: () => ipcRenderer.invoke('workspace:choose'),
   clearWorkspace: () => ipcRenderer.invoke('workspace:clear'),
