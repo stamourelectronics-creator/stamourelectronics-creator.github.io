@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#080d18"><title>IsaiahSearch</title><link rel="icon" type="image/svg+xml" href="/assets/isaiahsearch-icon.svg">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#080d18"><title>IsaiahSearch · IsaiahAI Chat</title><link rel="icon" type="image/svg+xml" href="/assets/isaiahsearch-icon.svg">
 <style>
 :root{color-scheme:dark;--bg:#080d18;--line:#29394f;--muted:#96a8c1;--text:#f2f6ff;--cyan:#65dcf8;--violet:#b2a1ff;--shadow:0 18px 60px #0005}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:radial-gradient(1000px 600px at 20% -20%,#183a5c77,transparent 62%),radial-gradient(800px 500px at 100% 8%,#392b7170,transparent 60%),var(--bg);font:14px/1.55 Inter,"Segoe UI",system-ui,sans-serif;color:var(--text)}
@@ -215,30 +215,151 @@ body{background:#f7f5fb;color:#201a32}.browser-tabs{background:#eee9f7;border-co
 .browser-note{position:relative;z-index:4;background:#f0eafb;color:#57427e;border-bottom:1px solid #e1d8ef;padding:6px 13px;font-size:11px}
 @media(max-width:650px){.toolbar{gap:6px;padding:6px 8px}.address-wrap{height:39px}.home-news-card img{height:104px}}
 
+
+/* IsaiahAI Chat coding-workspace visual language */
+#panel-chat.chat-drawer.chat-open.chat-fullscreen{left:0;right:0;top:0;bottom:0;width:100vw;max-width:none;height:100dvh;border:0;border-radius:0;background:#0b0e14;color:#e7ebf2;box-shadow:none}
+#panel-chat{background:#0b0e14;color:#e7ebf2}
+#panel-chat .ide-rail{width:62px;min-width:62px;height:100%;display:flex;flex-direction:column;align-items:center;gap:9px;padding:12px 8px;background:#0a0d12;border-right:1px solid #202733}
+.ide-rail-brand{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(145deg,#9b81f4,#5c49b7);color:#fff;font-size:21px;font-weight:900;box-shadow:0 6px 22px #6650c533;margin-bottom:11px}
+.ide-rail button{width:40px;height:40px;padding:0;border:1px solid transparent;border-radius:11px;background:transparent;color:#7f8998;font-size:17px;display:grid;place-items:center}
+.ide-rail button:hover,.ide-rail button.active{background:#171d28;border-color:#2b3544;color:#e6e9f1}
+.ide-rail-spacer{flex:1}
+#panel-chat>.chat{width:auto;flex:1;min-width:0;max-width:none;background:#0d1118}
+#panel-chat .chat-drawer-head{height:65px;min-height:65px;padding:0 22px;background:#0d1118;border-bottom:1px solid #232b37;align-items:center}
+#panel-chat .chat-drawer-brand{gap:12px}
+#panel-chat .chat-drawer-mark{width:34px;height:34px;border-radius:10px;background:#1a2030;color:#bba8ff;display:grid;place-items:center;font-size:18px}
+#panel-chat .chat-drawer-brand strong{color:#f4f5f8;font-size:14px;font-weight:750;letter-spacing:-.02em}
+#panel-chat .chat-drawer-brand small{color:#8993a2;font-size:10px;letter-spacing:.015em;text-transform:none}
+#panel-chat .chat-api-status{font-size:10px;color:#8993a2}
+#panel-chat .chat-drawer-actions{gap:8px}
+#panel-chat .chat-drawer-actions .sign-in{border-color:#303949;background:#141a24;color:#b8c0ce;border-radius:9px;padding:7px 11px;font-size:10px}
+#panel-chat .chat-drawer-actions .sign-in[aria-pressed=true]{background:#1b2432;color:#d9d1ff;border-color:#51447e}
+#panel-chat .chat-close{border:1px solid #303949;background:#141a24;color:#a8b0bd;border-radius:9px;width:32px;height:32px}
+#panel-chat .agent-tools{width:100%;max-width:none;padding:10px 20px 0;background:#0d1118;border-bottom:1px solid #202733}
+#panel-chat .workspace-indicator{color:#98a4b4;font-size:10px}
+#panel-chat .unrestricted-row{margin:7px 0 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap;color:#9ba7b7;font-size:10px}
+#panel-chat .agent-tools details{margin-top:7px;background:#111722;border:1px solid #252f3d;border-radius:10px}
+#panel-chat .agent-tools summary{color:#aeb8c7;font-size:10px}
+#panel-chat .tool-content{padding:8px 0 10px}
+#panel-chat .tool-content input,#panel-chat .tool-content select{background:#0c1118;border-color:#2b3543;color:#dbe1ea;border-radius:8px}
+#panel-chat .tool-content button{background:#1a2230;border-color:#2d394b;color:#d3d9e4;border-radius:8px}
+#panel-chat .tool-state{color:#8f9bac;font-size:10px}
+#panel-chat .transcript{max-width:none;width:100%;padding:30px clamp(18px,6vw,88px) 34px;gap:18px;background:#0d1118;scrollbar-color:#303b4c transparent}
+#panel-chat .welcome{max-width:870px;padding:50px 12px}
+#panel-chat .welcome .hero-icon{width:54px;height:54px;padding:7px;border-radius:16px;background:#171c29}
+#panel-chat .welcome .eyebrow{color:#a99afa;font-size:9px;letter-spacing:.18em}
+#panel-chat .welcome h1{color:#f1f3f7;font-size:clamp(30px,4.5vw,48px);letter-spacing:-.055em}
+#panel-chat .welcome p{color:#939eae;font-size:13px;max-width:680px}
+#panel-chat .prompt-grid button{background:#121924;border:1px solid #283343;border-radius:13px;color:#d4dbe6;transition:transform .16s,border-color .16s,background .16s}
+#panel-chat .prompt-grid button:hover{transform:translateY(-2px);border-color:#6557a4;background:#171e2b}
+#panel-chat .prompt-grid strong{color:#eff1f5}
+#panel-chat .prompt-grid span{color:#8f9aab}
+#panel-chat .message{max-width:930px;border-radius:15px;border-color:#242e3b;background:#111823;color:#e3e8f0;box-shadow:0 5px 18px #0002}
+#panel-chat .message.user{background:#191d2a;border-color:#34324b}
+#panel-chat .message .label{color:#a99afa;font-size:10px;letter-spacing:.04em}
+#panel-chat .answer-text{color:#e1e6ee;line-height:1.75}
+#panel-chat .answer-text pre{background:#080c12;border:1px solid #273243;border-radius:10px}
+#panel-chat .thinking{background:#101722;border:1px solid #283546;color:#c2cbd8;border-radius:12px;max-width:930px}
+#panel-chat .composer{width:100%;max-width:980px;padding:12px 18px 18px;margin:0 auto;background:#0d1118;border-top:1px solid #232b37}
+#panel-chat .model-picker{display:flex;align-items:center;gap:9px;margin-bottom:10px;color:#8794a5;font-size:10px}
+#panel-chat .model-picker select{background:#151c27;border:1px solid #303b4c;color:#e4e8ef;border-radius:9px;min-height:34px;padding:6px 10px;font-size:11px}
+#panel-chat .model-picker #modelHint{color:#8c98a8;font-size:10px}
+#panel-chat #chatForm{border:1px solid #303b4b;background:#111823;border-radius:14px;padding:7px;box-shadow:0 10px 30px #0003}
+#panel-chat #chatInput{background:transparent;border:0;box-shadow:none;color:#f0f2f6;min-height:44px}
+#panel-chat #chatInput::placeholder{color:#707d8f}
+#panel-chat .attach-button{background:transparent;border:0;color:#9ca8b8}
+#panel-chat .send{background:#7868c7;border:0;color:#fff;border-radius:10px;font-weight:750}
+#panel-chat .send:hover{background:#8979db}
+#panel-chat .notice{color:#687587;font-size:9px;margin:7px 2px 0;text-align:center}
+#panel-chat .puter-access-panel{margin:0 0 11px;padding:11px 13px;border:1px solid #342d53;border-radius:12px;background:linear-gradient(110deg,#171625,#121722 75%);display:grid;grid-template-columns:minmax(170px,1fr) auto;gap:8px 12px;align-items:center}
+#panel-chat .puter-access-main{min-width:0}
+#panel-chat .puter-access-kicker{display:block;color:#a99afa;font-size:8px;letter-spacing:.16em;text-transform:uppercase;font-weight:850;margin-bottom:3px}
+#panel-chat .puter-access-main strong{display:block;color:#edeaf9;font-size:11px}
+#panel-chat .puter-access-main small{display:block;color:#8d8ba3;font-size:9px;line-height:1.45;margin-top:2px}
+#panel-chat .puter-access-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+#panel-chat .puter-access-panel button{padding:7px 10px;border-radius:8px;font-size:9px;font-weight:750}
+#panel-chat #puterSignInBtn{background:#7967c9;border-color:#8978df;color:#fff}
+#panel-chat #puterSelectModelBtn{background:#201c36;border-color:#51447e;color:#ded6ff}
+#panel-chat #puterSelectModelBtn:disabled{background:#191c25;border-color:#303444;color:#707a89}
+#panel-chat #puterSignOutBtn{background:#151b25;border-color:#303b4a;color:#acb5c2}
+#panel-chat .puter-usage{grid-column:1/-1;border-top:1px solid #2b2940;padding-top:7px;color:#9296a9;font-size:9px;display:flex;align-items:center;justify-content:space-between;gap:9px;flex-wrap:wrap}
+#panel-chat .puter-usage details{display:inline-block}
+#panel-chat .puter-usage summary{cursor:pointer;color:#b7aafa}
+#panel-chat .puter-usage .puter-specs{padding-top:7px;line-height:1.65;color:#979caf}
+#panel-chat .puter-usage .puter-specs b{color:#d9d5ef}
+#panel-chat .attachment-chip{background:#151e2a;border-color:#2b3748}
+#panel-chat .agent-progress{background:#111823;border-color:#293548}
+#panel-chat .agent-progress-output{background:#080c12;color:#c7d3e4}
+@media(max-width:760px){
+ #panel-chat .ide-rail{width:48px;min-width:48px;padding:9px 4px}
+ .ide-rail-brand{width:34px;height:34px}
+ .ide-rail button{width:36px;height:36px}
+ #panel-chat .chat-drawer-head{padding:0 10px}
+ #panel-chat .agent-tools{padding:8px 10px 0}
+ #panel-chat .transcript{padding:18px 10px 22px}
+ #panel-chat .composer{padding:10px 9px 12px}
+ #panel-chat .puter-access-panel{grid-template-columns:1fr}
+ #panel-chat .puter-access-actions{justify-content:flex-start}
+ #panel-chat .model-picker{align-items:flex-start;flex-wrap:wrap}
+}
+@media(prefers-reduced-motion:reduce){#panel-chat *{scroll-behavior:auto!important;transition:none!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
+
 </style></head><body>
 
 <main>
-<section id="panel-chat" class="panel chat-drawer" aria-label="IsaiahSearch Agent chat"><div class="chat">
-<div class="chat-drawer-head"><div class="chat-drawer-brand"><span class="chat-drawer-mark">✦</span><div><strong>IsaiahSearch Agent</strong><small>Built into your browser · Agent mode is on</small><div class="chat-api-status"><span class="dot"></span><span id="apiStatus">Checking AI connection…</span></div></div></div><div class="chat-drawer-actions"><button id="agentModeToggle" class="sign-in" type="button" aria-pressed="true">Agent on</button><button id="showThinkingToggle" class="sign-in" type="button" aria-pressed="false">Reasoning</button><button id="closeChatBtn" class="chat-close" type="button" aria-label="Close AI chat">×</button></div></div>
-<div class="agent-tools"><div class="tool-top"><span class="workspace-indicator" id="workspaceStatus">Preparing your automatic computer workspace…</span></div><div class="unrestricted-row"><label><input id="unrestrictedModeToggle" type="checkbox"> Windows shell agent · auto-run as current user</label><span id="unrestrictedModeStatus">Off · approve each Windows command</span></div>
-<details id="agentTools"><summary>Computer tools · project files, PowerShell and Command Prompt</summary><div class="tool-content">
+<section id="panel-chat" class="panel chat-drawer" aria-label="IsaiahAI Chat coding workspace">
+<aside class="ide-rail" aria-label="Workspace navigation">
+ <div class="ide-rail-brand" title="IsaiahAI">✦</div>
+ <button type="button" class="active" title="Chat" aria-label="Chat">⌁</button>
+ <button type="button" id="railWorkspaceBtn" title="Workspace files" aria-label="Workspace files">▤</button>
+ <button type="button" id="railTerminalBtn" title="Terminal" aria-label="Terminal">&gt;_</button>
+ <button type="button" id="railLimitsBtn" title="Model limits and reasoning" aria-label="Model limits">◷</button>
+ <span class="ide-rail-spacer"></span>
+ <button type="button" id="railPuterBtn" title="Puter model access" aria-label="Puter model access">P</button>
+</aside>
+<div class="chat">
+<div class="chat-drawer-head"><div class="chat-drawer-brand"><span class="chat-drawer-mark">✦</span><div><strong>IsaiahAI Chat</strong><small>Code workspace · browser-aware assistant</small><div class="chat-api-status"><span class="dot"></span><span id="apiStatus">Checking AI connection…</span></div></div></div><div class="chat-drawer-actions"><button id="agentModeToggle" class="sign-in" type="button" aria-pressed="true">Agent on</button><button id="showThinkingToggle" class="sign-in" type="button" aria-pressed="false">Reasoning</button><button id="closeChatBtn" class="chat-close" type="button" aria-label="Close AI chat">×</button></div></div>
+<div class="agent-tools"><div class="tool-top"><span class="workspace-indicator" id="workspaceStatus">Preparing your automatic computer workspace…</span></div><div class="unrestricted-row"><label><input id="unrestrictedModeToggle" type="checkbox"> Local computer agent · run as current user</label><span id="unrestrictedModeStatus">Off · approve each command</span></div>
+<details id="agentTools"><summary>Workspace tools · project files and terminal</summary><div class="tool-content">
 <input id="fileFilter" placeholder="Filter project files…" aria-label="Filter project files">
 <select id="agentFileSelect" multiple size="4" aria-label="Choose multiple workspace files"><option value="">Choose a supported file…</option></select>
-<button id="attachFileContext">Attach selected files</button><button id="clearFileContext">Clear attachments</button><button id="saveAiCode" disabled>Review & save AI code</button><input id="newFilePath" placeholder="New file path or full Windows path…" aria-label="Path for new AI-generated file"><button id="createAiCodeFile">Create file · approve</button>
+<button id="attachFileContext">Attach selected files</button><button id="clearFileContext">Clear attachments</button><button id="saveAiCode" disabled>Review & save AI code</button><input id="newFilePath" placeholder="New file path or full path…" aria-label="Path for new AI-generated file"><button id="createAiCodeFile">Create file · approve</button>
 <select id="commandPreset" aria-label="Approved command"><option value="git-status">git status --short</option><option value="npm-test">npm test</option><option value="npm-build">npm run build</option><option value="node-version">node --version</option><option value="python-version">python --version</option></select><button id="runPreset">Run preset · approve</button>
-<select id="shellType" aria-label="Choose terminal"><option value="powershell">PowerShell</option><option value="cmd">Command Prompt</option></select><input id="customCommand" placeholder="Enter a PowerShell or CMD command…" aria-label="Terminal command"><button id="runCustomCommand">Run command · approve</button>
-<div id="agentToolStatus" class="tool-state" aria-live="polite">Your private Documents/IsaiahSearch Workspace is prepared automatically. Enable Windows shell agent mode to let CodePro run multi-step PowerShell/CMD tasks as your current user. High-impact commands and file writes still require approval.</div>
+<select id="shellType" aria-label="Choose terminal"><option value="powershell">PowerShell</option><option value="cmd">Command Prompt</option><option value="bash">Bash</option></select><input id="customCommand" placeholder="Enter a terminal command…" aria-label="Terminal command"><button id="runCustomCommand">Run command · approve</button>
+<div id="agentToolStatus" class="tool-state" aria-live="polite">Your private IsaiahSearch Workspace is prepared automatically. Enable the local computer agent for multi-step terminal tasks as your current user. High-impact commands and file writes still require approval.</div>
 <pre id="terminalOutput" class="terminal-output" hidden></pre>
 </div></details></div>
-<div id="transcript" class="transcript"><div class="welcome"><img class="hero-icon" src="/assets/isaiahai-icon.svg" alt="IsaiahSearch"><div class="eyebrow">ISAIAHSEARCH BROWSER · AGENT · RESEARCH</div><h1>What can we get done?</h1><p>Ask a question, research a topic, or let IsaiahSearch Agent work with your computer. Your private workspace is prepared automatically. Enable Windows shell agent mode to let CodePro run multi-step commands as your current user. High-impact commands and file-editor changes still require approval.</p><div class="prompt-grid"><button data-prompt="Research this topic using current web sources. Compare source quality and dates, then summarize the evidence."><strong>↗ Research a topic</strong><span>Search live sources and compare evidence</span></button><button data-prompt="Help me debug a project. Ask me to connect its folder, then inspect a relevant file and propose a safe fix."><strong>⌘ Debug my project</strong><span>Read selected files and suggest code edits</span></button><button data-prompt="Explain a difficult topic step by step, with examples and a concise takeaway."><strong>✧ Learn something</strong><span>Clear answers with useful examples</span></button></div></div></div>
+<div id="transcript" class="transcript"><div class="welcome"><img class="hero-icon" src="/assets/isaiahai-icon.svg" alt="IsaiahSearch"><div class="eyebrow">ISAIAHAI CHAT · CODE · RESEARCH</div><h1>Build something great.</h1><p>Work through code, investigate a bug, explore an idea, or ask IsaiahAI to take the next step. Your workspace, browser and local terminal are connected in one calm coding environment.</p><div class="prompt-grid"><button data-prompt="Research this topic using current web sources. Compare source quality and dates, then summarize the evidence."><strong>↗ Research a topic</strong><span>Search live sources and compare evidence</span></button><button data-prompt="Help me debug a project. Ask me to connect its folder, then inspect a relevant file and propose a safe fix."><strong>⌘ Debug my project</strong><span>Read selected files and suggest code edits</span></button><button data-prompt="Explain a difficult topic step by step, with examples and a concise takeaway."><strong>✧ Learn something</strong><span>Clear answers with useful examples</span></button></div></div></div>
 <div id="thinkingBar" class="thinking" hidden role="status" aria-live="polite"><span class="spinner"></span><span id="thinkingText">Preparing your request…</span><span class="pips"><i></i><i></i><i></i></span></div>
-<div class="composer"><div class="model-picker"><label for="modelSelect">Model</label><select id="modelSelect" aria-label="Choose IsaiahSearch model"><option value="isaiahai_7_super">IsaiahAI 7.0 SUPER</option><option value="isaiah_codepro">IsaiahAI CodePro · Windows agent</option><option value="breakaway_1_0">Breakaway 1.0</option></select><span id="modelHint">IsaiahAI 7.0 SUPER · OpenRouter</span></div><div id="attachmentTray" class="attachment-tray" hidden aria-live="polite"></div>
+<div class="composer">
+<div class="model-picker"><label for="modelSelect">Model</label><select id="modelSelect" aria-label="Choose IsaiahAI model">
+ <optgroup label="ISAIAHAI MODELS">
+  <option value="isaiahai_7_super">IsaiahAI 7.0 SUPER</option>
+  <option value="isaiah_max_6_0">Isaiah Max 6.0</option>
+  <option value="isaiah_5_3">IsaiahAI 5.3 Flash</option>
+  <option value="isaiah_codepro">IsaiahAI CodePro · Agent</option>
+  <option value="breakaway_1_0">Breakaway 1.0</option>
+  <option value="open_isaiah">Open-Isaiah</option>
+ </optgroup>
+ <optgroup label="PUTER MODELS"><option value="puter_gpt6_luna" disabled>IsaiahAI 26 Thinking · sign-in required</option></optgroup>
+</select><span id="modelHint">Connecting to IsaiahAI…</span></div>
+<div class="puter-access-panel" id="puterAccessPanel" aria-label="Puter model access">
+ <div class="puter-access-main"><span class="puter-access-kicker">Extended models</span><strong>IsaiahAI 26 Thinking</strong><small id="puterModelStatus">Locked · sign in to unlock this model in its own section.</small></div>
+ <div class="puter-access-actions">
+  <button type="button" id="puterSignInBtn" disabled>Loading secure sign-in…</button>
+  <button type="button" id="puterSelectModelBtn" disabled>Use IsaiahAI 26 Thinking</button>
+  <button type="button" id="puterSignOutBtn" hidden>Sign out</button>
+ </div>
+ <div class="puter-usage"><span id="puterUsageText">Your Puter account limits appear here after sign-in.</span>
+  <details id="puterModelDetails"><summary>Limits &amp; reasoning</summary><div class="puter-specs"><b>Model:</b> GPT-6 Luna<br><b>Context window:</b> 1,050,000 tokens<br><b>Maximum output:</b> 128,000 tokens<br><b>Reasoning effort:</b> none · fast response profile<br><b>Identity:</b> IsaiahAI 26 Thinking<br>Usage allowance and remaining account resources are refreshed from your signed-in account.</div></details>
+ </div>
+</div><div id="attachmentTray" class="attachment-tray" hidden aria-live="polite"></div>
 <form id="chatForm">
  <input id="attachmentInput" type="file" multiple hidden accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,.txt,.md,.markdown,.csv,.tsv,.json,.jsonl,.html,.htm,.xml,.css,.js,.jsx,.ts,.tsx,.py,.ps1,.bat,.cmd,.sh,.yml,.yaml,.toml,.ini,.log,.sql,.rs,.go,.java,.c,.cpp,.h,.cs">
  <button id="attachButton" class="attach-button" type="button" title="Attach images, PDFs, or text/code files" aria-label="Attach files">＋</button>
  <textarea id="chatInput" aria-label="Message IsaiahSearch Agent" placeholder="Message IsaiahSearch Agent…" rows="2"></textarea>
  <button id="sendBtn" class="send" type="submit">Send ↑</button>
-</form><p class="notice">Your API keys stay on the hosted server. Unrestricted command mode starts only after you accept the Windows first-run warning; you can switch it off at any time.</p></div>
+</form><p class="notice">Provider credentials stay off-device. Local actions run only as your current user; sensitive operations always ask before execution.</p></div>
 </div></section>
 <section id="panel-browser" class="panel active browser-panel" aria-label="IsaiahSearch browser">
 <div class="browser">
