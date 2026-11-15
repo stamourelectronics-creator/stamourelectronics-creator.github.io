@@ -234,7 +234,7 @@ body{background:#f7f5fb;color:#201a32}.browser-tabs{background:#eee9f7;border-co
 #panel-chat .chat-drawer-actions{gap:8px}
 #panel-chat .chat-drawer-actions .sign-in{border-color:#303949;background:#141a24;color:#b8c0ce;border-radius:9px;padding:7px 11px;font-size:10px}
 #panel-chat .chat-drawer-actions .sign-in[aria-pressed=true]{background:#1b2432;color:#d9d1ff;border-color:#51447e}
-#panel-chat .chat-close{border:1px solid #303949;background:#141a24;color:#a8b0bd;border-radius:9px;width:32px;height:32px}
+#panel-chat .chat-close{border:1px solid #303949;background:#141a24;color:#d5dceb;border-radius:9px;width:auto;min-width:112px;height:34px;padding:0 11px;font-size:11px;font-weight:750;white-space:nowrap}
 #panel-chat .agent-tools{width:100%;max-width:none;padding:10px 20px 0;background:#0d1118;border-bottom:1px solid #202733}
 #panel-chat .workspace-indicator{color:#98a4b4;font-size:10px}
 #panel-chat .unrestricted-row{margin:7px 0 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap;color:#9ba7b7;font-size:10px}
@@ -310,7 +310,7 @@ body{background:#f7f5fb;color:#201a32}.browser-tabs{background:#eee9f7;border-co
 <section id="panel-chat" class="panel chat-drawer" aria-label="IsaiahAI Chat coding workspace">
 <aside class="ide-rail" aria-label="Workspace navigation">
  <div class="ide-rail-brand" title="IsaiahAI">✦</div>
- <button type="button" class="active" title="Chat" aria-label="Chat">⌁</button>
+ <button type="button" id="railChatBtn" class="active" title="Chat" aria-label="Chat">⌁</button>
  <button type="button" id="railWorkspaceBtn" title="Workspace files" aria-label="Workspace files">▤</button>
  <button type="button" id="railTerminalBtn" title="Terminal" aria-label="Terminal">&gt;_</button>
  <button type="button" id="railLimitsBtn" title="Model limits and reasoning" aria-label="Model limits">◷</button>
@@ -318,7 +318,7 @@ body{background:#f7f5fb;color:#201a32}.browser-tabs{background:#eee9f7;border-co
  <button type="button" id="railPuterBtn" title="Puter model access" aria-label="Puter model access">P</button>
 </aside>
 <div class="chat">
-<div class="chat-drawer-head"><div class="chat-drawer-brand"><span class="chat-drawer-mark">✦</span><div><strong>IsaiahAI Chat</strong><small>Code workspace · browser-aware assistant</small><div class="chat-api-status"><span class="dot"></span><span id="apiStatus">Checking AI connection…</span></div></div></div><div class="chat-drawer-actions"><button id="agentModeToggle" class="sign-in" type="button" aria-pressed="true">Agent on</button><button id="showThinkingToggle" class="sign-in" type="button" aria-pressed="false">Reasoning</button><button id="closeChatBtn" class="chat-close" type="button" aria-label="Close AI chat">×</button></div></div>
+<div class="chat-drawer-head"><div class="chat-drawer-brand"><span class="chat-drawer-mark">✦</span><div><strong>IsaiahAI Chat</strong><small>Code workspace · browser-aware assistant</small><div class="chat-api-status"><span class="dot"></span><span id="apiStatus">Checking AI connection…</span></div></div></div><div class="chat-drawer-actions"><button id="agentModeToggle" class="sign-in" type="button" aria-pressed="true">Agent on</button><button id="showThinkingToggle" class="sign-in" type="button" aria-pressed="false">Reasoning</button><button id="closeChatBtn" class="chat-close" type="button" aria-label="Back to browser">← <span>Back to browser</span></button></div></div>
 <div class="agent-tools"><div class="tool-top"><span class="workspace-indicator" id="workspaceStatus">Preparing your automatic computer workspace…</span></div><div class="unrestricted-row"><label><input id="unrestrictedModeToggle" type="checkbox"> Local computer agent · run as current user</label><span id="unrestrictedModeStatus">Off · approve each command</span></div>
 <details id="agentTools"><summary>Workspace tools · project files and terminal</summary><div class="tool-content">
 <input id="fileFilter" placeholder="Filter project files…" aria-label="Filter project files">
@@ -391,7 +391,7 @@ body{background:#f7f5fb;color:#201a32}.browser-tabs{background:#eee9f7;border-co
 <script>
 (function(){
 'use strict';
-let API='https://codepro-gateway-production.up.railway.app/api',CODEPRO_API='https://codepro-gateway-production.up.railway.app',SEARCH_API='https://isaiahsearch.netlify.app/api';
+let API='https://codepro-gateway-production.up.railway.app/api',CODEPRO_API='https://codepro-gateway-production.up.railway.app',SEARCH_API='https://codepro-gateway-production.up.railway.app/api';
 const $=function(id){return document.getElementById(id);};
 let messages=[],lastAssistantContent='',workspacePath='',selectedWorkspaceFile='',pinnedFileContexts=[],workspaceFiles=[],lastCommandOutput='',thinkingTimer=null,showThinking=false,agentMode=true,unrestrictedAgentMode=false,apiReady=null,apiHealth=null,codeProHealth=null,workspaceReady=Promise.resolve(),currentPanel='browser',pendingAttachments=[],progressNodes=new Map(),agentRunSequence=0,systemPlatform='win32',puterSdkPromise=null,puterSignedIn=false,puterUser=null,puterModelId='',puterMonthlyUsage=null;
 const fence=String.fromCharCode(96).repeat(3);
@@ -1001,6 +1001,8 @@ async function sendChat(prompt){
 }
 
 $('chatForm').addEventListener('submit',function(event){event.preventDefault();sendChat($('chatInput').value).catch(function(error){stopThinking();appendMessage('assistant','Something went wrong: '+safeError(error));$('sendBtn').disabled=false;});});
+$('closeChatBtn').addEventListener('click',closeChat);
+$('railChatBtn').addEventListener('click',function(){$('chatInput').focus();$('transcript').scrollTo({top:$('transcript').scrollHeight,behavior:'smooth'});});
 document.querySelectorAll('[data-prompt]').forEach(function(button){button.addEventListener('click',function(){sendChat(button.dataset.prompt).catch(function(error){stopThinking();appendMessage('assistant','Something went wrong: '+safeError(error));$('sendBtn').disabled=false;});});});
 function resizeChatInput(){const input=$('chatInput');input.style.height='auto';input.style.height=Math.min(input.scrollHeight,180)+'px';}
  $('chatInput').addEventListener('input',resizeChatInput);
@@ -1296,13 +1298,12 @@ $('browserSearchForm').addEventListener('submit',function(event){event.preventDe
 $('homeBtn').addEventListener('click',showBrowserHome);
  $('bookmarkPageBtn').addEventListener('click',toggleBrowserBookmark);
  $('aiChatBtn').addEventListener('click',openChat);$('homeAgentBtn').addEventListener('click',openChat);
- $('closeChatBtn').addEventListener('click',closeChat);
  $('shortcutGrid').addEventListener('click',function(event){const button=event.target.closest('[data-open-url]');if(button&&isHttpUrl(button.dataset.openUrl))navigateBrowser(button.dataset.openUrl,{newTab:true});});
 $('newBrowserTab').addEventListener('click',function(){createBrowserTab('',true);});
 $('backBtn').addEventListener('click',function(){const tab=activeBrowserTab();if(tab?.nativeCreated)window.isaiahDesktop.browserBack(tab.id).catch(function(){});});
 $('forwardBtn').addEventListener('click',function(){const tab=activeBrowserTab();if(tab?.nativeCreated)window.isaiahDesktop.browserForward(tab.id).catch(function(){});});
 $('reloadBtn').addEventListener('click',function(){const tab=activeBrowserTab();if(tab?.nativeCreated){$('browserCanvas').hidden=false;$('browserNote').hidden=false;$('browserNote').textContent='Reloading '+(tab.title||'website')+'…';window.isaiahDesktop.browserReload(tab.id).catch(function(error){$('browserCanvas').hidden=true;$('browserNote').hidden=false;$('browserNote').textContent=safeError(error);});}else showBrowserHome();});
-$('newWindowBtn').addEventListener('click',function(){const url=$('address').value;if(!isHttpUrl(url))return;window.isaiahDesktop.openExternal(url).catch(function(error){$('browserNote').hidden=false;$('browserNote').textContent=safeError(error);});});
+/* External-browser launch was intentionally removed; IsaiahSearch keeps navigation in its own tabs. */
 function updateBrowserBounds(){
  const canvas=$('browserCanvas'),tab=activeBrowserTab();
  if(currentPanel!=='browser'||!tab||!tab.url||canvas.hidden){window.isaiahDesktop.setBrowserViewBounds({x:0,y:0,width:0,height:0});return;}
