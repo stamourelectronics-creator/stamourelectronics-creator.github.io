@@ -1,8 +1,8 @@
 {
   "name": "isaiahsearch-browser",
   "productName": "IsaiahSearch",
-  "version": "1.5.0",
-  "description": "IsaiahSearch desktop browser and IsaiahAI coding workspace for Windows and Ubuntu with Puter-powered IsaiahAI 26 Thinking and automatic updates.",
+  "version": "1.5.1",
+  "description": "IsaiahSearch desktop browser and IsaiahAI coding workspace for Windows and Ubuntu with working navigation and Puter-powered IsaiahAI 26 Thinking.",
   "main": "main.cjs",
   "license": "UNLICENSED",
   "scripts": {

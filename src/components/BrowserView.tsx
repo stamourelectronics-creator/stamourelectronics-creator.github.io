@@ -21,6 +21,8 @@ import {
   signInWithEmailAndPassword 
 } from 'firebase/auth';
 
+const ISAIAH_API_BASE = 'https://codepro-gateway-production.up.railway.app/api';
+
 interface BrowserViewProps {
   customBackgroundUrl?: string;
   onGoToChat: () => void;
@@ -2190,10 +2192,10 @@ export function BrowserView({
     setIsLoadingBrief(true);
     setBriefSummary('');
     try {
-      const response = await fetch('/api/search-summary-brief', {
+      const response = await fetch(ISAIAH_API_BASE + '/search-summary-brief', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: queryStr, results: resultsList })
+        body: JSON.stringify({ query: queryStr, results: resultsList, model: 'isaiahai_7_super' })
       });
       if (!response.ok || response.headers.get('content-type')?.includes('text/html')) throw new Error('Brief summary request failed');
       const data = await response.json();
@@ -2219,9 +2221,9 @@ export function BrowserView({
     if (!queryStr) return;
     const requestId = ++moreRequestIdRef.current;
     setIsLoadingMore(true); setAddonSummary(''); setTypedDetailed(''); setIsTypingMore(true);
-    const body = { query: queryStr, results: resultsList, previousSummary: currentBrief };
+    const body = { query: queryStr, results: resultsList, previousSummary: currentBrief, model: 'isaiahai_7_super' };
     try {
-      const response = await fetch('/api/search-summary-more-stream', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const response = await fetch(ISAIAH_API_BASE + '/search-summary-more-stream', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const responseType = response.headers.get('content-type') || '';
       if (!response.ok || responseType.includes('text/html') || !responseType.includes('text/plain')) throw new Error('Deep report service returned an invalid response');
       const reader = response.body?.getReader();
@@ -2241,7 +2243,7 @@ export function BrowserView({
     } catch {
       if (requestId !== moreRequestIdRef.current) return;
       try {
-        const retry = await fetch('/api/search-summary-more', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const retry = await fetch(ISAIAH_API_BASE + '/search-summary-more', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         if (retry.ok && !retry.headers.get('content-type')?.includes('text/html')) {
           const data = await retry.json(), report = String(data.moreSummary || data.assistantDetailedSummary || '').trim();
           if (report && requestId === moreRequestIdRef.current) { setAddonSummary(report); setTypedDetailed(report); return; }
@@ -2264,12 +2266,12 @@ export function BrowserView({
     const existingUrls = new Set((searchResults.results || []).map(item => normalizeSearchResultUrl(item.url)).filter(Boolean));
     try {
       for (let attempt = 0; attempt < 3; attempt++) {
-        const offset = Math.max(searchResults.results?.length || 0, moreLinksOffsetRef.current);
-        const response = await fetch('/api/more-search-links', {
+        const offset = Math.max(30, searchResults.results?.length || 0, moreLinksOffsetRef.current);
+        const response = await fetch(ISAIAH_API_BASE + '/more-search-links', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ query: activeSearch, engine: preferredSearchEngine, safeSearch: safeSearchFilter, offset }),
         });
-        moreLinksOffsetRef.current = offset + 20;
+        moreLinksOffsetRef.current = offset + 30;
         if (requestId !== searchRequestIdRef.current) return false;
         if (!response.ok || response.headers.get('content-type')?.includes('text/html')) throw new Error('Could not load the next result page');
         const incoming = enrichSearchResults(await response.json());
@@ -2413,7 +2415,7 @@ export function BrowserView({
     const requestId = ++searchRequestIdRef.current;
     briefRequestIdRef.current += 1;
     moreRequestIdRef.current += 1;
-    moreLinksOffsetRef.current = 0;
+    moreLinksOffsetRef.current = 30;
     setContinueChatText('');
     setIsLoadingBrief(false);
     setIsTypingBrief(false);
@@ -2503,7 +2505,7 @@ export function BrowserView({
 
     try {
       // Step 1: Fetch quick search results extremely quickly!
-      const quickResponse = await fetch('/api/quick-search-links', {
+      const quickResponse = await fetch(ISAIAH_API_BASE + '/quick-search-links', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query, engine: preferredSearchEngine, safeSearch: safeSearchFilter }),

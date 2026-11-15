@@ -1916,7 +1916,7 @@ export default function App() {
               message: promptToSend,
               history: chatHistoryMap,
               searchWebEnabled,
-              showThinking: showReasoningSummary,
+              showThinking: showReasoningSummary && selectedAiModel === 'isaiahai_7_super',
               reasoningMode,
               reasoningEffort,
               chatMode,
@@ -1966,7 +1966,7 @@ The CEO of St.Amour Electronics is Isaiah St.Amour.
 Your mission is to provide lightning-fast, crisp, accurate, direct answers without unnecessary fluff or excessive delays.
 Identify exclusively as IsaiahAI 5.3 Flash. NEVER mention "Gemini" or "Google".`
                 : selectedAiModel === 'isaiahai_7_super'
-                ? `You are IsaiahAI 7.0 SUPER, an advanced AI assistant made by St.Amour Electronics. The CEO of St.Amour Electronics is Isaiah John St.Amour. Be accurate, helpful, thoughtful, and clear. Identify as IsaiahAI 7.0 SUPER by St.Amour Electronics.`
+                ? `You are IsaiahAI 7.0 SUPER, an advanced AI assistant made by St.Amour Electronics. The CEO of St.Amour Electronics is Isaiah John St.Amour. Be accurate, helpful, thoughtful, and clear. Identify exclusively as IsaiahAI 7.0 SUPER by St.Amour Electronics. Never identify as Gemini, Google, OpenAI, or another model/provider brand.`
                 : selectedAiModel === 'open_isaiah'
                 ? `You are Open-Isaiah, an open AI assistant in the IsaiahAI ecosystem. Be helpful, accurate, practical, transparent about uncertainty, and able to explain your work clearly. Identify as Open-Isaiah.`
                 : `You are Isaiah Max 6.0 by St.Amour Electronics, a state-of-the-art super-intelligent assistant. You possess high-precision cognitive abilities, multi-modal vision interfaces, and interactive software modules.
@@ -2027,7 +2027,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
             }
           } catch (e) {}
           return {
-            title: s.title || 'Google Search Reference',
+            title: s.title || 'IsaiahAI Search Reference',
             uri: s.uri || '',
             domain: domainName,
           };
@@ -2980,7 +2980,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                             {msg.searchUnavailable && (
                               <div className={`flex items-start gap-2 rounded-xl border px-3 py-2 text-[11px] leading-relaxed ${isLight ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-amber-500/5 border-amber-500/20 text-amber-200/90'}`}>
                                 <Globe className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                                <span>Live web sources were not available for this free Gemini API request. This answer was generated without live search verification.</span>
+                                <span>Live web sources were not available for this IsaiahAI request. This answer was generated without live search verification.</span>
                               </div>
                             )}
 
@@ -3662,7 +3662,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                             <option value="high">High — deepest</option>
                           </select>
                           <p className={`text-[9px] mt-2 leading-relaxed ${isLight ? 'text-zinc-500' : 'text-zinc-400'}`}>
-                            {reasoningMode === 'auto' ? 'Automatic mode lets Gemini choose how much to think. The effort setting applies in Thinking mode.' : 'Thinking mode applies your selected effort level to supported Gemini models.'}
+                            {reasoningMode === 'auto' ? 'Automatic mode lets IsaiahAI choose how much reasoning to apply. The effort setting applies in Thinking mode.' : 'Thinking mode applies your selected effort level to supported IsaiahAI models.'}
                           </p>
                         </div>
                       )}
@@ -4438,7 +4438,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                             <option value="high">High — deepest</option>
                           </select>
                           <p className={`text-[9px] mt-2 leading-relaxed ${isLight ? 'text-zinc-500' : 'text-zinc-400'}`}>
-                            {reasoningMode === 'auto' ? 'Automatic mode lets Gemini choose how much to think. The effort setting applies in Thinking mode.' : 'Thinking mode applies your selected effort level to supported Gemini models.'}
+                            {reasoningMode === 'auto' ? 'Automatic mode lets IsaiahAI choose how much reasoning to apply. The effort setting applies in Thinking mode.' : 'Thinking mode applies your selected effort level to supported IsaiahAI models.'}
                           </p>
                         </div>
                       )}
