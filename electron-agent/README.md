@@ -1,5 +1,13 @@
 # IsaiahSearch Desktop
 
+## Desktop 1.5.1
+
+- Fixed a renderer startup exception that prevented later browser and chat controls from initializing on Windows and Ubuntu.
+- Added a visible **Back to browser** button to exit the full-screen IsaiahAI chat.
+- Wired the Chat navigation button before optional browser controls initialize.
+- Kept browser navigation inside IsaiahSearch tabs; removed the stale default-browser launch handler.
+- Routed desktop web search through the shared IsaiahAI gateway.
+
 IsaiahSearch Desktop is the Windows and Ubuntu version of the IsaiahSearch browser with an integrated IsaiahAI coding workspace.
 
 ## Downloads
