@@ -1,13 +1,16 @@
 {
   "name": "isaiahsearch-browser",
   "productName": "IsaiahSearch",
-  "version": "1.4.3",
-  "description": "IsaiahSearch full-window Windows browser with Gemini-powered IsaiahAI CodePro agent, native Chromium tabs, and automatic GitHub release updates.",
+  "version": "1.5.0",
+  "description": "IsaiahSearch desktop browser and IsaiahAI coding workspace for Windows and Ubuntu with Puter-powered IsaiahAI 26 Thinking and automatic updates.",
   "main": "main.cjs",
   "license": "UNLICENSED",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --win nsis portable --publish never && npm run write-update-manifest",
+    "dist": "npm run dist:win && npm run dist:linux",
+    "dist:win": "electron-builder --win nsis portable --publish never && npm run write-update-manifest -- win",
+    "prepare:linux-icon": "rsvg-convert -w 512 -h 512 build/icon.svg -o build/icon.png",
+    "dist:linux": "npm run prepare:linux-icon && electron-builder --linux AppImage deb --publish never && npm run write-update-manifest -- linux",
     "check": "node --check main.cjs && node --check preload.cjs && node scripts/check-renderer.cjs",
     "write-update-manifest": "node scripts/write-update-manifest.cjs"
   },
@@ -57,6 +60,16 @@
     },
     "portable": {
       "artifactName": "IsaiahSearch-Portable-${version}-${arch}.${ext}"
+    },
+    "linux": {
+      "target": [
+        { "target": "AppImage", "arch": ["x64"] },
+        { "target": "deb", "arch": ["x64"] }
+      ],
+      "artifactName": "IsaiahSearch-${version}-${arch}.${ext}",
+      "category": "Network",
+      "icon": "build/icon.png",
+      "maintainer": "Stamour Electronics"
     },
     "protocols": [
       {
