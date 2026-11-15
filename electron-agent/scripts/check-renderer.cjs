@@ -113,8 +113,10 @@ if (!linuxTargets.includes('AppImage') || !linuxTargets.includes('deb')) {
   throw new Error('Ubuntu AppImage and Debian package targets are required.');
 }
 if (!pkg.homepage) throw new Error('Package homepage metadata is required for Linux Debian packaging.');
-if (!tManifestCheck() ) throw new Error('Linux updater manifest must target the x86_64 AppImage artifact.');
-function tManifestCheck(){return fs.readFileSync(path.join(root, 'scripts', 'write-update-manifest.cjs'), 'utf8').includes("'-x86_64.AppImage'")===false && fs.readFileSync(path.join(root, 'scripts', 'write-update-manifest.cjs'), 'utf8').includes("'-x86_64.AppImage'")===true;}
+const updateManifestSource = fs.readFileSync(path.join(root, 'scripts', 'write-update-manifest.cjs'), 'utf8');
+if (!updateManifestSource.includes("'-x86_64.AppImage'")) {
+  throw new Error('The Ubuntu updater manifest must target the x86_64 AppImage artifact.');
+}
 if (!pkg.scripts['dist:linux'] || !pkg.scripts['dist:win']) {
   throw new Error('Both platform build scripts are required.');
 }
