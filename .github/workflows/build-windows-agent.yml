@@ -1,4 +1,4 @@
-name: Build IsaiahSearch Browser for Windows
+name: Build IsaiahSearch Desktop (Windows and Ubuntu)
 on:
   push:
     branches: [main]
@@ -9,13 +9,14 @@ on:
       - 'src/App.tsx'
   workflow_dispatch:
 concurrency:
-  group: windows-isaiahsearch-${{ github.workflow }}
+  group: isaiahsearch-desktop-${{ github.workflow }}
   cancel-in-progress: true
 permissions:
   contents: write
   actions: read
 jobs:
   build-windows:
+    name: Build Windows x64
     runs-on: windows-latest
     steps:
       - name: Check out IsaiahSearch
@@ -27,54 +28,75 @@ jobs:
       - name: Install dependencies
         working-directory: electron-agent
         run: npm install
-      - name: Validate browser and agent source
+      - name: Validate source
         working-directory: electron-agent
         run: npm run check
-      - name: Verify CodePro and Breakaway gateway
-        shell: pwsh
-        continue-on-error: true
-        run: |
-          try {
-            $health = Invoke-RestMethod -Uri 'https://codepro-gateway-production.up.railway.app/health' -TimeoutSec 15
-            if ($health.ok -and $health.providerReady) {
-              if ($health.cloudflareTokenConfigured -and $health.model -eq '@cf/zai-org/glm-4.7-flash') {
-                Write-Host 'CodePro gateway is online with Cloudflare Workers AI GLM-4.7-Flash configured.'
-              } elseif ($health.groqFallbackConfigured) {
-                Write-Host 'CodePro gateway is online with its Groq fallback. Cloudflare token is not configured.'
-              }
-              if ($health.breakawayConfigured) { Write-Host ('Breakaway 1.0 backup route is ready: ' + $health.breakawayModel) }
-              else { Write-Warning 'Breakaway 1.0 backup route is not configured.' }
-            } else {
-              Write-Warning 'CodePro gateway responded but no AI provider is ready.'
-            }
-          } catch { Write-Warning ('CodePro gateway health check failed: ' + $_.Exception.Message) }
-      - name: Check hosted AI API availability
-        shell: pwsh
-        continue-on-error: true
-        run: |
-          try {
-            $health = Invoke-RestMethod -Uri 'https://isaiahsearch.netlify.app/api/health' -TimeoutSec 12
-            if ($health.aiConfigured) { Write-Host 'Hosted AI API is reachable and reports AI credentials configured.' }
-            else { Write-Warning 'Hosted AI API is reachable, but server-side AI credentials are not configured.' }
-          } catch { Write-Warning ('Hosted AI API health check failed: ' + $_.Exception.Message) }
-      - name: Build Windows installer and portable browser
+      - name: Build Windows installer and portable app
         working-directory: electron-agent
-        run: npm run dist
-      - name: Upload Windows binaries as workflow artifact
+        run: npm run dist:win
+      - name: Upload Windows release files
         uses: actions/upload-artifact@v4
         with:
           name: IsaiahSearch-Windows
           path: electron-agent/release/*
           if-no-files-found: error
-          retention-days: 90
-      - name: Publish downloadable Windows release
+          retention-days: 30
+
+  build-ubuntu:
+    name: Build Ubuntu x64
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out IsaiahSearch
+        uses: actions/checkout@v4
+      - name: Install Linux icon conversion utility
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y librsvg2-bin
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        working-directory: electron-agent
+        run: npm install
+      - name: Validate source
+        working-directory: electron-agent
+        run: npm run check
+      - name: Build Ubuntu AppImage and Debian package
+        working-directory: electron-agent
+        run: npm run dist:linux
+      - name: Upload Ubuntu release files
+        uses: actions/upload-artifact@v4
+        with:
+          name: IsaiahSearch-Ubuntu
+          path: electron-agent/release/*
+          if-no-files-found: error
+          retention-days: 30
+
+  publish-release:
+    name: Publish combined Windows and Ubuntu release
+    needs: [build-windows, build-ubuntu]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download platform release files
+        uses: actions/download-artifact@v4
+        with:
+          pattern: IsaiahSearch-*
+          path: release-assets
+          merge-multiple: true
+      - name: Publish downloads and updater manifests
         uses: softprops/action-gh-release@v2
         with:
           tag_name: isaiahsearch-browser-build-${{ github.run_number }}
-          name: IsaiahSearch Browser Windows build ${{ github.run_number }}
+          name: IsaiahSearch Desktop 1.5.0 · build ${{ github.run_number }}
           body: |
-            IsaiahSearch Browser for Windows x64.
-            Full-window IsaiahSearch browser with native tabs, live news cards, website favicons, and built-in IsaiahAI CodePro and Breakaway 1.0. CodePro uses Cloudflare Workers AI when configured and automatically falls back to Groq; Breakaway keeps Gemini primary and can use its separate Groq backup route when the hosted Gemini API is unavailable. The Windows Shell Bridge requires explicit opt-in, runs as the current Windows user, streams real command output, and separately confirms high-impact operations. The installer supports automatic GitHub release updates.
-            AI availability depends on the configured hosted model providers.
-          files: electron-agent/release/*
+            IsaiahSearch Desktop 1.5.0 for Windows x64 and Ubuntu x64.
+
+            Includes the IsaiahSearch browser, IsaiahAI coding workspace, cross-platform local computer agent, automatic model failover/retry, and the optional IsaiahAI 26 Thinking model. The Puter-powered model is unlocked only after the user signs in to their own Puter account. No model-provider API key is embedded in either installer.
+
+            Windows: NSIS setup and portable executable.
+            Ubuntu: AppImage (recommended for automatic updates) and Debian package. AppImage builds check GitHub Releases and install updates automatically. Debian package installations can be updated by installing the new .deb release.
+          files: release-assets/*
           make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
