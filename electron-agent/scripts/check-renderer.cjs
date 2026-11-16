@@ -11,8 +11,8 @@ if (scripts.length !== 1) {
 }
 new vm.Script(scripts[0][1], { filename: 'isaiahai-chat-renderer.js' });
 
-const markupIds = new Set([...html.matchAll(/\\bid=["']([^"']+)["']/g)].map(match => match[1]));
-const clickBindings = [...scripts[0][1].matchAll(/\\$\\(['"]([^'"]+)['"]\\)\\.addEventListener/g)];
+const markupIds = new Set([...html.matchAll(/\bid=["']([^"']+)["']/g)].map(match => match[1]));
+const clickBindings = [...scripts[0][1].matchAll(/\$\(['"]([^'"]+)['"]\)\.addEventListener/g)];
 const missingClickTargets = [...new Set(clickBindings.map(match => match[1]).filter(id => !markupIds.has(id)))];
 if (missingClickTargets.length) {
   throw new Error('Renderer click handlers reference missing elements: ' + missingClickTargets.join(', '));
@@ -34,6 +34,8 @@ const requiredHtml = [
   'id="browserBookmarks"',
   'id="shortcutGrid"',
   'id="homeClock"',
+  'id="themeToggleBtn"',
+  'id="addShortcutBtn"',
   'id="homeBookmarks"',
   'id="recentSites"',
   'id="aiChatBtn"',
@@ -83,7 +85,8 @@ if (!html.includes("createBrowserTab('',true)") || !html.includes('function togg
   throw new Error('The browser must launch to a blank new tab and include local bookmarks.');
 }
 if (!html.includes("classList.add('chat-open','chat-fullscreen')") ||
-    !html.includes("currentPanel=name==='chat'?'chat':'browser'")) {
+    !html.includes("currentPanel=name==='chat'?'chat':'browser'") ||
+    !html.includes('#panel-chat.chat-drawer.chat-open.chat-fullscreen')) {
   throw new Error('The AI chat must open full-screen and suspend the browser panel.');
 }
 if (!html.includes("window.puter.auth.signIn()") ||
@@ -92,7 +95,7 @@ if (!html.includes("window.puter.auth.signIn()") ||
 }
 if (!html.includes("fetch(SEARCH_API+'/quick-search-links'") ||
     !html.includes("let API='https://codepro-gateway-production.up.railway.app/api'") ||
-    !html.includes("SEARCH_API='https://codepro-gateway-production.up.railway.app/api'")) {
+    !html.includes("SEARCH_API='https://isaiahsearch.netlify.app/api'")) {
   throw new Error('Chat and browser-search requests must use their intended independent endpoints.');
 }
 if (/codeProHealth\\.provider(?!Ready)/.test(html) ||

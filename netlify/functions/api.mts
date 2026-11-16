@@ -828,7 +828,12 @@ ${webText || '(No live results. Disclose uncertainty.)'}`;
   return { content: answer, thinking, thinkingSummary: thinking, sources, provider: 'IsaiahAI', selectedProvider: provider, pageTitle, pageUrl };
 }
 
-async function generateSummary(query: string, results: SearchResult[], mode: 'brief' | 'full' | 'more') {
+async function generateSummary(
+  query: string,
+  results: SearchResult[],
+  mode: 'brief' | 'full' | 'more',
+  requestedModel = ''
+) {
   const today = new Date().toISOString().slice(0, 10);
   const sources = results.filter(item => /^https?:\/\//i.test(String(item?.url || '')));
   const sourceText = sources.slice(0, mode === 'more' ? 18 : 12).map((item, i) =>
@@ -846,15 +851,54 @@ async function generateSummary(query: string, results: SearchResult[], mode: 'br
   const prompt = 'Today is ' + today + '.\nQuestion: ' + query + '\n\nTask: ' + instructions +
     '\n\nSource material (search snippets only; do not pretend to have read full pages unless their content is included):\n' +
     (sourceText || '(No direct web sources were returned. Disclose this limitation and do not guess.)');
-  if (env('GEMINI_API_KEY')) {
+
+  // IsaiahAI 7.0 SUPER Search Assist gets its own fast Gemini Flash route.
+  // This is intentionally separate from the chat model and does not reveal provider names to the UI.
+  if (requestedModel === 'isaiahai_7_super') {
+    const summaryKey = env('GEMINI_API_KEY_70') || env('GEMINI_API_KEY');
+    if (summaryKey) {
+      const ai = new GoogleGenAI({ apiKey: summaryKey });
+      let timeout: ReturnType<typeof setTimeout> | undefined;
+      try {
+        const timeoutMs = mode === 'more' ? 26000 : 18000;
+        const response = await Promise.race([
+          ai.models.generateContent({
+            model: 'gemini-3.8-flash',
+            contents: prompt,
+            config: {
+              systemInstruction: 'You are IsaiahAI Search Assist, part of the IsaiahAI ecosystem by St.Amour Electronics. Identify as IsaiahAI Search Assist only. Answer directly from the supplied search snippets, compare sources where possible, cite only the URLs supplied, disclose uncertainty, and never invent article contents, dates, statistics, quotations, or citations. Do not reveal hidden chain-of-thought.',
+              maxOutputTokens: mode === 'more' ? 5200 : 1500,
+              temperature: 0.3,
+              ...(mode === 'more' ? {} : { thinkingConfig: { thinkingLevel: 'LOW' } }),
+            } as any,
+          }),
+          new Promise((_, reject) => {
+            timeout = setTimeout(() => reject(new Error('IsaiahAI Search Assist timed out')), timeoutMs);
+          }),
+        ]) as any;
+        const summary = String(response?.text || '').trim();
+        if (summary) return summary;
+        console.warn('[IsaiahAI 7.0 SUPER Search Assist] Gemini Flash returned an empty summary.');
+      } catch (error: any) {
+        console.warn('[IsaiahAI 7.0 SUPER Search Assist] Flash summary unavailable:', String(error?.message || error).slice(0, 160));
+      } finally {
+        if (timeout) clearTimeout(timeout);
+      }
+    } else {
+      console.warn('[IsaiahAI 7.0 SUPER Search Assist] No Gemini summary key is configured.');
+    }
+    // Do not silently switch to another model for the 7.0 SUPER summary. The
+    // source-backed fallback below keeps the Search Assist panel useful.
+  } else if (env('GEMINI_API_KEY')) {
     const ai = new GoogleGenAI({ apiKey: env('GEMINI_API_KEY') });
     const attempts = [
       { model: 'gemini-4-argon', timeoutMs: 8500, highReasoning: true },
       { model: 'gemini-3.8-flash', timeoutMs: 5500, highReasoning: true },
     ];
     for (const attempt of attempts) {
+      let timeout: ReturnType<typeof setTimeout> | undefined;
       try {
-        const result = await Promise.race([
+        const response = await Promise.race([
           ai.models.generateContent({
             model: attempt.model,
             contents: prompt,
@@ -864,15 +908,20 @@ async function generateSummary(query: string, results: SearchResult[], mode: 'br
               ...(attempt.highReasoning ? { thinkingConfig: { thinkingLevel: 'HIGH' } } : {}),
             } as any,
           }),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Summary request timed out')), attempt.timeoutMs)),
+          new Promise((_, reject) => {
+            timeout = setTimeout(() => reject(new Error('Summary request timed out')), attempt.timeoutMs);
+          }),
         ]) as any;
-        if (result?.text?.trim()) return result.text.trim();
+        if (response?.text?.trim()) return response.text.trim();
       } catch (error: any) {
-        console.warn(`[IsaiahAI Search Assist] Gemini ${attempt.model} failed:`, String(error?.message || error).slice(0, 140));
+        console.warn(`[IsaiahAI Search Assist] ${attempt.model} failed:`, String(error?.message || error).slice(0, 140));
+      } finally {
+        if (timeout) clearTimeout(timeout);
       }
     }
   }
-  if (env('OPENROUTER_API_KEY') || env('ISAIAH_OPENROUTER_API_KEY')) {
+
+  if (requestedModel !== 'isaiahai_7_super' && (env('OPENROUTER_API_KEY') || env('ISAIAH_OPENROUTER_API_KEY'))) {
     const models = ['openrouter/free', 'nvidia/nemotron-3-ultra-550b-a55b:free', 'nvidia/nemotron-3.5-lightning:free'];
     const started = Date.now(), budget = mode === 'more' ? 16000 : 10000;
     for (const model of models) {
@@ -957,7 +1006,7 @@ export default async function handler(request: Request) {
   try {
     if (path === '/health' && request.method === 'GET') {
       const models = {
-        isaiahai_7_super: Boolean(env('OPENROUTER_API_KEY') || env('ISAIAH_OPENROUTER_API_KEY')),
+        isaiahai_7_super: Boolean(env('OPENROUTER_API_KEY') || env('ISAIAH_OPENROUTER_API_KEY') || env('GEMINI_API_KEY_70') || env('GEMINI_API_KEY')),
         breakaway_1_0: Boolean(env('GEMINI_API_KEY')),
         isaiah_codepro: Boolean(env('GROQ_API_KEY')),
       };
@@ -1007,7 +1056,7 @@ export default async function handler(request: Request) {
       if (!query) return json({ error: 'Query is required.' }, 400);
       const results: SearchResult[] = Array.isArray(body.results) ? body.results : [];
       const mode = path === '/search-summary-brief' ? 'brief' : path === '/search-summary-more' ? 'more' : 'full';
-      const summary = await generateSummary(query, results, mode);
+      const summary = await generateSummary(query, results, mode, String(body.model || ''));
       if (mode === 'brief') return json({ summary });
       if (mode === 'more') return json({ moreSummary: summary });
       const firstLine = summary.split('\n').find((line: string) => line.trim()) || summary;
@@ -1017,7 +1066,7 @@ export default async function handler(request: Request) {
       const query = String(body.query || '').trim();
       if (!query) return json({ error: 'Query is required.' }, 400);
       const results: SearchResult[] = Array.isArray(body.results) ? body.results : [];
-      const summary = await generateSummary(query, results, 'more');
+      const summary = await generateSummary(query, results, 'more', String(body.model || ''));
       const chunks = summary.match(/[\s\S]{1,180}/g) || [summary];
       const stream = new ReadableStream<Uint8Array>({
         start(controller) {
