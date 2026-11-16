@@ -835,12 +835,12 @@ async function generateSummary(
   requestedModel = ''
 ) {
   const today = new Date().toISOString().slice(0, 10);
-  const sources = results.filter(item => /^https?:\\/\\//i.test(String(item?.url || '')));
+  const sources = results.filter(item => /^https?:\/\//i.test(String(item?.url || '')));
   const sourceText = sources.slice(0, mode === 'more' ? 18 : 12).map((item, i) =>
     (i + 1) + '. ' + String(item.title || 'Untitled source') +
-    '\\nURL: ' + item.url +
-    '\\nSnippet: ' + String(item.snippet || '').slice(0, 1200)
-  ).join('\\n\\n');
+    '\nURL: ' + item.url +
+    '\nSnippet: ' + String(item.snippet || '').slice(0, 1200)
+  ).join('\n\n');
   const briefInstructions =
     'Give the direct answer first in 1–3 useful paragraphs. Add inline Markdown links for claims the supplied sources support. Mention when a source is a search portal or a snippet instead of a full article.';
   const fullInstructions =
@@ -848,8 +848,8 @@ async function generateSummary(
   const moreInstructions =
     'Produce a careful research report with an executive answer, key findings, source-by-source evidence, comparisons or competing explanations, a dated timeline when relevant, uncertainties, and practical next steps. Cross-check claims across independent sources where possible. Prioritize primary/official sources and recent relevant reporting for current questions. Clearly flag older source dates, missing evidence, or contradictions. Cite factual claims with supplied Markdown URLs and never fabricate sources.';
   const instructions = mode === 'brief' ? briefInstructions : mode === 'more' ? moreInstructions : fullInstructions;
-  const prompt = 'Today is ' + today + '.\\nQuestion: ' + query + '\\n\\nTask: ' + instructions +
-    '\\n\\nSource material (search snippets only; do not pretend to have read full pages unless their content is included):\\n' +
+  const prompt = 'Today is ' + today + '.\nQuestion: ' + query + '\n\nTask: ' + instructions +
+    '\n\nSource material (search snippets only; do not pretend to have read full pages unless their content is included):\n' +
     (sourceText || '(No direct web sources were returned. Disclose this limitation and do not guess.)');
 
   // IsaiahAI 7.0 SUPER Search Assist gets its own fast Gemini Flash route.
@@ -940,18 +940,18 @@ async function generateSummary(
     }
   }
   const linked = sources.slice(0, mode === 'more' ? 18 : 8)
-    .map((item, i) => (i + 1) + '. **[' + String(item.title || 'Search result').replace(/[\\[\\]]/g, '') + '](' + item.url + ')** — ' + String(item.snippet || '').slice(0, 420))
-    .join('\\n');
+    .map((item, i) => (i + 1) + '. **[' + String(item.title || 'Search result').replace(/[\[\]]/g, '') + '](' + item.url + ')** — ' + String(item.snippet || '').slice(0, 420))
+    .join('\n');
   if (mode === 'brief') {
-    return '### Overview: ' + query + '\\n\\nThe AI summary service could not complete this request, so here are the actual source links returned for the query rather than a guessed answer.\\n\\n' +
+    return '### Overview: ' + query + '\n\nThe AI summary service could not complete this request, so here are the actual source links returned for the query rather than a guessed answer.\n\n' +
       (linked || 'No direct source pages were returned. Try another query.');
   }
   if (mode === 'more') {
-    return '## More research on ' + query + '\\n\\nThe deeper analysis service was unavailable, so I will not invent a report. Compare these source pages and their dates.\\n\\n' +
+    return '## More research on ' + query + '\n\nThe deeper analysis service was unavailable, so I will not invent a report. Compare these source pages and their dates.\n\n' +
       (linked || 'No direct source pages were returned. Try again shortly or continue in the full chat.');
   }
-  return '## Search summary: ' + query + '\\n\\n' +
-    (sources[0]?.snippet || 'I could not generate a summary from available services.') + '\\n\\n### Relevant links\\n\\n' + linked;
+  return '## Search summary: ' + query + '\n\n' +
+    (sources[0]?.snippet || 'I could not generate a summary from available services.') + '\n\n### Relevant links\n\n' + linked;
 }
 function xmlUnescape(s: string) { return decodeHtml(s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')); }
 
