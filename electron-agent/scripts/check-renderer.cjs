@@ -11,6 +11,20 @@ if (scripts.length !== 1) {
 }
 new vm.Script(scripts[0][1], { filename: 'isaiahai-chat-renderer.js' });
 
+const markupIds = new Set([...html.matchAll(/\\bid=["']([^"']+)["']/g)].map(match => match[1]));
+const clickBindings = [...scripts[0][1].matchAll(/\\$\\(['"]([^'"]+)['"]\\)\\.addEventListener/g)];
+const missingClickTargets = [...new Set(clickBindings.map(match => match[1]).filter(id => !markupIds.has(id)))];
+if (missingClickTargets.length) {
+  throw new Error('Renderer click handlers reference missing elements: ' + missingClickTargets.join(', '));
+}
+if (!html.includes('id="closeChatBtn"') || !html.includes('<span>Exit chat</span>') ||
+    !html.includes('.chat-close{width:auto;') || !html.includes("$('closeChatBtn').addEventListener('click',closeChat)")) {
+  throw new Error('The chat must have a visible, correctly sized, working Exit chat button.');
+}
+if (!html.includes('id="railChatBtn"') || !html.includes("$('railChatBtn').addEventListener('click'")) {
+  throw new Error('The Chat workspace navigation button must be wired.');
+}
+
 const requiredHtml = [
   'id="panel-browser"',
   'id="panel-chat"',
