@@ -88,9 +88,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: isaiahsearch-browser-build-${{ github.run_number }}
-          name: IsaiahSearch Desktop 1.5.1 · build ${{ github.run_number }}
+          name: IsaiahSearch Desktop 1.5.2 · build ${{ github.run_number }}
           body: |
-            IsaiahSearch Desktop 1.5.1 for Windows x64 and Ubuntu x64.
+            IsaiahSearch Desktop 1.5.2 for Windows x64 and Ubuntu x64.
 
             Includes the IsaiahSearch browser, IsaiahAI coding workspace, cross-platform local computer agent, automatic model failover/retry, and the optional IsaiahAI 26 Thinking model. The Puter-powered model is unlocked only after the user signs in to their own Puter account. No model-provider API key is embedded in either installer.
 
