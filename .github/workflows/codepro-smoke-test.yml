@@ -1,5 +1,5 @@
 name: IsaiahAI multi-model live smoke test
-# Retest after the bounded Gemini fallback deployment is stable.
+# Verify the Groq-first CodePro gateway and the separate Gemini website models.
 
 on:
   push:
@@ -29,10 +29,10 @@ jobs:
               throw "Model readiness is false for $model."
             }
           }
-          if ($health.model -ne 'gemini-3.8-flash') {
-            throw "Unexpected active CodePro model: $($health.model)"
+          if (-not $health.groqConfigured -or $health.codeproProvider -ne 'Groq' -or $health.codeproModel -ne 'openai/gpt-oss-120b') {
+            throw "CodePro is not reporting Groq as its primary model. Provider: $($health.codeproProvider); model: $($health.codeproModel)"
           }
-          Write-Host ("Gateway online. CodePro provider: " + $health.provider + "; model: " + $health.model)
+          Write-Host ("Gateway online. CodePro provider: " + $health.codeproProvider + "; model: " + $health.codeproModel)
 
       - name: Test IsaiahAI 5.3 Flash, Max 6.0 and 7.0 SUPER with reasoning controls
         shell: pwsh
@@ -79,6 +79,8 @@ jobs:
           $payload = @{
             message = 'Reply with the exact text CODEPRO_SMOKE_OK and nothing else.'
             history = @()
+            model = 'isaiah_codepro'
+            selectedModel = 'isaiah_codepro'
             stream = $false
           } | ConvertTo-Json -Depth 8 -Compress
           # Deliberately no Authorization header: the client does not contain server credentials.
@@ -86,7 +88,10 @@ jobs:
           if ([string]::IsNullOrWhiteSpace([string]$result.content) -or $result.brand -ne 'IsaiahAI CodePro') {
             throw 'CodePro did not return a valid branded response.'
           }
-          if ($result.provider -ne 'Gemini') {
-            throw "CodePro did not use Gemini. Actual provider: $($result.provider)"
+          if ($result.selectedModel -ne 'isaiah_codepro') {
+            throw "The gateway returned the wrong selected model: $($result.selectedModel)"
           }
-          Write-Host ("Passed: IsaiahAI CodePro via " + $result.model)
+          if ($result.provider -ne 'Groq' -or $result.model -ne 'openai/gpt-oss-120b' -or $result.fallbackUsed -eq $true) {
+            throw "CodePro did not use its Groq primary route. Actual provider: $($result.provider); model: $($result.model)"
+          }
+          Write-Host ("Passed: IsaiahAI CodePro via " + $result.provider + " / " + $result.model)
