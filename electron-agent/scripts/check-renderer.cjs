@@ -33,6 +33,8 @@ const requiredHtml = [
   'id="browserCanvas"',
   'id="browserBookmarks"',
   'id="shortcutGrid"',
+  'id="addSiteShortcut"',
+  'id="homeGreeting"',
   'id="homeClock"',
   'id="homeBookmarks"',
   'id="recentSites"',
@@ -83,7 +85,10 @@ if (!html.includes("createBrowserTab('',true)") || !html.includes('function togg
   throw new Error('The browser must launch to a blank new tab and include local bookmarks.');
 }
 if (!html.includes("classList.add('chat-open','chat-fullscreen')") ||
-    !html.includes("currentPanel=name==='chat'?'chat':'browser'")) {
+    !html.includes("currentPanel=name==='chat'?'chat':'browser'") ||
+    !html.includes('#panel-chat.chat-drawer.chat-open.chat-fullscreen') ||
+    !html.includes('width:100vw!important') ||
+    !html.includes("function closeChat(){activatePanel('browser')")) {
   throw new Error('The AI chat must open full-screen and suspend the browser panel.');
 }
 if (!html.includes("window.puter.auth.signIn()") ||
@@ -102,6 +107,9 @@ if (/codeProHealth\\.provider(?!Ready)/.test(html) ||
 
 const main = fs.readFileSync(path.join(root, 'main.cjs'), 'utf8');
 new vm.Script(main, { filename: 'electron-agent-main.js' });
+if (!main.includes('view.setBounds(visible ? browserBounds : { x: 0, y: 0, width: 0, height: 0 })')) {
+  throw new Error('Hidden native Chromium surfaces must not intercept the chat UI on Linux.');
+}
 if (!main.includes("DEFAULT_API_BASE_URL = 'https://codepro-gateway-production.up.railway.app/api'")) {
   throw new Error('Desktop model requests must use the shared Railway /api route.');
 }
@@ -121,6 +129,14 @@ if (!main.includes('DEFAULT_LOCAL_UI_PORT = 41737') ||
     !main.includes("appServer.listen(preferredPort, 'localhost', loadLocalUi)") ||
     !main.includes("appServer.listen(0, 'localhost', loadLocalUi)")) {
   throw new Error('Puter must use a stable localhost origin with a safe temporary-port fallback.');
+}
+
+const appIcon = fs.readFileSync(path.join(root, 'assets', 'isaiahsearch-icon.svg'), 'utf8');
+const buildIcon = fs.readFileSync(path.join(root, 'build', 'icon.svg'), 'utf8');
+for (const [name, svg] of [['app', appIcon], ['Windows/Linux build', buildIcon]]) {
+  if (!svg.includes('aria-label="IsaiahSearch"') || !svg.includes('linearGradient') || !svg.includes('a9faff')) {
+    throw new Error('The new IsaiahSearch orbital-search icon is missing from the ' + name + ' asset.');
+  }
 }
 
 const preload = fs.readFileSync(path.join(root, 'preload.cjs'), 'utf8');
