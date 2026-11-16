@@ -1,12 +1,12 @@
 # IsaiahSearch Desktop
 
-## Desktop 1.5.1
+## Desktop 1.6.0
 
-- Fixed a renderer startup exception that prevented later browser and chat controls from initializing on Windows and Ubuntu.
-- Added a visible **Back to browser** button to exit the full-screen IsaiahAI chat.
-- Wired the Chat navigation button before optional browser controls initialize.
-- Kept browser navigation inside IsaiahSearch tabs; removed the stale default-browser launch handler.
-- Routed desktop web search through the shared IsaiahAI gateway.
+- Rebuilt the new-tab home to match the IsaiahSearch light purple-to-cyan visual identity, including the updated orbital-search logo, clock/date, appearance toggle, Top Sites, Add Site, bookmarks, recent pages, and IsaiahSearch Agent card.
+- Made IsaiahAI Chat a real full-window workspace on Windows and Ubuntu, with an always-visible **Exit chat** control and working Chat, Workspace, Terminal, Limits, and Puter navigation.
+- Fixed the renderer's search endpoint so desktop web search no longer targets the CodePro chat-only gateway.
+- Added persistent custom Top Sites shortcuts and a light/dark new-tab appearance preference.
+- Kept the same desktop code path for Windows and Ubuntu so the shared UI fixes apply to both builds.
 
 IsaiahSearch Desktop is the Windows and Ubuntu version of the IsaiahSearch browser with an integrated IsaiahAI coding workspace.
 
@@ -21,15 +21,15 @@ The Ubuntu AppImage is the recommended Linux download because `electron-updater`
 
 ## IsaiahAI models
 
-The desktop app routes the regular IsaiahAI models through the shared Railway gateway. Provider credentials stay on the hosted server and are never included in the installer.
+The desktop app routes IsaiahAI model requests through the shared hosted gateway. Provider credentials stay on the server and are never included in the installer or exposed in the renderer.
 
-IsaiahAI CodePro and Breakaway 1.0 use the dedicated gateway. Transient overload, rate-limit, service-busy, and network failures are retried automatically with bounded backoff. CodePro is presented under its IsaiahAI name; the app does not display the underlying provider.
+IsaiahAI CodePro and Breakaway 1.0 use the dedicated gateway. Transient overload, rate-limit, service-busy, and network failures are retried automatically with bounded backoff. Visible model labels and assistant identity remain IsaiahAI-branded.
 
 ## IsaiahAI 26 Thinking
 
 The separate Puter Models section stays locked until the user signs in with Puter. After sign-in, IsaiahAI 26 Thinking becomes selectable and uses the `openai/gpt-6-luna` model with `reasoning_effort: "none"`. Its identity, instructions, and chat labels remain IsaiahAI-branded.
 
-Puter owns its account authentication and usage allowance. Users pay for or consume their own eligible Puter account resources; model limits and current account allowance are shown in the app. The application does not bundle a Puter credential or provider API key.
+Puter owns its account authentication and usage allowance. The app displays usage when the user's account exposes it; it does not bundle a Puter credential or provider API key.
 
 ## Local coding workspace
 
@@ -38,7 +38,7 @@ The local workspace is saved under the user's Documents folder by default:
 - Windows: `Documents/IsaiahSearch Workspace`
 - Ubuntu: `~/Documents/IsaiahSearch Workspace`
 
-The local agent runs as the current signed-in user. Windows supports PowerShell and Command Prompt; Ubuntu uses Bash. The bridge does not silently elevate to Administrator/root; Ubuntu commands containing sudo, doas, or pkexec are blocked. High-impact disk, boot, registry, security, shutdown, deletion, and similar operations require a separate confirmation. Ubuntu shell execution blocks `sudo`.
+The local agent runs as the current signed-in user. Windows supports PowerShell and Command Prompt; Ubuntu uses Bash. The bridge does not silently elevate to Administrator/root; Ubuntu commands containing sudo, doas, or pkexec are blocked. High-impact operations require separate confirmation.
 
 ## Building from source
 
@@ -75,4 +75,4 @@ The Ubuntu build outputs an AppImage and a Debian package in `electron-agent/rel
 
 ## Verification notes
 
-The release workflow runs the renderer syntax/feature checks plus JavaScript syntax checks on both runner platforms before producing release assets. Model/provider availability and Puter account quotas remain subject to their respective hosted services.
+The release workflow runs the renderer syntax/feature checks plus JavaScript syntax checks on both runner platforms before producing release assets. Model/provider availability and Puter account quotas remain subject to their respective hosted services. Automated CI builds are not a substitute for manually testing each installer on a physical Windows and Ubuntu computer.
