@@ -102,7 +102,7 @@ if (!html.includes("fetch(SEARCH_API+'/quick-search-links'") ||
     !html.includes("SEARCH_API='https://isaiahsearch.netlify.app/api'")) {
   throw new Error('Chat and browser-search requests must use their intended independent endpoints.');
 }
-if (/codeProHealth\\.provider(?!Ready)/.test(html) ||
+if (/codeProHealth\.provider(?!Ready)/.test(html) ||
     !html.includes("selectedProvider:'IsaiahAI CodePro'")) {
   throw new Error('The CodePro interface must keep the IsaiahAI name and hide the underlying provider.');
 }
@@ -112,7 +112,7 @@ new vm.Script(main, { filename: 'electron-agent-main.js' });
 if (!main.includes("DEFAULT_API_BASE_URL = 'https://codepro-gateway-production.up.railway.app/api'")) {
   throw new Error('Desktop model requests must use the shared Railway /api route.');
 }
-if (/node:child_process|\\bspawn\\(|runProcess|workspace:run-custom-command|workspace:run-preset|agent:unrestricted/.test(main)) {
+if (/node:child_process|\bspawn\(|runProcess|workspace:run-custom-command|workspace:run-preset|agent:unrestricted/.test(main)) {
   throw new Error('The Electron main process must not expose shell, terminal, or unrestricted computer-command execution.');
 }
 if (!main.includes("ipcMain.handle('workspace:write'") || !main.includes('confirmAction')) {
