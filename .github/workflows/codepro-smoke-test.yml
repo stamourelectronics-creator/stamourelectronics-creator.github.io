@@ -29,10 +29,7 @@ jobs:
               throw "Model readiness is false for $model."
             }
           }
-          if (-not $health.groqConfigured -or $health.codeproProvider -ne 'Groq' -or $health.codeproModel -ne 'openai/gpt-oss-120b') {
-            throw "CodePro is not reporting Groq as its primary model. Provider: $($health.codeproProvider); model: $($health.codeproModel)"
-          }
-          Write-Host ("Gateway online. CodePro provider: " + $health.codeproProvider + "; model: " + $health.codeproModel)
+          Write-Host ("Gateway online. Current CodePro provider: " + $health.codeproProvider + "; model: " + $health.codeproModel)
 
       - name: Test IsaiahAI 5.3 Flash, Max 6.0 and 7.0 SUPER with reasoning controls
         shell: pwsh
@@ -76,6 +73,10 @@ jobs:
         shell: pwsh
         run: |
           $base = 'https://codepro-gateway-production.up.railway.app'
+          $health = Invoke-RestMethod -Uri "$base/health" -TimeoutSec 20
+          if (-not $health.groqConfigured -or $health.codeproProvider -ne 'Groq' -or $health.codeproModel -ne 'openai/gpt-oss-120b') {
+            throw "Groq is not configured as CodePro's primary provider. Add a non-empty GROQ_API_KEY to the codepro-gateway Railway service. Current provider: $($health.codeproProvider); model: $($health.codeproModel)"
+          }
           $payload = @{
             message = 'Reply with the exact text CODEPRO_SMOKE_OK and nothing else.'
             history = @()
