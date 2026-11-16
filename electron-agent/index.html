@@ -304,6 +304,101 @@ body{background:#f7f5fb;color:#201a32}.browser-tabs{background:#eee9f7;border-co
 }
 @media(prefers-reduced-motion:reduce){#panel-chat *{scroll-behavior:auto!important;transition:none!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
 
+
+/* IsaiahSearch 1.5.3 — reference-matched browser home and reliable chat overlay. */
+body{background:#f5f1ff;color:#211b36}
+.browser-home{
+ background:
+  radial-gradient(900px 580px at 8% 4%,rgba(187,151,255,.64),transparent 67%),
+  radial-gradient(850px 560px at 100% 100%,rgba(111,225,255,.46),transparent 66%),
+  linear-gradient(135deg,#faf8ff 0%,#f2eeff 54%,#edf8ff 100%);
+ padding:clamp(18px,3.4vw,38px) clamp(14px,4vw,34px) 30px;
+}
+.newtab-shell{width:min(1080px,100%);max-width:1080px;margin:0 auto}
+.newtab-top{margin-bottom:clamp(24px,4.2vh,42px);align-items:center}
+.newtab-logo{width:46px;height:46px;filter:drop-shadow(0 7px 14px #7146d333)}
+.newtab-brand{gap:12px}
+.newtab-brand strong{font-size:17px;letter-spacing:-.035em;color:#211936}
+.newtab-brand span{font-size:11px;letter-spacing:0;color:#756b8b}
+.clock-widget{padding:10px 15px;border-radius:17px;background:#ffffffb8;border:1px solid #ffffffd6;box-shadow:0 8px 24px #58477d0d}
+.clock-widget strong{font-size:16px;color:#211b36}
+.clock-widget span{font-size:11px;color:#766c8c}
+.newtab-hero{text-align:center;margin:0 auto clamp(25px,4.2vh,42px);max-width:850px}
+.home-greeting{font-size:15px;color:#696183;font-weight:600;margin:12px 0 5px}
+.newtab-eyebrow{display:inline-flex;align-items:center;gap:8px;margin:0 auto 7px;padding:7px 14px;border:1px solid #c9b4ff99;border-radius:999px;background:#e7dcffbd;color:#6233ba;font-size:11px;letter-spacing:0;font-weight:750}
+.newtab-eyebrow:before{content:"";width:7px;height:7px;border-radius:50%;background:#32cde6;box-shadow:0 0 12px #32cde688}
+.newtab-hero h1{margin:7px 0 12px;font-size:clamp(38px,5.5vw,68px);line-height:1.02;letter-spacing:-.065em;background:linear-gradient(100deg,#26203e 8%,#7653d0 51%,#32bfe9 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.newtab-hero>p{margin:0 auto 25px;color:#665f7d;font-size:15px;line-height:1.6}
+.search-form{max-width:720px;min-height:66px;margin:0 auto;padding:8px 9px 8px 20px;border:1px solid #b7d7ff;border-radius:22px;background:#ffffffd9;box-shadow:0 12px 30px #7d83f02a,0 0 20px #69dff52b;backdrop-filter:blur(20px)}
+.search-lens{font-size:20px;color:#59537b}
+.search-form input{font-size:16px;color:#2a2440}
+.search-form input::placeholder{color:#77718d}
+.search-form button{min-width:103px;border-radius:15px;padding:13px 18px;background:linear-gradient(120deg,#733be8,#3b8bf3 65%,#21c4e9);box-shadow:0 6px 18px #6c52df4a;color:white}
+.home-section{margin-bottom:24px}
+.home-section-heading{margin-bottom:10px}
+.home-section-heading h2{font-size:12px;letter-spacing:.15em;text-transform:uppercase;color:#625c78}
+.home-section-heading span{color:#8c84a0;font-size:9px;letter-spacing:.12em}
+.shortcut-grid{grid-template-columns:repeat(7,minmax(0,1fr));gap:12px}
+.site-shortcut{min-height:112px;justify-content:center;gap:9px;padding:13px 8px;background:#ffffffa8;border:1px solid #ffffffd6;border-radius:21px;color:#302944;box-shadow:0 8px 22px #5242720d;backdrop-filter:blur(14px)}
+.site-shortcut:hover{background:#ffffffdc;border-color:#c7b6f4;transform:translateY(-2px);box-shadow:0 12px 26px #67518c19}
+.site-shortcut-icon{width:51px;height:51px;border-radius:17px;background:#fff;color:#7161a1;box-shadow:0 5px 12px #46365e20}
+.site-shortcut-icon img{width:27px;height:27px;object-fit:contain}
+.add-site-shortcut{background:#ffffff7c;border-style:dashed;border-color:#c5b8e9}
+.add-site-icon{font-size:25px;font-weight:500;background:#ffffff3d;border:1px dashed #bcaee0;box-shadow:none}
+.home-widgets{grid-template-columns:1fr 1fr 1.25fr;gap:14px;margin:0 0 25px}
+.home-widget{min-height:178px;padding:17px 18px;background:#ffffffad;border:1px solid #ffffffdc;border-radius:22px;box-shadow:0 9px 26px #5444770e;backdrop-filter:blur(16px)}
+.widget-heading{gap:11px}
+.widget-icon{width:39px;height:39px;border-radius:13px;background:linear-gradient(135deg,#d8c8ff,#c5ecff);border:1px solid #b9adff78;color:#6944d0}
+.widget-heading strong{font-size:14px;color:#241d3a;letter-spacing:-.02em}
+.widget-heading small{color:#756e89;font-size:11px}
+.home-widget p{color:#6f6883;font-size:12px;line-height:1.65}
+.widget-list button{background:#ffffff91;border:1px solid #e8e2f4;color:#534a69;border-radius:12px;padding:9px 11px}
+.widget-list button:hover{background:#f3efff;border-color:#c9b7f6;color:#38275c}
+.widget-empty{color:#9289a4}
+.widget-action{background:linear-gradient(110deg,#ece4ff,#e0f8ff);border:1px solid #d7c8ff;color:#6744c2;border-radius:12px;padding:9px 13px;font-weight:750}
+.agent-widget{background:linear-gradient(125deg,#dcd0ffcf 0%,#d3eaffc9 54%,#b8ecf6cc 100%);border-color:#c7baf5}
+.agent-widget .widget-icon{background:linear-gradient(135deg,#c0aaff,#8de1ef);color:#5832b0}
+.agent-widget .widget-heading small{color:#087f91}
+.home-news{margin-top:3px}
+.home-news-card{background:#ffffffc7;border:1px solid #ffffffed;border-radius:17px;box-shadow:0 7px 22px #54447710;color:#29213d}
+.home-news-card img{height:118px}
+.newtab-footer{color:#8d849f;border-color:#ffffffa8}
+#panel-chat.chat-drawer.chat-open.chat-fullscreen{
+ position:fixed!important;z-index:1200!important;top:0!important;right:0!important;bottom:0!important;left:0!important;
+ width:100vw!important;max-width:100vw!important;height:100dvh!important;min-height:0!important;
+ border:0!important;border-radius:0!important;
+}
+#panel-chat.chat-drawer.chat-open.chat-fullscreen .chat{width:100%;max-width:none}
+#panel-chat .chat-drawer-head{flex-direction:row!important;align-items:center!important;justify-content:space-between!important;gap:10px;min-height:72px}
+#panel-chat .chat-drawer-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:7px;width:auto}
+#panel-chat .chat-close{z-index:20;position:relative;min-width:100px;min-height:38px;padding:0 13px;display:inline-flex!important;align-items:center;justify-content:center;visibility:visible!important;opacity:1!important;pointer-events:auto!important;background:linear-gradient(120deg,#754be0,#388ddf);border:1px solid #a9a0ff;color:#fff;box-shadow:0 5px 16px #5e4ac733}
+#panel-chat .chat-close span{display:inline!important;color:inherit}
+#panel-chat .ide-rail{z-index:3}
+@media(max-width:850px){
+ .shortcut-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+ .home-widgets{grid-template-columns:1fr 1fr}
+ .agent-widget{grid-column:1/-1}
+}
+@media(max-width:560px){
+ .browser-home{padding:17px 12px 20px}
+ .newtab-top{margin-bottom:22px}
+ .newtab-logo{width:39px;height:39px}
+ .newtab-hero h1{font-size:39px}
+ .newtab-hero>p{font-size:13px;margin-bottom:18px}
+ .search-form{min-height:58px;padding:6px 7px 6px 13px;border-radius:17px}
+ .search-form button{min-width:82px;padding:11px 12px}
+ .shortcut-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+ .site-shortcut{min-height:99px}
+ .home-widgets{grid-template-columns:1fr}
+ .agent-widget{grid-column:auto}
+ #panel-chat .chat-drawer-head{flex-direction:row!important;align-items:center!important;min-height:66px;padding:8px 10px}
+ #panel-chat .chat-drawer-brand small{font-size:8px}
+ #panel-chat .chat-drawer-actions{gap:4px}
+ #panel-chat .chat-drawer-actions .sign-in{padding:6px 7px;font-size:9px}
+ #panel-chat .chat-close{min-width:82px;min-height:34px;padding:0 8px;font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){.site-shortcut,.home-widget,.search-form,button{transition:none!important}}
+
 </style></head><body>
 
 <main>
@@ -373,11 +468,11 @@ body{background:#f7f5fb;color:#201a32}.browser-tabs{background:#eee9f7;border-co
 <div id="browserHome" class="browser-home">
 <div class="newtab-shell">
 <div class="newtab-top"><div class="newtab-brand"><img src="/assets/isaiahsearch-icon.svg" alt="IsaiahSearch" class="newtab-logo"><div><strong>IsaiahSearch</strong><span>YOUR BROWSER. YOUR SPACE.</span></div></div><div class="clock-widget"><strong id="homeClock">--:--</strong><span id="homeDate">Loading local date…</span></div></div>
-<div class="newtab-hero"><div class="newtab-eyebrow">A LITTLE SPACE TO EXPLORE</div><h1>Where to next?</h1><p>Open a website, find something new, or ask your built-in AI agent to help.</p>
+<div class="newtab-hero"><div class="home-greeting" id="homeGreeting">Good evening 👋</div><div class="newtab-eyebrow">A LITTLE SPACE TO EXPLORE</div><h1>Where to next?</h1><p>Open a website, find something new, or ask your built-in AI agent to help.</p>
 <form id="browserSearchForm" class="search-form"><span class="search-lens" aria-hidden="true">⌕</span><input id="browserSearchInput" aria-label="Search the web" placeholder="Search the web or enter a question…" autocomplete="off"><button type="submit">Search ↗</button></form>
 <div id="browserSearchStatus" class="muted" style="margin-top:10px;font-size:11px" aria-live="polite"></div><div id="browserResults" class="browser-results"></div></div>
 <section class="home-section"><div class="home-section-heading"><h2>Top sites</h2><span>QUICK ACCESS</span></div><div id="shortcutGrid" class="shortcut-grid">
-<button class="site-shortcut" data-open-url="https://www.youtube.com/"><span class="site-shortcut-icon"><img src="https://www.google.com/s2/favicons?sz=64&amp;domain=www.youtube.com" alt="" loading="lazy" referrerpolicy="no-referrer"></span><span>YouTube</span></button><button class="site-shortcut" data-open-url="https://www.wikipedia.org/"><span class="site-shortcut-icon"><img src="https://www.google.com/s2/favicons?sz=64&amp;domain=www.wikipedia.org" alt="" loading="lazy" referrerpolicy="no-referrer"></span><span>Wikipedia</span></button><button class="site-shortcut" data-open-url="https://github.com/"><span class="site-shortcut-icon"><img src="https://www.google.com/s2/favicons?sz=64&amp;domain=github.com" alt="" loading="lazy" referrerpolicy="no-referrer"></span><span>GitHub</span></button><button class="site-shortcut" data-open-url="https://www.reddit.com/"><span class="site-shortcut-icon"><img src="https://www.google.com/s2/favicons?sz=64&amp;domain=www.reddit.com" alt="" loading="lazy" referrerpolicy="no-referrer"></span><span>Reddit</span></button><button class="site-shortcut" data-open-url="https://mail.google.com/"><span class="site-shortcut-icon"><img src="https://www.google.com/s2/favicons?sz=64&amp;domain=mail.google.com" alt="" loading="lazy" referrerpolicy="no-referrer"></span><span>Gmail</span></button><button class="site-shortcut" data-open-url="https://www.google.com/"><span class="site-shortcut-icon"><img src="https://www.google.com/s2/favicons?sz=64&amp;domain=www.google.com" alt="" loading="lazy" referrerpolicy="no-referrer"></span><span>Google</span></button>
+<button class="site-shortcut" data-open-url="https://www.youtube.com/"><span class="site-shortcut-icon"><img src="https://www.google.com/s2/favicons?sz=64&amp;domain=www.youtube.com" alt="" loading="lazy" referrerpolicy="no-referrer"></span><span>YouTube</span></button><button class="site-shortcut" data-open-url="https://www.wikipedia.org/"><span class="site-shortcut-icon"><img src="https://www.google.com/s2/favicons?sz=64&amp;domain=www.wikipedia.org" alt="" loading="lazy" referrerpolicy="no-referrer"></span><span>Wikipedia</span></button><button class="site-shortcut" data-open-url="https://github.com/"><span class="site-shortcut-icon"><img src="https://www.google.com/s2/favicons?sz=64&amp;domain=github.com" alt="" loading="lazy" referrerpolicy="no-referrer"></span><span>GitHub</span></button><button class="site-shortcut" data-open-url="https://www.reddit.com/"><span class="site-shortcut-icon"><img src="https://www.google.com/s2/favicons?sz=64&amp;domain=www.reddit.com" alt="" loading="lazy" referrerpolicy="no-referrer"></span><span>Reddit</span></button><button class="site-shortcut" data-open-url="https://mail.google.com/"><span class="site-shortcut-icon"><img src="https://www.google.com/s2/favicons?sz=64&amp;domain=mail.google.com" alt="" loading="lazy" referrerpolicy="no-referrer"></span><span>Gmail</span></button><button class="site-shortcut" data-open-url="https://www.google.com/"><span class="site-shortcut-icon"><img src="https://www.google.com/s2/favicons?sz=64&amp;domain=www.google.com" alt="" loading="lazy" referrerpolicy="no-referrer"></span><span>Google</span></button><button type="button" class="site-shortcut add-site-shortcut" id="addSiteShortcut" aria-label="Add a favorite website"><span class="site-shortcut-icon add-site-icon">＋</span><span>Add site</span></button>
 </div></section>
 <section class="home-widgets"><article class="home-widget bookmark-widget"><div class="widget-heading"><span class="widget-icon">★</span><div><strong>Your bookmarks</strong><small>Saved pages, ready when you are</small></div></div><div id="homeBookmarks" class="widget-list"><span class="widget-empty">Your saved bookmarks will appear here.</span></div></article>
 <article class="home-widget recent-widget"><div class="widget-heading"><span class="widget-icon">◷</span><div><strong>Recently visited</strong><small>Pick up where you left off</small></div></div><div id="recentSites" class="widget-list"><span class="widget-empty">Your recent sites will appear here.</span></div></article>
@@ -1122,6 +1217,34 @@ function renderHomeWidgets(){
   recentSites.slice(0,4).forEach(item=>{const button=document.createElement('button'),label=document.createElement('span'),arrow=document.createElement('b');label.textContent=item.title||new URL(item.url).hostname;arrow.textContent='↗';button.append(label,arrow);button.addEventListener('click',()=>navigateBrowser(item.url,{newTab:true}));recentRoot.append(button);});}
 }
 
+
+const CUSTOM_SHORTCUT_KEY='isaiahsearch-custom-shortcuts-v1';
+let customShortcuts=[];
+try{const saved=JSON.parse(localStorage.getItem(CUSTOM_SHORTCUT_KEY)||'[]');customShortcuts=Array.isArray(saved)?saved.filter(item=>item&&typeof item.title==='string'&&isHttpUrl(item.url)).slice(0,12):[]}catch{}
+function renderCustomShortcuts(){
+ const root=$('shortcutGrid'),addButton=$('addSiteShortcut');if(!root||!addButton)return;
+ root.querySelectorAll('[data-custom-shortcut="true"]').forEach(function(item){item.remove();});
+ customShortcuts.forEach(function(item){
+  const button=document.createElement('button');button.type='button';button.className='site-shortcut';button.dataset.openUrl=item.url;button.dataset.customShortcut='true';
+  const icon=document.createElement('span');icon.className='site-shortcut-icon';
+  const image=document.createElement('img');image.alt='';image.loading='lazy';image.referrerPolicy='no-referrer';
+  try{image.src='https://www.google.com/s2/favicons?sz=64&domain='+encodeURIComponent(new URL(item.url).hostname);}catch{}
+  image.onerror=function(){icon.textContent=String(item.title||'?').slice(0,1).toUpperCase();};
+  icon.append(image);const title=document.createElement('span');title.textContent=item.title;button.append(icon,title);root.insertBefore(button,addButton);
+ });
+}
+function addCustomShortcut(){
+ const title=String(window.prompt('Name for this favorite site')||'').trim();if(!title)return;
+ const raw=String(window.prompt('Website address (for example, example.com)')||'').trim();if(!raw)return;
+ const normalized=normalizeAddress(raw);
+ if(!normalized||!isHttpUrl(normalized)){$('browserSearchStatus').textContent='Enter a valid website address, such as https://example.com.';return;}
+ if(customShortcuts.some(item=>item.url===normalized)){ $('browserSearchStatus').textContent='That website is already in Top sites.';return; }
+ customShortcuts=[...customShortcuts,{title:title.slice(0,32),url:normalized}].slice(0,12);
+ try{localStorage.setItem(CUSTOM_SHORTCUT_KEY,JSON.stringify(customShortcuts));}catch{}
+ renderCustomShortcuts();$('browserSearchStatus').textContent='Added '+title+' to Top sites.';
+}
+$('addSiteShortcut').addEventListener('click',addCustomShortcut);
+
 function renderHomeNews(items){
  const root=$('homeNewsGrid');if(!root)return;root.replaceChildren();
  (Array.isArray(items)?items:[]).slice(0,8).forEach(function(item){
@@ -1189,7 +1312,7 @@ function toggleBrowserBookmark(){
  else{let title=tab.title||'';try{if(!title||title==='New Tab')title=new URL(tab.url).hostname;}catch{}browserBookmarks.unshift({title,url:tab.url});browserBookmarks=browserBookmarks.slice(0,60);}
  saveBrowserCollections();renderBrowserBookmarks();updateBookmarkButton();
 }
-function updateHomeClock(){const now=new Date();$('homeClock').textContent=now.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});$('homeDate').textContent=now.toLocaleDateString([], {weekday:'long',month:'long',day:'numeric',year:'numeric'});}
+function updateHomeClock(){const now=new Date(),hour=now.getHours();$('homeClock').textContent=now.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});$('homeDate').textContent=now.toLocaleDateString([], {weekday:'long',month:'long',day:'numeric',year:'numeric'});$('homeGreeting').textContent=(hour<12?'Good morning':hour<18?'Good afternoon':'Good evening')+' 👋';}
 function renderBrowserTabs(){
  const root=$('browserTabs'),newButton=$('newBrowserTab');root.replaceChildren();
  browserTabs.forEach(function(tab){
@@ -1239,7 +1362,7 @@ function activatePanel(name){
  else{drawer.classList.remove('chat-open','chat-fullscreen');if(!browserTabs.length)createBrowserTab('',true);setTimeout(()=>$('address').focus(),25);}
  syncNativeBrowserView();requestAnimationFrame(updateBrowserBounds);
 }
-function openChat(){activatePanel('chat');}function closeChat(){activatePanel('browser');}
+function openChat(){activatePanel('chat');}function closeChat(){activatePanel('browser');$('panel-browser').classList.add('active');$('panel-chat').classList.remove('active');setTimeout(function(){const address=$('address');if(address)address.focus();},30);}
 function showBrowserHome(){
  const tab=activeBrowserTab();if(tab){if(tab.nativeCreated){window.isaiahDesktop.closeBrowserView(tab.id).catch(()=>{});tab.nativeCreated=false;}
  tab.url='';tab.title='New Tab';tab.loading=false;tab.canGoBack=false;tab.canGoForward=false;}
@@ -1374,7 +1497,7 @@ document.addEventListener('keydown',function(event){
  else if(mod&&event.shiftKey&&key==='a'){event.preventDefault();openChat();}
  else if(event.key==='Escape'&&$('panel-chat').classList.contains('chat-open'))closeChat();
 });
-createBrowserTab('',true);renderBrowserBookmarks();renderHomeWidgets();updateHomeClock();loadHomeNews();setInterval(updateHomeClock,15000);
+createBrowserTab('',true);renderBrowserBookmarks();renderCustomShortcuts();renderHomeWidgets();updateHomeClock();loadHomeNews();setInterval(updateHomeClock,15000);
 })();
 </script>
 </body></html>
