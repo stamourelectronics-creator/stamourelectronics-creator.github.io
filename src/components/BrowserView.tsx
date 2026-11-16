@@ -2267,7 +2267,7 @@ export function BrowserView({
     try {
       for (let attempt = 0; attempt < 3; attempt++) {
         const offset = Math.max(30, searchResults.results?.length || 0, moreLinksOffsetRef.current);
-        const response = await fetch(ISAIAH_API_BASE + '/more-search-links', {
+        const response = await fetch('/api/more-search-links', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ query: activeSearch, engine: preferredSearchEngine, safeSearch: safeSearchFilter, offset }),
         });
