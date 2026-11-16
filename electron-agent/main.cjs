@@ -222,7 +222,9 @@ function getBrowserView(tabId) {
 function applyBrowserViewState() {
   for (const [tabId, view] of browserViews) {
     const visible = browserPanelVisible && tabId === activeBrowserTabId && browserBounds.width > 1 && browserBounds.height > 1;
-    view.setBounds(browserBounds);
+    // On Linux, an invisible native Chromium surface can retain its last hit-test
+    // rectangle and sit above renderer controls. Zero its bounds whenever hidden.
+    view.setBounds(visible ? browserBounds : { x: 0, y: 0, width: 0, height: 0 });
     view.setVisible(visible);
   }
 }
