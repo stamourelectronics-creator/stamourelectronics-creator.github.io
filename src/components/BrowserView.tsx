@@ -2191,19 +2191,39 @@ export function BrowserView({
     const requestId = ++briefRequestIdRef.current;
     setIsLoadingBrief(true);
     setBriefSummary('');
-    try {
-      const response = await fetch(ISAIAH_API_BASE + '/search-summary-brief', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: queryStr, results: resultsList, model: 'isaiahai_7_super' })
-      });
-      if (!response.ok || response.headers.get('content-type')?.includes('text/html')) throw new Error('Brief summary request failed');
-      const data = await response.json();
-      if (requestId !== briefRequestIdRef.current) return;
-      const summary = String(data.summary || '').trim();
-      if (!summary) throw new Error('Search Assist returned an empty summary');
-      setBriefSummary(summary);
-    } catch (err) {
+    let summaryFailure: any = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const response = await fetch(ISAIAH_API_BASE + '/search-summary-brief', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: queryStr, results: resultsList, model: 'isaiahai_7_super' }),
+          signal: AbortSignal.timeout(40000),
+          cache: 'no-store'
+        });
+        if (!response.ok || response.headers.get('content-type')?.includes('text/html')) {
+          const detail = await response.text().catch(() => '');
+          const error: any = new Error('IsaiahAI 7.0 SUPER summary request failed (HTTP ' + response.status + ').');
+          error.status = response.status;
+          error.detail = detail.slice(0, 120);
+          throw error;
+        }
+        const data = await response.json();
+        if (requestId !== briefRequestIdRef.current) return;
+        const summary = String(data.summary || '').trim();
+        if (!summary) throw new Error('IsaiahAI 7.0 SUPER returned an empty Search Assist summary.');
+        setBriefSummary(summary);
+        summaryFailure = null;
+        break;
+      } catch (error: any) {
+        summaryFailure = error;
+        if (requestId !== briefRequestIdRef.current) return;
+        const retryable = !error?.status || [408, 425, 429, 500, 502, 503, 504].includes(Number(error.status));
+        if (attempt === 0 && retryable) await new Promise(resolve => window.setTimeout(resolve, 700));
+        else break;
+      }
+    }
+    if (summaryFailure) {
       if (requestId !== briefRequestIdRef.current) return;
       const sourceList = (Array.isArray(resultsList) ? resultsList : []).slice(0, 6)
         .filter((item: any) => item && /^https?:\/\//i.test(String(item.url || '')))
@@ -2266,12 +2286,12 @@ export function BrowserView({
     const existingUrls = new Set((searchResults.results || []).map(item => normalizeSearchResultUrl(item.url)).filter(Boolean));
     try {
       for (let attempt = 0; attempt < 3; attempt++) {
-        const offset = Math.max(30, searchResults.results?.length || 0, moreLinksOffsetRef.current);
+        const offset = Math.max(10, searchResults.results?.length || 0, moreLinksOffsetRef.current);
         const response = await fetch(ISAIAH_API_BASE + '/more-search-links', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ query: activeSearch, engine: preferredSearchEngine, safeSearch: safeSearchFilter, offset }),
         });
-        moreLinksOffsetRef.current = offset + 30;
+        moreLinksOffsetRef.current = offset + 10;
         if (requestId !== searchRequestIdRef.current) return false;
         if (!response.ok || response.headers.get('content-type')?.includes('text/html')) throw new Error('Could not load the next result page');
         const incoming = enrichSearchResults(await response.json());
