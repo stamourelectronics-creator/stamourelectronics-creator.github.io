@@ -66,9 +66,7 @@ const requiredHtml = [
   'SEARCH_API',
   'requestChatTurn',
   'maxActions=10',
-  'onAgentCommandOutput',
-  'function extractCommandProposal',
-  'bash|sh|zsh',
+  'function extractBrowserProposal',
   'createBrowserView',
   'onBrowserEvent',
   'Writing your answer',
@@ -76,6 +74,12 @@ const requiredHtml = [
 ];
 for (const item of requiredHtml) {
   if (!html.includes(item)) throw new Error('Desktop renderer feature check missing: ' + item);
+}
+if (/runShellCommand|runApprovedPreset|onAgentCommandOutput|unrestrictedModeToggle|terminalOutput|extractCommandProposal|workspace:run-custom-command/.test(html)) {
+  throw new Error('The renderer must not expose local shell, terminal, or unrestricted computer-control features.');
+}
+if (!html.includes('writeWorkspaceFile') || !html.includes('inspectBrowserView')) {
+  throw new Error('Project-file review/saving and browser-aware agent capabilities must remain available.');
 }
 if (!html.includes("currentPanel='browser'") ||
     !html.includes('<section id="panel-browser" class="panel active browser-panel"')) {
@@ -108,17 +112,14 @@ new vm.Script(main, { filename: 'electron-agent-main.js' });
 if (!main.includes("DEFAULT_API_BASE_URL = 'https://codepro-gateway-production.up.railway.app/api'")) {
   throw new Error('Desktop model requests must use the shared Railway /api route.');
 }
-if (!main.includes("if (selectedShell === 'bash')") || !main.includes("process.platform === 'linux'")) {
-  throw new Error('Ubuntu Bash shell bridge is missing.');
+if (/node:child_process|\\bspawn\\(|runProcess|workspace:run-custom-command|workspace:run-preset|agent:unrestricted/.test(main)) {
+  throw new Error('The Electron main process must not expose shell, terminal, or unrestricted computer-command execution.');
 }
-if (!main.includes("sudo|doas|pkexec") || !main.includes("find\\b[^\\n]*\\s-delete")) {
-  throw new Error('Ubuntu privilege and destructive-command safeguards are missing.');
+if (!main.includes("ipcMain.handle('workspace:write'") || !main.includes('confirmAction')) {
+  throw new Error('Approved project-file saving must remain available.');
 }
 if (!main.includes('APPIMAGE') || !main.includes('checkForUpdatesAndNotify')) {
   throw new Error('Linux AppImage automatic update checks are missing.');
-}
-if (!main.includes("ipcMain.handle('app:system-info'")) {
-  throw new Error('The platform information IPC method is missing.');
 }
 if (!main.includes('DEFAULT_LOCAL_UI_PORT = 41737') ||
     !main.includes("appServer.listen(preferredPort, 'localhost', loadLocalUi)") ||
@@ -128,7 +129,12 @@ if (!main.includes('DEFAULT_LOCAL_UI_PORT = 41737') ||
 
 const preload = fs.readFileSync(path.join(root, 'preload.cjs'), 'utf8');
 new vm.Script(preload, { filename: 'electron-agent-preload.js' });
-if (!preload.includes('getSystemInfo:')) throw new Error('The system info bridge is missing.');
+if (/runShellCommand|runApprovedPreset|onAgentCommandOutput|getUnrestrictedMode|setUnrestrictedMode|getSystemInfo/.test(preload)) {
+  throw new Error('The preload must not expose local command execution or unrestricted computer-agent controls.');
+}
+if (!preload.includes('writeWorkspaceFile:') || !preload.includes('inspectBrowserView:')) {
+  throw new Error('Approved project-file saving and browser inspection must remain available.');
+}
 
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 if (!pkg.build || !pkg.build.linux || !pkg.build.win) throw new Error('Both Windows and Linux electron-builder targets must exist.');
@@ -157,4 +163,4 @@ if (!html.includes("$('closeChatBtn').addEventListener('click',closeChat)") ||
 if (html.includes("$('newWindowBtn').addEventListener")) {
   throw new Error('The renderer must not bind a missing external-browser control.');
 }
-console.log('IsaiahSearch Windows/Ubuntu renderer, chat controls, Puter, model routing, retry, and updater checks passed.');
+console.log('IsaiahSearch Windows/Ubuntu renderer, browser-aware coding chat, approved project files, Puter, model routing, retry, and updater checks passed.');

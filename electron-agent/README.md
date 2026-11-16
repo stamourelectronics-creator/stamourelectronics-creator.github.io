@@ -1,14 +1,15 @@
 # IsaiahSearch Desktop
 
-## Desktop 1.6.0
+## Desktop 1.6.1
 
 - Rebuilt the new-tab home to match the IsaiahSearch light purple-to-cyan visual identity, including the updated orbital-search logo, clock/date, appearance toggle, Top Sites, Add Site, bookmarks, recent pages, and IsaiahSearch Agent card.
-- Made IsaiahAI Chat a real full-window workspace on Windows and Ubuntu, with an always-visible **Exit chat** control and working Chat, Workspace, Terminal, Limits, and Puter navigation.
+- Made IsaiahAI Chat a full-window reasoning-first coding agent on Windows and Ubuntu, with an always-visible **Exit chat** control and working Chat, Project Files, Limits, and Puter navigation.
+- Removed PowerShell, Command Prompt, Bash, terminal presets, and automatic local command execution from the agent. Browser navigation remains available, and project-file changes still require explicit approval.
 - Fixed the renderer's search endpoint so desktop web search no longer targets the CodePro chat-only gateway.
 - Added persistent custom Top Sites shortcuts and a light/dark new-tab appearance preference.
 - Kept the same desktop code path for Windows and Ubuntu so the shared UI fixes apply to both builds.
 
-IsaiahSearch Desktop is the Windows and Ubuntu version of the IsaiahSearch browser with an integrated IsaiahAI coding workspace.
+IsaiahSearch Desktop is the Windows and Ubuntu version of the IsaiahSearch browser with an integrated IsaiahAI reasoning-first coding chat and browser research agent.
 
 ## Downloads
 
@@ -31,14 +32,14 @@ The separate Puter Models section stays locked until the user signs in with Pute
 
 Puter owns its account authentication and usage allowance. The app displays usage when the user's account exposes it; it does not bundle a Puter credential or provider API key.
 
-## Local coding workspace
+## Project files
 
-The local workspace is saved under the user's Documents folder by default:
+A private project workspace is saved under the user's Documents folder by default:
 
 - Windows: `Documents/IsaiahSearch Workspace`
 - Ubuntu: `~/Documents/IsaiahSearch Workspace`
 
-The local agent runs as the current signed-in user. Windows supports PowerShell and Command Prompt; Ubuntu uses Bash. The bridge does not silently elevate to Administrator/root; Ubuntu commands containing sudo, doas, or pkexec are blocked. High-impact operations require separate confirmation.
+Users can attach supported text/code files to a chat and ask IsaiahAI to review them. Generated code can be saved only after an explicit confirmation; replacing an existing file creates a dated backup first. The agent does not execute local shell commands, open a terminal, or run computer-control actions.
 
 ## Building from source
 

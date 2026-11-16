@@ -2,15 +2,12 @@ const { app, BrowserWindow, WebContentsView, ipcMain, dialog, shell } = require(
 const { autoUpdater } = require('electron-updater');
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { spawn } = require('node:child_process');
 const http = require('node:http');
 
 let mainWindow;
 let appServer = null;
 let appOrigin = null;
 let workspaceRoot = null;
-let unrestrictedAgentEnabled = false;
-let unrestrictedModeChoiceSaved = true;
 let defaultBrowserPrompted = false;
 let updateCheckTimer = null;
 const browserViews = new Map();
@@ -54,8 +51,6 @@ async function loadSavedWorkspace() {
   try {
     const saved = JSON.parse(await fs.readFile(settingsFile, 'utf8'));
     candidate = typeof saved.workspaceRoot === 'string' ? saved.workspaceRoot : '';
-    unrestrictedAgentEnabled = saved.unrestrictedAgentEnabled === true;
-    unrestrictedModeChoiceSaved = true;
     defaultBrowserPrompted = saved.defaultBrowserPrompted === true;
   } catch { /* first launch or reset: use the private default workspace */ }
   if (candidate) {
@@ -75,18 +70,10 @@ async function loadSavedWorkspace() {
 }
 async function persistWorkspace() {
   await fs.mkdir(path.dirname(settingsFile), { recursive: true });
-  await fs.writeFile(settingsFile, JSON.stringify({ workspaceRoot, unrestrictedAgentEnabled: unrestrictedAgentEnabled === true, unrestrictedModeChoiceSaved: true, defaultBrowserPrompted }, null, 2), { encoding: 'utf8', mode: 0o600 });
+  await fs.writeFile(settingsFile, JSON.stringify({ workspaceRoot, defaultBrowserPrompted }, null, 2), { encoding: 'utf8', mode: 0o600 });
 }
 const skippedDirs = new Set(['.git', 'node_modules', 'dist', 'build', 'release', '.next', '.cache', '.idea', '.vscode']);
 const textExtensions = new Set(['.txt', '.md', '.json', '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.css', '.html', '.htm', '.py', '.rs', '.go', '.java', '.cs', '.xml', '.yml', '.yaml', '.toml', '.ini', '.sh', '.bat', '.ps1', '.sql', '.svg', '.env.example']);
-const presets = {
-  'git-status': { bin: 'git', args: ['status', '--short'], label: 'git status --short' },
-  'npm-test': { bin: 'npm', args: ['test'], label: 'npm test' },
-  'npm-build': { bin: 'npm', args: ['run', 'build'], label: 'npm run build' },
-  'node-version': { bin: 'node', args: ['--version'], label: 'node --version' },
-  'python-version': { bin: process.platform === 'linux' ? 'python3' : 'python', args: ['--version'], label: process.platform === 'linux' ? 'python3 --version' : 'python --version' }
-};
-
 function toggleFullscreenShortcut(event, input) {
   if (input?.type !== 'keyDown' || String(input.key).toLowerCase() !== 'f11') return;
   if (!mainWindow || mainWindow.isDestroyed()) return;
@@ -589,12 +576,6 @@ app.on('before-quit', () => {
   }
 });
 
-ipcMain.handle('app:system-info', () => ({
-  platform: process.platform,
-  shell: process.platform === 'win32' ? 'powershell' : process.platform === 'linux' ? 'bash' : 'unsupported',
-  autoUpdateChannel: process.platform === 'linux' ? 'AppImage' : process.platform === 'win32' ? 'Windows installer' : 'unsupported'
-}));
-
 ipcMain.handle('app:config', () => {
   const configured = String(process.env.ISAIAH_API_BASE_URL || DEFAULT_API_BASE_URL).trim();
   let apiBaseUrl = DEFAULT_API_BASE_URL;
@@ -652,26 +633,6 @@ async function confirmAction(title, message, detail, confirmLabel) {
   });
   return result.response === 1;
 }
-ipcMain.handle('agent:unrestricted:get', () => ({
-  enabled: unrestrictedAgentEnabled,
-  runsAsAdministrator: false
-}));
-ipcMain.handle('agent:unrestricted:set', async (_event, enabled) => {
-  const wantsEnabled = enabled === true;
-  if (wantsEnabled && !unrestrictedAgentEnabled) {
-    const approved = await confirmAction(
-      'Enable the local computer agent?',
-      process.platform === 'win32' ? 'Allow IsaiahAI CodePro to run PowerShell or Command Prompt steps automatically?' : 'Allow IsaiahAI CodePro to run Bash steps automatically on Ubuntu?',
-      'Commands run locally as your current user, never silently as Administrator or root. The agent can read and change files your account can access and launch programs. Real command output and exit codes are returned to the AI. High-impact disk, boot, registry, security, shutdown, and similar operations always need a separate confirmation. You can turn this setting off at any time.',
-      'Enable computer agent'
-    );
-    if (!approved) return { enabled: false, canceled: true, runsAsAdministrator: false };
-  }
-  unrestrictedAgentEnabled = wantsEnabled;
-  unrestrictedModeChoiceSaved = true;
-  await persistWorkspace();
-  return { enabled: unrestrictedAgentEnabled, canceled: false, runsAsAdministrator: false };
-});
 ipcMain.handle('workspace:choose', async () => {
   const picked = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
   if (picked.canceled || !picked.filePaths[0]) return { canceled: true };
@@ -734,108 +695,4 @@ ipcMain.handle('workspace:write', async (_event, payload) => {
   }
   await fs.writeFile(item.file, content, { encoding: 'utf8', flag: 'wx' });
   return { saved: true, created: true, backup: null };
-});
-function runProcess(bin, args, cwd, timeoutMs = 120000, onOutput = null) {
-  return new Promise(resolve => {
-    let output = '';
-    let settled = false;
-    let timedOut = false;
-    let child;
-    const finish = result => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      resolve(result);
-    };
-    const append = chunk => {
-      const text = String(chunk);
-      output = (output + text).slice(-48000);
-      if (typeof onOutput === 'function') { try { onOutput(text); } catch {} }
-    };
-    const timer = setTimeout(() => {
-      timedOut = true;
-      try { child?.kill(); } catch {}
-      finish({ exitCode: -2, timedOut: true, output: (output || '') + '\n\nCommand stopped after the 120-second safety limit.' });
-    }, timeoutMs);
-    try {
-      child = spawn(bin, args, { cwd, shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
-      child.stdout.on('data', append);
-      child.stderr.on('data', append);
-      child.on('error', err => finish({ exitCode: -1, output: err.message }));
-      child.on('close', code => {
-        if (timedOut) return;
-        finish({ exitCode: code, output: output || '(No output)' });
-      });
-    } catch (error) {
-      finish({ exitCode: -1, output: error?.message || 'Could not start command.' });
-    }
-  });
-}
-ipcMain.handle('workspace:run-preset', async (_event, presetKey) => {
-  const root = requireWorkspace();
-  const preset = presets[String(presetKey || '')];
-  if (!preset) throw new Error('That command is not in the approved command list.');
-  if (!unrestrictedAgentEnabled && !await confirmAction('Approve command?', 'Run this command in the chosen workspace?', preset.label + '\nWorking directory: ' + root, 'Run command')) {
-    return { canceled: true, exitCode: null, output: 'Command canceled.' };
-  }
-  return runProcess(preset.bin, preset.args, root);
-});
-function isHighImpactCommand(command) {
-  const value = String(command || '');
-  const windowsChecks = [
-    /\b(?:format(?:\.com)?|diskpart|Clear-Disk|Format-Volume|Remove-Partition|Initialize-Disk|Set-Disk)\b/i,
-    /\b(?:reg(?:\.exe)?\s+(?:delete|add)|Remove-ItemProperty|Set-ItemProperty)\b/i,
-    /\b(?:Set-MpPreference|Add-MpPreference|bcdedit|Disable-WindowsOptionalFeature)\b/i,
-    /\b(?:Stop-Computer|Restart-Computer|shutdown(?:\.exe)?|sc(?:\.exe)?\s+delete)\b/i,
-    /\b(?:cipher\s+\/w|vssadmin\s+delete|wbadmin\s+delete)\b/i
-  ];
-  const linuxChecks = [
-    /\b(?:sudo|doas|pkexec)\b/i,
-    /\b(?:mkfs(?:\.[a-z0-9_-]+)?|wipefs|blkdiscard|fdisk|parted|sfdisk)\b/i,
-    /\bdd\b[^\n]*\bof=\/dev\//i,
-    /\brm\b/i,
-    /\bfind\b[^\n]*\s-delete\b/i,
-    /\b(?:shred|truncate)\b/i,
-    /\b(?:shutdown|reboot|poweroff|halt)\b/i,
-    /\bsystemctl\s+(?:disable|mask|stop|enable|restart)\b/i,
-    /\b(?:userdel|groupdel|passwd|chown)\b/i
-  ];
-  return [...windowsChecks, ...(process.platform === 'linux' ? linuxChecks : [])].some(pattern => pattern.test(value));
-}
-ipcMain.handle('workspace:run-custom-command', async (_event, payload) => {
-  const root = requireWorkspace();
-  const command = String(payload?.command || '').trim();
-  const selectedShell = String(payload?.shell || (process.platform === 'linux' ? 'bash' : 'powershell')).toLowerCase();
-  const executionId = String(payload?.executionId || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 100);
-  if (!command || command.length > 12000) throw new Error('Enter a command up to 12,000 characters.');
-  const allowedShells = process.platform === 'win32' ? ['powershell', 'cmd'] : process.platform === 'linux' ? ['bash'] : [];
-  if (!allowedShells.includes(selectedShell)) throw new Error(process.platform === 'linux' ? 'Ubuntu uses the Bash shell bridge.' : 'Choose a supported local shell.');
-  if (process.platform === 'linux' && /\b(?:sudo|doas|pkexec)\b/i.test(command)) throw new Error('The local agent runs as your signed-in user. Privilege elevation through sudo, doas, or pkexec is disabled.');
-  const shellLabel = selectedShell === 'powershell' ? 'PowerShell' : selectedShell === 'cmd' ? 'Command Prompt' : 'Bash';
-  const highImpact = isHighImpactCommand(command);
-  const accountLabel = process.platform === 'linux' ? 'your current Ubuntu user' : 'your current Windows user';
-  const detail = command + '\n\nWorking directory: ' + root +
-    '\n\nCommands run as ' + accountLabel + ', never silently elevated. ' +
-    (highImpact ? 'This command matches a high-impact system-change pattern and always requires separate approval.' : 'Review the command and its effects before enabling automatic computer-agent mode.');
-  if ((highImpact || !unrestrictedAgentEnabled) && !await confirmAction(
-    highImpact ? 'Confirm high-impact system command' : 'Approve terminal command?',
-    highImpact ? 'This command may change important system settings or data.' : 'IsaiahAI CodePro is requesting permission to run this command in ' + shellLabel + '.',
-    detail + '\n\nNo command runs until you approve this exact request.',
-    highImpact ? 'Run high-impact command' : 'Run this command'
-  )) {
-    return { canceled: true, exitCode: null, output: 'Command canceled by user.' };
-  }
-  const stream = chunk => {
-    if (executionId && mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('agent:command-output', { executionId, chunk: String(chunk) });
-    }
-  };
-  if (selectedShell === 'cmd') {
-    return runProcess(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', command], root, 120000, stream);
-  }
-  if (selectedShell === 'bash') {
-    const bash = process.env.SHELL && /\/bash$/.test(process.env.SHELL) ? process.env.SHELL : '/bin/bash';
-    return runProcess(bash, ['-lc', command], root, 120000, stream);
-  }
-  return runProcess('powershell.exe', ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'RemoteSigned', '-Command', command], root, 120000, stream);
 });
