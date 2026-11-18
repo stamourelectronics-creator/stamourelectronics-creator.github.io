@@ -1,0 +1,143 @@
+name: IsaiahAI SUPER and Google Auth Checks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/isaiah-super-google-checks.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build site and verify Google auth wiring
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Build GitHub Pages site
+        run: npm run build:pages
+      - name: Verify Google sign-in separation
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const app = fs.readFileSync('src/App.tsx', 'utf8');
+          const firebase = fs.readFileSync('src/firebase.ts', 'utf8');
+          const docs = fs.readFileSync('src/components/SchoolDocSyncModal.tsx', 'utf8');
+          assert.match(app, /user\.isAnonymous\s*\?\s*null\s*:\s*user/, 'anonymous sessions must not masquerade as Google logins');
+          assert.match(app, /linkWithPopup\(activeUser,\s*provider\)/, 'anonymous users must be linkable to Google');
+          assert.match(app, /getRedirectResult\(auth\)/, 'redirect sign-in results must be handled');
+          assert.match(firebase, /const googleProvider = new GoogleAuthProvider\(\);/, 'basic Google account provider is missing');
+          assert.match(firebase, /const googleWorkspaceProvider = new GoogleAuthProvider\(\);/, 'on-demand Workspace provider is missing');
+          assert.match(docs, /onGoogleSignIn: \(\) => Promise<string \| null>/, 'Docs must use the shared Workspace sign-in flow');
+          console.log('Google sign-in checks passed.');
+          NODE
+
+  live-super:
+    name: Live streamed IsaiahAI 7.0 SUPER test
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 3
+    steps:
+      - name: Test streamed model response
+        run: |
+          node --input-type=module <<'NODE'
+          const endpoint = 'https://codepro-gateway-production.up.railway.app/api/chat';
+          const controller = new AbortController();
+          const hardTimeout = setTimeout(() => controller.abort(), 100000);
+          const startedAt = Date.now();
+          let firstByteMs = null;
+          let accumulated = '';
+          let completed = null;
+          let sawThinking = false;
+          let sawWriting = false;
+          let buffer = '';
+
+          const processFrame = (frame) => {
+            const lines = frame.split(/\\r?\\n/);
+            const eventName = lines.find((line) => line.startsWith('event:'))?.slice(6).trim();
+            const dataText = lines.filter((line) => line.startsWith('data:')).map((line) => line.slice(5).trim()).join('\\n');
+            if (!dataText) return;
+            const data = JSON.parse(dataText);
+            if (eventName === 'status') {
+              if (data.status === 'thinking') sawThinking = true;
+              if (data.status === 'writing') sawWriting = true;
+            } else if (eventName === 'delta') {
+              accumulated += String(data.text || '');
+            } else if (eventName === 'done') {
+              completed = data;
+            } else if (eventName === 'error') {
+              throw new Error(data.message || 'The model returned a stream error.');
+            }
+          };
+
+          try {
+            const response = await fetch(endpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+              signal: controller.signal,
+              body: JSON.stringify({
+                model: 'isaiahai_7_super',
+                selectedModel: 'isaiahai_7_super',
+                message: 'Reply with exactly this text and nothing else: ISAIAHAI_7_SUPER_LIVE_OK',
+                history: [],
+                stream: true,
+                reasoningMode: 'auto',
+                reasoningEffort: 'low',
+                showThinking: false
+              })
+            });
+
+            if (!response.ok) throw new Error('Gateway HTTP ' + response.status + ': ' + await response.text());
+            if (!response.headers.get('content-type')?.includes('text/event-stream')) {
+              throw new Error('Gateway did not return a server-sent event stream.');
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            while (true) {
+              const { value, done } = await reader.read();
+              if (done) break;
+              if (firstByteMs === null) firstByteMs = Date.now() - startedAt;
+              buffer = (buffer + decoder.decode(value, { stream: true })).replace(/\\r\\n/g, '\\n');
+              let splitAt;
+              while ((splitAt = buffer.indexOf('\\n\\n')) !== -1) {
+                const frame = buffer.slice(0, splitAt);
+                buffer = buffer.slice(splitAt + 2);
+                processFrame(frame);
+              }
+            }
+            buffer += decoder.decode();
+            if (buffer.trim()) processFrame(buffer);
+
+            const answer = String(completed?.content || accumulated).trim();
+            if (!completed) throw new Error('Stream closed without a done event.');
+            if (completed.brand !== 'IsaiahAI 7.0 SUPER') throw new Error('Wrong model identity: ' + completed.brand);
+            if (!answer) throw new Error('The selected model returned an empty answer.');
+            if (!sawThinking || !sawWriting) throw new Error('Expected early thinking and writing status events were not both received.');
+            console.log(JSON.stringify({
+              passed: true,
+              model: completed.brand,
+              providerRoute: completed.model || 'gateway fallback',
+              firstByteMs,
+              totalMs: Date.now() - startedAt,
+              characters: answer.length
+            }, null, 2));
+          } finally {
+            clearTimeout(hardTimeout);
+          }
+          NODE
