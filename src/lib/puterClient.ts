@@ -17,8 +17,6 @@ export interface GeneratedIsaiahsiImage {
   prompt: string;
   enhancedPrompt?: string;
   model: string;
-  namingCredit: string;
-  engineCredit: string;
   timestamp: string;
 }
 
@@ -119,8 +117,6 @@ export async function generateIsaiahsiImage(
     prompt: cleanPrompt,
     enhancedPrompt,
     model: 'IsaiahAI Imagery 26',
-    namingCredit: 'IsaiahAI Imagery 26',
-    engineCredit: 'Puter AI image generation',
     timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   };
 }
