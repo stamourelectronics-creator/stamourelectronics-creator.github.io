@@ -1455,7 +1455,7 @@ export default function App() {
     const activeModelDisplayName = chatMode === 'school' ? 'IsaiahAI School Mode'
       : chatMode === 'code' ? 'Isaiah AI Code PR'
       : chatMode === 'code_extended' ? 'Code PR Extended'
-      : chatMode === 'image' ? 'Isaiah AI Image Gen'
+      : chatMode === 'image' ? 'IsaiahAI Imagery 26'
       : selectedAiModel === 'isaiah_5_3' ? 'IsaiahAI 5.3 Flash'
       : selectedAiModel === 'maw_ai' ? 'Maw AI'
       : selectedAiModel === 'isaiahai_7_super' ? 'IsaiahAI 7.0 SUPER'
@@ -2955,7 +2955,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                                 else if (modelKey === 'school') modelName = 'IsaiahAI School Mode';
                                 else if (modelKey === 'code') modelName = 'Isaiah AI Code PR';
                                 else if (modelKey === 'code_extended') modelName = 'Code PR Extended';
-                                else if (modelKey === 'image') modelName = 'Isaiah AI Image Gen';
+                                else if (modelKey === 'image') modelName = 'IsaiahAI Imagery 26';
                                 else modelName = 'Isaiah Max 6.0';
                               }
 
@@ -4057,7 +4057,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                                 >
                                   <span className="text-sm">🎨</span>
                                   <div className="flex-grow min-w-0">
-                                    <div className={`font-semibold text-xs ${isLight ? 'text-zinc-900' : 'text-white'}`}>Isaiah AI Image Gen</div>
+                                    <div className={`font-semibold text-xs ${isLight ? 'text-zinc-900' : 'text-white'}`}>IsaiahAI Imagery 26</div>
                                     <div className="text-[9px] text-zinc-400 font-normal">Text-to-image synthesis</div>
                                   </div>
                                 </button>
@@ -4153,7 +4153,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                       >
                         <span>
                           {chatMode === 'general' 
-                            ? (selectedAiModel === 'isaiah_5_3' ? '⚡ 5.3 Flash' : selectedAiModel === 'maw_ai' ? '🧠 Maw AI' : selectedAiModel === 'isaiahai_7_super' ? '✨ 7.0 SUPER' : '👑 Max 6.0') 
+                            ? (selectedAiModel === 'isaiah_5_3' ? '⚡ 5.3 Flash' : selectedAiModel === 'maw_ai' ? '🧠 Maw AI' : selectedAiModel === 'isaiahai_7_super' ? '✨ 7.0 SUPER' : selectedAiModel === 'open_isaiah' ? '🌐 Open-Isaiah' : selectedAiModel === 'isaiah_codepro' ? '💻 CodePro' : selectedAiModel === 'breakaway_1_0' ? '⚡ Breakaway' : '👑 Max 6.0') 
                             : chatMode === 'school'
                             ? '🎓 School'
                             : chatMode === 'code' 
@@ -4443,7 +4443,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                             >
                               <span className="text-sm">🎨</span>
                               <div className="flex-grow min-w-0">
-                                <div className="font-semibold text-xs text-white">Isaiah AI Image Gen</div>
+                                <div className="font-semibold text-xs text-white">IsaiahAI Imagery 26</div>
                                 <div className="text-[9px] text-zinc-400 font-normal">Dynamic text-to-image synthesis</div>
                               </div>
                             </button>
@@ -5370,7 +5370,7 @@ Workspace Host: ${window.location.host}
         </div>
       )}
 
-      {/* Image generation is handled directly in chat powered behind-the-scenes by Claude AI & Puter, credited to Isaiahsi */}
+      {/* IsaiahAI Imagery 26 is available after Puter sign-in. */}
 
     </div>
   );
