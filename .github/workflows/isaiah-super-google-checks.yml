@@ -68,9 +68,9 @@ jobs:
           let buffer = '';
 
           const processFrame = (frame) => {
-            const lines = frame.split(/\\r?\\n/);
+            const lines = frame.split(/\r?\n/);
             const eventName = lines.find((line) => line.startsWith('event:'))?.slice(6).trim();
-            const dataText = lines.filter((line) => line.startsWith('data:')).map((line) => line.slice(5).trim()).join('\\n');
+            const dataText = lines.filter((line) => line.startsWith('data:')).map((line) => line.slice(5).trim()).join('\n');
             if (!dataText) return;
             const data = JSON.parse(dataText);
             if (eventName === 'status') {
@@ -113,9 +113,9 @@ jobs:
               const { value, done } = await reader.read();
               if (done) break;
               if (firstByteMs === null) firstByteMs = Date.now() - startedAt;
-              buffer = (buffer + decoder.decode(value, { stream: true })).replace(/\\r\\n/g, '\\n');
+              buffer = (buffer + decoder.decode(value, { stream: true })).replace(/\r\n/g, '\n');
               let splitAt;
-              while ((splitAt = buffer.indexOf('\\n\\n')) !== -1) {
+              while ((splitAt = buffer.indexOf('\n\n')) !== -1) {
                 const frame = buffer.slice(0, splitAt);
                 buffer = buffer.slice(splitAt + 2);
                 processFrame(frame);
