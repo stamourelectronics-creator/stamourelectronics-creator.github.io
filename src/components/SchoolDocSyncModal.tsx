@@ -17,7 +17,6 @@ import {
   ShieldCheck,
   Check,
 } from 'lucide-react';
-import { auth, googleProvider, signInWithPopup, GoogleAuthProvider } from '../firebase';
 import { formatMathAndFractions, MATH_FRACTION_SYMBOLS, MATH_OPERATION_SYMBOLS } from '../lib/mathFormatter';
 
 interface SchoolDocSyncModalProps {
@@ -27,6 +26,7 @@ interface SchoolDocSyncModalProps {
   studyContent: string;
   googleAccessToken: string | null;
   onUpdateGoogleAccessToken: (token: string) => void;
+  onGoogleSignIn: () => Promise<string | null>;
   currentUser: any;
   isLight?: boolean;
 }
@@ -38,6 +38,7 @@ export const SchoolDocSyncModal: React.FC<SchoolDocSyncModalProps> = ({
   studyContent,
   googleAccessToken,
   onUpdateGoogleAccessToken,
+  onGoogleSignIn,
   currentUser,
   isLight = false,
 }) => {
@@ -77,26 +78,17 @@ export const SchoolDocSyncModal: React.FC<SchoolDocSyncModalProps> = ({
   };
 
   const handleSignInForDocs = async (): Promise<string | null> => {
-    if (!auth) {
-      setErrorMessage("Firebase Authentication is initializing.");
-      return null;
-    }
     setIsSigningIn(true);
     setErrorMessage(null);
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      if (credential?.accessToken) {
-        const token = credential.accessToken;
-        onUpdateGoogleAccessToken(token);
-        sessionStorage.setItem('google_access_token', token);
-        localStorage.setItem('google_access_token', token);
-        setSuccessNotice("Google Docs authorization connected successfully!");
-        setTimeout(() => setSuccessNotice(null), 3500);
-        return token;
-      } else {
-        throw new Error("Could not acquire Google Docs access token.");
-      }
+      const token = await onGoogleSignIn();
+      if (!token) throw new Error("Google Workspace permission was not granted. Please try connecting again.");
+      onUpdateGoogleAccessToken(token);
+      sessionStorage.setItem('google_access_token', token);
+      localStorage.setItem('google_access_token', token);
+      setSuccessNotice("Google Docs authorization connected successfully!");
+      setTimeout(() => setSuccessNotice(null), 3500);
+      return token;
     } catch (err: any) {
       console.error("Google sign in for Docs error:", err);
       setErrorMessage(err.message || "Failed to authorize Google Docs. Please try again.");
