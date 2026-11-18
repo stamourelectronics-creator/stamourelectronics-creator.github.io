@@ -6,6 +6,8 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/codepro-smoke-test.yml'
+      - 'src/main.tsx'
+      - 'src/components/BrowserView.tsx'
   workflow_dispatch:
 
 permissions:
@@ -67,6 +69,29 @@ jobs:
               throw "The free-tier route did not clearly report that live search was unavailable for $($model.id)."
             }
             Write-Host ("Passed: " + $model.label + " via " + $result.model + "; live-search limitation was surfaced honestly")
+          }
+
+      - name: Verify IsaiahSearch returns real result links and the next page
+        shell: pwsh
+        run: |
+          $base = 'https://codepro-gateway-production.up.railway.app'
+          $query = 'OpenAI'
+          $firstBody = @{ query = $query; engine = 'isaiah'; safeSearch = 'Moderate' } | ConvertTo-Json -Compress
+          $first = Invoke-RestMethod -Method Post -Uri "$base/api/quick-search-links" -ContentType 'application/json' -Body $firstBody -TimeoutSec 45
+          $firstResults = @($first.results | Where-Object { $_.url -match '^https?://' })
+          $firstUnique = @($firstResults | ForEach-Object { ([uri]$_.url).GetLeftPart([System.UriPartial]::Path).TrimEnd('/').ToLowerInvariant() } | Sort-Object -Unique)
+          Write-Host ("IsaiahSearch first page: " + $firstUnique.Count + " unique destination links")
+          if ($firstUnique.Count -lt 8) {
+            throw "IsaiahSearch returned only $($firstUnique.Count) usable links on its first page."
+          }
+          $moreBody = @{ query = $query; engine = 'isaiah'; safeSearch = 'Moderate'; offset = 10 } | ConvertTo-Json -Compress
+          $more = Invoke-RestMethod -Method Post -Uri "$base/api/more-search-links" -ContentType 'application/json' -Body $moreBody -TimeoutSec 45
+          $moreResults = @($more.results | Where-Object { $_.url -match '^https?://' })
+          $moreUnique = @($moreResults | ForEach-Object { ([uri]$_.url).GetLeftPart([System.UriPartial]::Path).TrimEnd('/').ToLowerInvariant() } | Sort-Object -Unique)
+          $newLinks = @($moreUnique | Where-Object { $_ -notin $firstUnique })
+          Write-Host ("IsaiahSearch next page: " + $newLinks.Count + " additional unique destination links")
+          if ($newLinks.Count -lt 1) {
+            throw 'IsaiahSearch pagination did not produce a new destination link.'
           }
 
       - name: Test IsaiahAI CodePro provider
