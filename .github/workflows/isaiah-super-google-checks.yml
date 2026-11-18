@@ -125,6 +125,7 @@ jobs:
             if (buffer.trim()) processFrame(buffer);
 
             const answer = String(completed?.content || accumulated).trim();
+            if (firstByteMs === null || firstByteMs > 8000) throw new Error('The chat did not open its stream promptly: ' + firstByteMs + 'ms');
             if (!completed) throw new Error('Stream closed without a done event.');
             if (completed.brand !== 'IsaiahAI 7.0 SUPER') throw new Error('Wrong model identity: ' + completed.brand);
             if (!answer) throw new Error('The selected model returned an empty answer.');
