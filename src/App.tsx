@@ -637,7 +637,6 @@ export default function App() {
               },
               body: JSON.stringify({ title: title || 'IsaiahAI Study Guide' })
             });
-          }
         } catch (e) {}
       }
 
