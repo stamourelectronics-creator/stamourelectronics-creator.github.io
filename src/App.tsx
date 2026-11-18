@@ -20,7 +20,9 @@ import { RotatingWebIcon } from './components/RotatingWebIcon';
 import { Sparkles, FileText, Send, Bot, CornerDownLeft, MessageSquare, Settings, Gamepad2, Info, ArrowUp, AlertCircle, HelpCircle, ExternalLink, Loader2, Wifi, Trash2, ShieldCheck, HelpCircle as HelpIcon, Mic, Paperclip, ChevronDown, Plus, Globe, Volume2, VolumeX, Menu, LogIn, LogOut, X, Layers, Copy, Check, Download, Edit3, Brain, Headphones, Ghost, ImageIcon, Camera, Mail, Share2, Zap, AudioLines, SlidersHorizontal, Crown, Code2, Rocket, HardDrive, CheckCircle2, GraduationCap, BookOpen } from 'lucide-react';
 import { ChatSession, Message, UserSettings, SearchResultBox } from './types';
 import { 
-  auth, googleProvider, GoogleAuthProvider, signInWithPopup, signInAnonymously, signOut, onAuthStateChanged,
+  auth, googleProvider, googleWorkspaceProvider, GoogleAuthProvider, signInWithPopup,
+  signInWithRedirect, getRedirectResult, linkWithPopup, linkWithRedirect,
+  signInAnonymously, signOut, onAuthStateChanged,
   db, doc, getDoc, setDoc, deleteDoc, getDocs, query, where, collection, onSnapshot
 } from './firebase';
 
@@ -212,6 +214,7 @@ export default function App() {
 
   // Authentication State
   const [currentUser, setCurrentUser] = useState<any | null>(null);
+  const [googleAuthError, setGoogleAuthError] = useState<string | null>(null);
   const [googleAccessToken, setGoogleAccessToken] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
     return sessionStorage.getItem('google_access_token') || localStorage.getItem('google_access_token');
@@ -228,11 +231,31 @@ export default function App() {
 
   useEffect(() => {
     if (auth) {
+      // Complete popup-blocked sign-ins that were continued through redirect.
+      void getRedirectResult(auth).then((result) => {
+        if (!result) return;
+        const credential = GoogleAuthProvider.credentialFromResult(result);
+        const token = credential?.accessToken || null;
+        if (token) {
+          setGoogleAccessToken(token);
+          sessionStorage.setItem('google_access_token', token);
+          localStorage.setItem('google_access_token', token);
+        }
+        setGoogleAuthError(null);
+      }).catch((error: any) => {
+        const code = String(error?.code || '');
+        const message = code === 'auth/unauthorized-domain'
+          ? "Google sign-in is blocked because this site is not authorized. Add stamourelectronics-creator.github.io in Firebase Console → Authentication → Settings → Authorized domains."
+          : (error?.message || "Google sign-in could not be completed.");
+        setGoogleAuthError(message);
+      });
+
       let profileUnsubscribe: () => void = () => {};
       const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
         profileUnsubscribe(); // Cleanup stale subscribers
         if (user) {
-          setCurrentUser(user);
+          // Anonymous Firebase sessions are for cloud sync, not a signed-in Google account.
+          setCurrentUser(user.isAnonymous ? null : user);
           try {
             const profileRef = doc(db, 'user_profiles', user.uid);
             profileUnsubscribe = onSnapshot(profileRef, async (profileSnap) => {
@@ -408,31 +431,112 @@ export default function App() {
     setUsernameSetupRequired(false);
   };
 
+  const describeGoogleAuthError = (err: any): string => {
+    const code = String(err?.code || '');
+    if (code === 'auth/unauthorized-domain') {
+      return "Google sign-in is blocked because this site is not authorized. Add stamourelectronics-creator.github.io in Firebase Console → Authentication → Settings → Authorized domains.";
+    }
+    if (code === 'auth/operation-not-allowed') {
+      return "Google sign-in is disabled for this Firebase project. Enable Google under Firebase Authentication → Sign-in method.";
+    }
+    if (code === 'auth/popup-closed-by-user') return "Google sign-in was cancelled before it finished.";
+    if (code === 'auth/account-exists-with-different-credential') return "This email already uses another sign-in method. Sign in with that method first, then connect Google.";
+    return err?.message || "Google sign-in could not be completed. Please try again.";
+  };
+
+  const runGoogleSignIn = async (provider: any): Promise<string | null> => {
+    const activeUser = auth?.currentUser;
+    let result: any;
+    if (activeUser?.isAnonymous) {
+      try {
+        // Convert the temporary cloud-sync account into the user's Google account
+        // so existing cloud data remains attached to the same Firebase UID.
+        result = await linkWithPopup(activeUser, provider);
+      } catch (linkError: any) {
+        if (['auth/credential-already-in-use', 'auth/provider-already-linked'].includes(String(linkError?.code || ''))) {
+          result = await signInWithPopup(auth, provider);
+        } else {
+          throw linkError;
+        }
+      }
+    } else {
+      result = await signInWithPopup(auth, provider);
+    }
+
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    const token = credential?.accessToken || null;
+    if (token) {
+      setGoogleAccessToken(token);
+      sessionStorage.setItem('google_access_token', token);
+      localStorage.setItem('google_access_token', token);
+    }
+    setGoogleAuthError(null);
+    return token;
+  };
+
+  const startGoogleRedirect = async (provider: any): Promise<boolean> => {
+    const activeUser = auth?.currentUser;
+    if (activeUser?.isAnonymous) await linkWithRedirect(activeUser, provider);
+    else await signInWithRedirect(auth, provider);
+    setGoogleAuthError("Opening Google sign-in…");
+    return true;
+  };
+
   const handleGoogleSignIn = async (): Promise<string | null> => {
     if (!auth) {
-      console.warn("Firebase is not fully configured.");
+      setGoogleAuthError("Firebase Authentication is not configured for this site.");
       return null;
     }
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      if (credential?.accessToken) {
-        const token = credential.accessToken;
-        setGoogleAccessToken(token);
-        sessionStorage.setItem('google_access_token', token);
-        localStorage.setItem('google_access_token', token);
-        return token;
-      }
+      return await runGoogleSignIn(googleProvider);
     } catch (err: any) {
-      console.warn("Google sign-in abort:", err);
+      const code = String(err?.code || '');
+      if (['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment', 'auth/web-storage-unsupported'].includes(code)) {
+        try {
+          await startGoogleRedirect(googleProvider);
+          return null;
+        } catch (redirectError: any) {
+          setGoogleAuthError(describeGoogleAuthError(redirectError));
+          return null;
+        }
+      }
+      setGoogleAuthError(describeGoogleAuthError(err));
+      console.warn("Google account sign-in failed:", code || err?.message);
+      return null;
     }
-    return null;
+  };
+
+  const handleGoogleWorkspaceSignIn = async (): Promise<string | null> => {
+    if (!auth) {
+      setGoogleAuthError("Firebase Authentication is not configured for this site.");
+      return null;
+    }
+    try {
+      const token = await runGoogleSignIn(googleWorkspaceProvider);
+      if (!token) setGoogleAuthError("Your Google account is connected, but no Workspace access token was returned. Reconnect and approve the requested Google permissions.");
+      return token;
+    } catch (err: any) {
+      const code = String(err?.code || '');
+      if (['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment', 'auth/web-storage-unsupported'].includes(code)) {
+        try {
+          await startGoogleRedirect(googleWorkspaceProvider);
+          return null;
+        } catch (redirectError: any) {
+          setGoogleAuthError(describeGoogleAuthError(redirectError));
+          return null;
+        }
+      }
+      setGoogleAuthError(describeGoogleAuthError(err));
+      console.warn("Google Workspace authorization failed:", code || err?.message);
+      return null;
+    }
   };
 
   const handleGoogleSignOut = async () => {
     if (!auth) return;
     try {
       await signOut(auth);
+      setGoogleAuthError(null);
       setCurrentUser(null);
       setGoogleAccessToken(null);
       sessionStorage.removeItem('google_access_token');
@@ -501,19 +605,7 @@ export default function App() {
   const handleDirectGoogleDocsSync = async (title: string, content: string): Promise<{ success: boolean; docUrl?: string; error?: string }> => {
     let token = googleAccessToken || sessionStorage.getItem('google_access_token') || localStorage.getItem('google_access_token');
     if (!token) {
-      try {
-        if (!auth) throw new Error("Firebase Auth initializing");
-        const result = await signInWithPopup(auth, googleProvider);
-        const credential = GoogleAuthProvider.credentialFromResult(result);
-        if (credential?.accessToken) {
-          token = credential.accessToken;
-          setGoogleAccessToken(token);
-          sessionStorage.setItem('google_access_token', token);
-          localStorage.setItem('google_access_token', token);
-        }
-      } catch (authErr: any) {
-        console.warn("[Google Docs Direct Sync] Popup auth failed or dismissed:", authErr);
-      }
+      token = await handleGoogleWorkspaceSignIn();
     }
 
     if (!token) {
@@ -536,14 +628,8 @@ export default function App() {
 
       if (!createRes.ok && (createRes.status === 401 || createRes.status === 403)) {
         try {
-          const result = await signInWithPopup(auth, googleProvider);
-          const credential = GoogleAuthProvider.credentialFromResult(result);
-          if (credential?.accessToken) {
-            token = credential.accessToken;
-            setGoogleAccessToken(token);
-            sessionStorage.setItem('google_access_token', token);
-            localStorage.setItem('google_access_token', token);
-            createRes = await fetch('https://docs.googleapis.com/v1/documents', {
+          token = await handleGoogleWorkspaceSignIn();
+          if (token) createRes = await fetch('https://docs.googleapis.com/v1/documents', {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${token}`,
@@ -2508,6 +2594,12 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
             </>
           )}
         </header>
+        )}
+        {googleAuthError && (
+          <div role="alert" className="mx-4 mt-2 max-w-2xl rounded-xl border border-rose-500/30 bg-rose-950/70 px-3 py-2 text-xs text-rose-100 flex items-start justify-between gap-3">
+            <span>{googleAuthError}</span>
+            <button type="button" onClick={() => setGoogleAuthError(null)} className="shrink-0 font-semibold text-rose-200 hover:text-white">Dismiss</button>
+          </div>
         )}
 
         {/* 3. DYNAMIC RENDERING BLOCK (GAMES & VERSIONS VS CHAT INTERFACES) */}
@@ -5288,7 +5380,7 @@ Workspace Host: ${window.location.host}
         initialBody={gmailModalBody}
         currentUser={currentUser}
         googleAccessToken={googleAccessToken}
-        onGoogleSignIn={async () => { await handleGoogleSignIn(); }}
+        onGoogleSignIn={async () => { await handleGoogleWorkspaceSignIn(); }}
       />
 
       {/* ============================================================ */}
@@ -5338,6 +5430,7 @@ Workspace Host: ${window.location.host}
           sessionStorage.setItem('google_access_token', token);
           localStorage.setItem('google_access_token', token);
         }}
+        onGoogleSignIn={handleGoogleWorkspaceSignIn}
         currentUser={currentUser}
         isLight={isLight}
       />
