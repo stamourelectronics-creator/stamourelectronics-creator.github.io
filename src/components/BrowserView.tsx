@@ -3274,7 +3274,7 @@ export function BrowserView({
                   {isLoadingBrief && !typedSummary ? (
                     <div className="flex items-center gap-2 py-1.5 text-xs font-semibold text-indigo-600">
                       <RotatingWebIcon size={16} color="#4f46e5" className="text-indigo-600" />
-                      <span>IsaiahAI Search Assistant is compiling web indices & typing response...</span>
+                      <span>Thinking...</span>
                     </div>
                   ) : (
                     <div className="relative">
@@ -3340,9 +3340,9 @@ export function BrowserView({
                     
                     <button
                       type="button"
-                      onClick={onGoToChat}
                       className="w-8 h-8 rounded-full bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-500 hover:text-zinc-900 transition-all cursor-pointer shadow-sm"
                       title="Open full-screen IsaiahAI chat"
+                      aria-label="Open full-screen IsaiahAI chat"
                       onClick={openFullSearchAssistant}
                     >
                       <MessageSquare className="w-3.5 h-3.5" />
