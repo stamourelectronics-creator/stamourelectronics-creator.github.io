@@ -101,10 +101,17 @@ export async function generateIsaiahsiImage(
   const enhancedPrompt = options.enhanceWithClaude === false
     ? cleanPrompt
     : await enhancePromptWithClaude(cleanPrompt);
+  const requestedRatio = options.aspectRatio || '1:1';
+  const ratioMap: Record<string, { w: number; h: number }> = {
+    '1:1': { w: 1, h: 1 },
+    '16:9': { w: 16, h: 9 },
+    '9:16': { w: 9, h: 16 },
+    '4:3': { w: 4, h: 3 }
+  };
   const result = await window.puter.ai.txt2img(enhancedPrompt, {
     model: 'gpt-image-2.6-flare',
     quality: 'max',
-    aspect_ratio: options.aspectRatio || '1:1'
+    ratio: ratioMap[requestedRatio] || ratioMap['1:1']
   });
   const imageUrl = String(result?.src || result?.toString?.() || '').trim();
   if (!imageUrl || imageUrl === '[object HTMLImageElement]') {
