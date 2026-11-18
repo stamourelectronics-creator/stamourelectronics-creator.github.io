@@ -1547,11 +1547,14 @@ export default function App() {
     const isGameGenQuery = lowerPrompt === 'game gen' || lowerPrompt.startsWith('game gen ') || lowerPrompt === 'game generation' || lowerPrompt.startsWith('game generation ');
     const isClearDrive = lowerPrompt === '!clear drive';
 
-    // Search automatically for normal prompts; special generators/local commands skip web lookup.
-    const isWebSearch = !isImagePrefix && !isNaturalImageQuery && !isDocsPrefix && !isSlidesPrefix &&
-      !isGamesQuery && !isGameGenQuery && !isClearDrive;
-    setIsSearchingWebActive(isWebSearch);
-    setActiveSearchQuery(isWebSearch ? rawPrompt : '');
+    // Search only when the prompt needs live information or explicitly asks for it.
+    const shouldRunLiveSearch = !isImagePrefix && !isDocsPrefix && !isSlidesPrefix &&
+      !isGamesQuery && !isGameGenQuery && !isClearDrive &&
+      (promptNeedsLiveSearch(rawPrompt) || isWPrefix || isIsaiahSearchPrefix);
+    const isWebSearch = shouldRunLiveSearch;
+    setIsSearchingWebActive(false);
+    setActiveSearchQuery('');
+    setRequestPhase('thinking');
 
     try {
       if (isGamesQuery) {
@@ -1691,86 +1694,40 @@ export default function App() {
           }
         }
       } else if (isImagePrefix) {
-        // Image generation command - Isaiahsi Image AI (Named by Isaiahsi · Powered by Claude AI & Puter)
-        const imagePrompt = imagePromptText || 'A futuristic AI interface designed by St.Amour Electronics';
-        setCurrentSearchPrompt(`Isaiahsi: Synthesizing "${imagePrompt}"...`);
+        const imagePrompt = imagePromptText || 'A futuristic editorial artwork for IsaiahAI';
+        setRequestPhase('thinking');
+        setIsSearchingWebActive(false);
+        setCurrentSearchPrompt('IsaiahAI Imagery 26 is preparing your image…');
 
-        try {
-          const isaiahsiResult = await generateIsaiahsiImage(imagePrompt, {
-            aspectRatio: '1:1',
-            enhanceWithClaude: true
-          });
-
-          const replyContent = `🎨 **Isaiahsi Image AI**\n*${isaiahsiResult.namingCredit} · ${isaiahsiResult.engineCredit}*\n\nRendered visual for: **"${imagePrompt}"**` +
-            (isaiahsiResult.enhancedPrompt ? `\n\n*Claude AI Visual Synthesis:* "${isaiahsiResult.enhancedPrompt}"` : '');
-
-          const assistantMsg: Message = {
-            id: `msg-${Date.now()}-assistant`,
-            role: 'assistant',
-            content: replyContent,
-            model: 'image',
-            modelDisplayName: 'Isaiahsi',
-            images: [isaiahsiResult.imageUrl],
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          };
-
-          updatedSession.messages = [...workingMessages, assistantMsg];
-          speakText(`Isaiahsi Image AI has synthesized ${imagePrompt}`);
-          setSessions(prev => prev.map(s => s.id === updatedSession.id ? updatedSession : s));
-          return;
-        } catch (isaiahsiErr: any) {
-          console.warn('[Isaiahsi Image synthesis error, falling back to server]:', isaiahsiErr);
+        if (!isPuterSignedIn()) {
+          await signInPuter();
+          setPuterSignedIn(isPuterSignedIn());
         }
+        if (!isPuterSignedIn()) throw new Error('Sign in with Puter to use IsaiahAI Imagery 26.');
 
-        setCurrentSearchPrompt(`Isaiahsi Vision Node: Synthesizing "${imagePrompt}"...`);
-
-        const inputImg = currentUploaded.length > 0 ? {
-          data: currentUploaded[0].data,
-          mimeType: currentUploaded[0].mimeType
-        } : null;
-
-        const response = await fetch('/api/generate-image', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            prompt: imagePrompt,
-            imageSize,
-            isPro: imageIsPro,
-            image: inputImg
-          }),
+        const generated = await generateIsaiahsiImage(imagePrompt, {
+          aspectRatio: '1:1',
+          enhanceWithClaude: true
         });
-
-        if (!response.ok) {
-          const errData = await response.json().catch(() => ({}));
-          const errMsg = errData.message || errData.error || 'Image generation service offline';
-          throw new Error(errMsg);
-        }
-        
-        if (response.headers.get('content-type')?.includes('text/html')) throw new Error('Received HTML error page');
-        const data = await response.json();
-
-        let replyContent = `🎨 **Isaiahsi Image AI**\n*Named by Isaiahsi · Powered by Claude AI & Neural Vision*\n\n` +
-          (data.trainedText || `Rendered visual for: **"${imagePrompt}"**`);
-        let imageUrls = [data.imageUrl];
-
-        if (data.isFallback) {
-          replyContent = `🎨 **Isaiahsi Image AI**\n*Named by Isaiahsi · Powered by Neural Vision Engine*\n\n` +
-            (data.trainedText || `Successfully generated visual matches for: **"${imagePrompt}"**`);
-          imageUrls = data.fallbackUrls && data.fallbackUrls.length > 0 ? data.fallbackUrls : [data.imageUrl];
-        }
 
         const assistantMsg: Message = {
           id: `msg-${Date.now()}-assistant`,
           role: 'assistant',
-          content: replyContent,
+          content: `🎨 **IsaiahAI Imagery 26**\n\nCreated an image from: **"${imagePrompt}"**`,
           model: 'image',
-          modelDisplayName: 'Isaiahsi',
-          images: imageUrls,
+          modelDisplayName: 'IsaiahAI Imagery 26',
+          images: [generated.imageUrl],
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         };
-
         updatedSession.messages = [...workingMessages, assistantMsg];
-        speakText(assistantMsg.content);
+        saveSessionsToCache(prev => {
+          const exists = prev.some(session => session.id === targetSessionId);
+          return exists
+            ? prev.map(session => session.id === targetSessionId ? updatedSession : session)
+            : [updatedSession, ...prev];
+        });
+        speakText(`IsaiahAI Imagery 26 created your image for ${imagePrompt}`);
+        return;
       } else if (isDocsPrefix) {
         // Google Docs command & Direct sync prompt
         let docsPrompt = rawPrompt;
@@ -1969,14 +1926,54 @@ export default function App() {
           content: msg.content,
         }));
 
-        if (searchWebEnabled) {
-          setCurrentSearchPrompt(`St.Amour Intelligence: Checking available live sources for "${rawPrompt}"...`);
-        }
-        
         let data: any;
+        let liveSearchResults: any[] = [];
+        let promptToSend = rawPrompt;
+        const modelToSend = (chatMode === 'code' || chatMode === 'code_extended')
+          ? 'isaiah_codepro'
+          : selectedAiModel;
+
+        // Perform a genuine search request before inference only when needed.
+        if (shouldRunLiveSearch) {
+          setRequestPhase('searching');
+          setIsSearchingWebActive(true);
+          setActiveSearchQuery(rawPrompt);
+          setCurrentSearchPrompt(null);
+          try {
+            const searchResponse = await fetch('/api/quick-search-links', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                query: rawPrompt.replace(/^(?:s!|isaiahsearch|isaiah search)\s*/i, '').trim(),
+                engine: 'isaiah',
+                safeSearch: 'Moderate'
+              }),
+            });
+            if (!searchResponse.ok) {
+              const detail = await searchResponse.json().catch(() => ({}));
+              throw new Error(detail.error || 'Live web search could not complete.');
+            }
+            const searchData = await searchResponse.json();
+            liveSearchResults = Array.isArray(searchData.results) ? searchData.results.slice(0, 20) : [];
+            if (liveSearchResults.length > 0) {
+              const sourceContext = liveSearchResults.map((item: any, index: number) =>
+                (index + 1) + '. ' + String(item.title || 'Web source') +
+                '\nURL: ' + String(item.url || '') +
+                '\nSnippet: ' + String(item.snippet || '').slice(0, 700)
+              ).join('\n\n');
+              promptToSend += '\n\nLIVE ISAIAHSEARCH RESULTS (use only these links as source URLs; distinguish snippets from full page content):\n' +
+                sourceContext + '\n\nAnswer the original question directly. Cite supplied URLs as Markdown links and state when snippets do not contain enough detail.';
+            }
+          } catch (searchError: any) {
+            console.warn('[IsaiahSearch] Live search was attempted but unavailable:', searchError);
+          } finally {
+            setIsSearchingWebActive(false);
+            setActiveSearchQuery('');
+          }
+        }
+        setRequestPhase('thinking');
 
         // Auto-load local computer file if connected in Code PR mode
-        let promptToSend = rawPrompt;
         let isCodeEditingActive = (chatMode === 'code' || chatMode === 'code_extended') && localWorkspaceConnected && !!selectedLocalFile;
         if (isCodeEditingActive && selectedLocalFile?.handle) {
           try {
@@ -1988,22 +1985,28 @@ export default function App() {
         }
 
         try {
-          const chatApiEndpoint = selectedAiModel === 'maw_ai'
-            ? '/api/chat'
-            : 'https://codepro-gateway-production.up.railway.app/api/chat';
-          const response = await fetch(chatApiEndpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              message: promptToSend,
-              history: chatHistoryMap,
-              searchWebEnabled,
-              showThinking: showReasoningSummary && selectedAiModel === 'isaiahai_7_super',
-              reasoningMode,
-              reasoningEffort,
-              chatMode,
-              model: selectedAiModel,
-              selectedModel: selectedAiModel,
+          if (modelToSend === 'maw_ai' && mawAIRef.current) {
+            data = {
+              content: await mawAIRef.current.generateResponse(rawPrompt),
+              sources: [],
+              provider: 'Maw local core'
+            };
+          } else {
+            const chatApiEndpoint = modelToSend === 'breakaway_1_0' ? '/api/breakaway' : '/api/chat';
+            const response = await fetch(chatApiEndpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                message: promptToSend,
+                history: chatHistoryMap,
+                searchWebEnabled: false,
+                stream: true,
+                showThinking: showReasoningSummary && modelToSend === 'isaiahai_7_super',
+                reasoningMode,
+                reasoningEffort,
+                chatMode,
+                model: modelToSend,
+                selectedModel: modelToSend,
               images: currentUploaded.map(img => ({
                 data: img.data,
                 mimeType: img.mimeType,
@@ -2057,31 +2060,21 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
 1. Every single response you write MUST be super smart, highly articulate, and written in thorough, high-density paragraph form (at least one complete, well-reasoned, highly detailed paragraph per response).
 2. Avoid shallow one-liner bullet lists or lazy short answers. Provide deep technical and conceptual explanations with speed, clarity, and authority.
 3. Identify exclusively as Isaiah Max 6.0. NEVER mention "Gemini" or "Google".\n\nADDITIONAL INSTRUCTIONS:\n1. If the user asks "find me a job" or asks for local jobs, you MUST first ask for their exact location. Once they provide it, output a simulated search result of nearby jobs.\n2. If the user searches for or requests the "St.Amour database", check their email (${currentUser?.email || "unauthenticated"}). If their email is exactly precise26@gmail.com, azndibroblox2@gmail.com, azndibroblox@gmail.com, precise26@hotmail.com, or stamourisaiah@gmail.com, grant them access with ZERO LIMITS.`,
-            }),
-          });
-          if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            throw new Error(errData.error || 'IsaiahAI core generation failed');
+              }),
+            });
+            if (!response.ok) {
+              const errData = await response.json().catch(() => ({}));
+              throw new Error(errData.error || 'IsaiahAI core generation failed');
+            }
+            if (response.headers.get('content-type')?.includes('text/html')) throw new Error('Received HTML error page');
+            const responseType = response.headers.get('content-type') || '';
+            data = responseType.includes('text/event-stream')
+              ? await readIsaiahEventStream(response, setRequestPhase)
+              : await response.json();
           }
-          if (response.headers.get('content-type')?.includes('text/html')) throw new Error('Received HTML error page');
-          data = await response.json();
         } catch (apiErr: any) {
-          if (selectedAiModel === 'maw_ai' && mawAIRef.current) {
-            console.warn('[Maw AI] API unavailable, engaging local Maw core:', apiErr);
-            const rawResponse = await mawAIRef.current.generateResponse(rawPrompt);
-            data = {
-              content: rawResponse,
-              sources: [],
-              thinking: showReasoningSummary
-                ? 'Maw AI used its local knowledge and available public lookup fallback to prepare this response. This is a brief explanation of the approach, not private internal reasoning.'
-                : '',
-              provider: 'Maw local fallback'
-            };
-          } else {
-            // Never route chat to Puter. The hosted server is responsible for Gemini-first
-            // generation and the server-side OpenRouter fallback; surface a retryable error if both fail.
-            throw apiErr;
-          }
+          // Do not silently route a failed model to a different model or provider.
+          throw apiErr;
         }
 
         // Auto-edit local file on PC in background if code block was returned
@@ -2101,19 +2094,19 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
         }
 
         // Dynamically translate Google grounding sources into visual Web Search boxes
-        const searchResults = (data.sources || []).map((s: any) => {
+        const combinedSources = [
+          ...(Array.isArray(data.sources) ? data.sources : []),
+          ...liveSearchResults.map((item: any) => ({ title: item.title, uri: item.url, snippet: item.snippet }))
+        ];
+        const seenSourceUrls = new Set<string>();
+        const searchResults = combinedSources.map((source: any) => {
+          const uri = String(source.uri || source.url || '').trim();
+          if (!uri || seenSourceUrls.has(uri)) return null;
+          seenSourceUrls.add(uri);
           let domainName = 'web';
-          try {
-            if (s.uri) {
-              domainName = new URL(s.uri).hostname.replace('www.', '');
-            }
-          } catch (e) {}
-          return {
-            title: s.title || 'IsaiahAI Search Reference',
-            uri: s.uri || '',
-            domain: domainName,
-          };
-        });
+          try { domainName = new URL(uri).hostname.replace('www.', ''); } catch { /* ignore invalid URLs */ }
+          return { title: source.title || 'IsaiahAI Search Reference', uri, domain: domainName, description: source.snippet || '' };
+        }).filter(Boolean);
 
         const assistantMsg: Message = {
           id: `msg-${Date.now()}-assistant`,
@@ -2125,7 +2118,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
           thinking: data.thinking,
           sources: data.sources,
           searchUnavailable: Boolean(data.searchUnavailable),
-          isSearch: isWebSearch && searchResults.length > 0,
+          isSearch: shouldRunLiveSearch && searchResults.length > 0,
           searchType: 'google',
           summaryQuery: rawPrompt,
           searchResults: searchResults,
@@ -2180,6 +2173,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
       setIsSearchingWebActive(false);
       setActiveSearchQuery('');
       setCurrentSearchPrompt(null);
+      setRequestPhase('thinking');
     }
   };
 
