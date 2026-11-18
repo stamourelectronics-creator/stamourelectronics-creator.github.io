@@ -8,6 +8,8 @@ on:
       - '.github/workflows/codepro-smoke-test.yml'
       - 'src/main.tsx'
       - 'src/components/BrowserView.tsx'
+      - 'src/App.tsx'
+      - 'src/lib/puterClient.ts'
   workflow_dispatch:
 
 permissions:
@@ -94,6 +96,8 @@ jobs:
           $response = Invoke-WebRequest -Method Post -Uri "$base/api/chat" -ContentType 'application/json' -Body $payload -TimeoutSec 180
           $streamText = [string]$response.Content
           if ($response.StatusCode -ne 200 -or $streamText -notmatch 'event: delta' -or $streamText -notmatch 'event: done' -or $streamText -notmatch 'STREAM_SMOKE_OK') {
+            Write-Host ("Stream HTTP status: " + $response.StatusCode + "; content type: " + $response.Headers['Content-Type'] + "; body length: " + $streamText.Length)
+            Write-Host ($streamText.Substring(0, [Math]::Min(4000, $streamText.Length)))
             throw 'The Gemini stream did not deliver a complete, parseable delta and done event.'
           }
           Write-Host 'Passed: Gemini streaming returned delta and done events with the expected text.'
