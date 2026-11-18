@@ -1,7 +1,11 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
   getAuth, 
-  signInWithPopup, 
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+  linkWithPopup,
+  linkWithRedirect,
   signOut, 
   onAuthStateChanged, 
   GoogleAuthProvider,
@@ -83,9 +87,14 @@ if (isFirebaseConfigured) {
   }
 }
 
-// Google Auth provider config with Google Docs & Google Drive scopes
+// Keep ordinary account sign-in lightweight. Requesting every Workspace scope
+// during login can block the entire Google sign-in flow for users whose OAuth
+// consent screen or APIs have not enabled all of those scopes.
 const googleProvider = new GoogleAuthProvider();
-// Google Workspace scopes used by the mobile Workspace agent and web Gmail/Docs features.
+googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+// Ask for Workspace permissions only when a user opens a Gmail/Docs/Drive feature.
+const googleWorkspaceProvider = new GoogleAuthProvider();
 [
   'https://www.googleapis.com/auth/gmail.readonly',
   'https://www.googleapis.com/auth/gmail.send',
@@ -99,10 +108,9 @@ const googleProvider = new GoogleAuthProvider();
   'https://www.googleapis.com/auth/chat.spaces.readonly',
   'https://www.googleapis.com/auth/chat.messages.readonly',
   'https://www.googleapis.com/auth/chat.messages.create'
-].forEach((scope) => googleProvider.addScope(scope));
-googleProvider.setCustomParameters({
+].forEach((scope) => googleWorkspaceProvider.addScope(scope));
+googleWorkspaceProvider.setCustomParameters({
   prompt: 'consent',
-  access_type: 'offline',
   include_granted_scopes: 'true',
 });
 
@@ -111,7 +119,12 @@ export {
   auth,
   db,
   googleProvider,
+  googleWorkspaceProvider,
   GoogleAuthProvider,
+  signInWithRedirect,
+  getRedirectResult,
+  linkWithPopup,
+  linkWithRedirect,
   signInWithPopup,
   signInAnonymously,
   signOut,
