@@ -12,7 +12,7 @@ import { ShareModal } from './components/ShareModal';
 import { LocalFileWorkspaceModal } from './components/LocalFileWorkspaceModal';
 import { InteractiveQuizCard, parseQuizFromText } from './components/InteractiveQuizCard';
 import { SchoolDocSyncModal } from './components/SchoolDocSyncModal';
-import { generateIsaiahsiImage } from './lib/puterClient';
+import { generateIsaiahsiImage, signInPuter, isPuterSignedIn } from './lib/puterClient';
 import { formatMathAndFractions, MATH_FRACTION_SYMBOLS, MATH_OPERATION_SYMBOLS } from './lib/mathFormatter';
 import { pickLocalFile, pickLocalDirectory, readFileText, writeFileText, extractCodeBlockFromResponse, LocalFileItem, isFileSystemAccessSupported } from './lib/localWorkspace';
 import MawAI from "./lib/MawAI";
@@ -112,6 +112,63 @@ function VersionsSandbox() {
   );
 }
 
+async function readIsaiahEventStream(
+  response: Response,
+  onPhase: (phase: 'thinking' | 'writing') => void
+): Promise<any> {
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error('The AI response stream was unavailable.');
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let accumulated = '';
+  let completed: any = {};
+
+  const processFrame = (frame: string) => {
+    const lines = frame.split(/\r?\n/);
+    const eventName = lines.find(line => line.startsWith('event:'))?.slice(6).trim() || '';
+    const dataText = lines.filter(line => line.startsWith('data:')).map(line => line.slice(5).trim()).join('\n');
+    if (!dataText) return;
+    let payload: any;
+    try { payload = JSON.parse(dataText); } catch { return; }
+
+    if (eventName === 'status') {
+      if (payload.status === 'writing') onPhase('writing');
+      else if (payload.status !== 'checking') onPhase('thinking');
+    } else if (eventName === 'delta') {
+      accumulated += String(payload.text || '');
+    } else if (eventName === 'done') {
+      completed = { ...completed, ...payload };
+    } else if (eventName === 'error') {
+      throw new Error(String(payload.message || 'The model stream failed.'));
+    }
+  };
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let splitAt = buffer.indexOf('\n\n');
+    while (splitAt !== -1) {
+      const frame = buffer.slice(0, splitAt);
+      buffer = buffer.slice(splitAt + 2);
+      processFrame(frame);
+      splitAt = buffer.indexOf('\n\n');
+    }
+  }
+  buffer += decoder.decode();
+  if (buffer.trim()) processFrame(buffer);
+  const content = String(completed.content || accumulated).trim();
+  if (!content) throw new Error('The selected model returned an empty response.');
+  return { ...completed, content };
+}
+
+function promptNeedsLiveSearch(prompt: string): boolean {
+  const text = String(prompt || '').toLowerCase();
+  const explicitSearch = /\b(search the web|look up|find online|research|verify|fact[- ]check|compare sources|give me sources|with sources)\b/i.test(text);
+  const currentInfo = /\b(current|currently|latest|today|tonight|right now|as of|this week|this month|recent|news|weather|forecast|price|pricing|stock|exchange rate|availability|opening hours|schedule|score|live|released|release date|2026|2027|near me)\b/i.test(text);
+  return explicitSearch || currentInfo;
+}
+
 export default function App() {
   // ==========================================
   // STATE DEFINITIONS
@@ -122,9 +179,9 @@ export default function App() {
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [activeView, setActiveView] = useState<'chat' | 'games' | 'versions' | 'browser'>('browser');
   // Web search is automatic for ordinary chat; no toggle is needed.
-  const searchWebEnabled = true;
   const [imageSize, setImageSize] = useState<'1K' | '2K' | '4K'>('1K');
   const [imageIsPro, setImageIsPro] = useState<boolean>(false);
+  const [puterSignedIn, setPuterSignedIn] = useState<boolean>(() => isPuterSignedIn());
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
 
   // Mobile environment detection
@@ -398,6 +455,7 @@ export default function App() {
 
   const [inputText, setInputText] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [requestPhase, setRequestPhase] = useState<'thinking' | 'searching' | 'writing'>('thinking');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [currentSearchPrompt, setCurrentSearchPrompt] = useState<string | null>(null);
   const [gameGenPrompt, setGameGenPrompt] = useState<string>('');
@@ -413,14 +471,16 @@ export default function App() {
   const [siriSpeaking, setSiriSpeaking] = useState<boolean>(false);
 
   // Selected AI Model (IsaiahAI 7.0 SUPER, IsaiahAI 5.3 Flash, Isaiah Max 6.0, or Maw AI)
-  const [selectedAiModel, setSelectedAiModel] = useState<'isaiah_5_3' | 'isaiah_max_6_0' | 'maw_ai' | 'isaiahai_7_super' | 'open_isaiah'>(() => {
+  const [selectedAiModel, setSelectedAiModel] = useState<'isaiah_5_3' | 'isaiah_max_6_0' | 'maw_ai' | 'isaiahai_7_super' | 'open_isaiah' | 'isaiah_codepro' | 'breakaway_1_0'>(() => {
     // One-time upgrade: make IsaiahAI 7.0 SUPER the default without overwriting later user choices.
     if (localStorage.getItem('isaiah_model_default_version') !== '7.0-super') {
       localStorage.setItem('isaiah_selected_model', 'isaiahai_7_super');
       localStorage.setItem('isaiah_model_default_version', '7.0-super');
       return 'isaiahai_7_super';
     }
-    return (localStorage.getItem('isaiah_selected_model') as 'isaiah_5_3' | 'isaiah_max_6_0' | 'maw_ai' | 'isaiahai_7_super' | 'open_isaiah') || 'isaiahai_7_super';
+    const saved = localStorage.getItem('isaiah_selected_model') || 'isaiahai_7_super';
+    const supported = ['isaiah_5_3', 'isaiah_max_6_0', 'maw_ai', 'isaiahai_7_super', 'open_isaiah', 'isaiah_codepro', 'breakaway_1_0'];
+    return (supported.includes(saved) ? saved : 'isaiahai_7_super') as 'isaiah_5_3' | 'isaiah_max_6_0' | 'maw_ai' | 'isaiahai_7_super' | 'open_isaiah' | 'isaiah_codepro' | 'breakaway_1_0';
   });
   const [isSearchingWebActive, setIsSearchingWebActive] = useState<boolean>(false);
   const [activeSearchQuery, setActiveSearchQuery] = useState<string>('');
@@ -630,6 +690,26 @@ export default function App() {
     return stored === 'low' || stored === 'medium' || stored === 'high' ? stored : 'medium';
   });
   const [reasoningControlsOpen, setReasoningControlsOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    const syncPuterState = () => setPuterSignedIn(isPuterSignedIn());
+    syncPuterState();
+    window.addEventListener('focus', syncPuterState);
+    return () => window.removeEventListener('focus', syncPuterState);
+  }, []);
+
+  const openImageStudio = async () => {
+    try {
+      if (!isPuterSignedIn()) await signInPuter();
+      setPuterSignedIn(isPuterSignedIn());
+      if (!isPuterSignedIn()) throw new Error('Puter sign-in was not completed.');
+      setChatMode('image');
+      setActiveView('chat');
+      setChatModeDropdownOpen(false);
+    } catch (error: any) {
+      setShareNotice(error?.message || 'Sign in with Puter to unlock IsaiahAI Imagery 26.');
+    }
+  };
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   
@@ -1380,6 +1460,8 @@ export default function App() {
       : selectedAiModel === 'maw_ai' ? 'Maw AI'
       : selectedAiModel === 'isaiahai_7_super' ? 'IsaiahAI 7.0 SUPER'
       : selectedAiModel === 'open_isaiah' ? 'Open-Isaiah'
+      : selectedAiModel === 'isaiah_codepro' ? 'IsaiahAI CodePro'
+      : selectedAiModel === 'breakaway_1_0' ? 'Breakaway 1.0'
       : 'Isaiah Max 6.0';
 
     const userMsg: Message = {
@@ -2250,10 +2332,8 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
           onGoogleSignIn={handleGoogleSignIn}
           onGoogleSignOut={handleGoogleSignOut}
           onToggleVoiceMode={() => setIsVoiceEnabled(!isVoiceEnabled)}
-          onSelectImageMode={() => {
-            setChatMode('image');
-            setActiveView('chat');
-          }}
+          puterSignedIn={puterSignedIn}
+          onSelectImageMode={() => { void openImageStudio(); }}
         />
       </div>
 
