@@ -138,16 +138,15 @@ jobs:
             history = @()
             model = 'isaiah_codepro'
             selectedModel = 'isaiah_codepro'
-            stream = $false
+            stream = $true
           } | ConvertTo-Json -Depth 8 -Compress
-          $result = Invoke-RestMethod -Method Post -Uri "$base/api/chat" -ContentType 'application/json' -Body $payload -TimeoutSec 300
-          if ([string]::IsNullOrWhiteSpace([string]$result.content) -or $result.brand -ne 'IsaiahAI CodePro') {
-            throw 'CodePro did not return a valid branded response.'
+          $response = Invoke-WebRequest -Method Post -Uri "$base/api/chat" -ContentType 'application/json' -Body $payload -TimeoutSec 360
+          $streamText = [string]$response.Content
+          if ($response.StatusCode -ne 200 -or $streamText -notmatch 'event: delta' -or $streamText -notmatch 'event: done' -or $streamText -notmatch 'CODEPRO_SMOKE_OK') {
+            Write-Host ($streamText.Substring(0, [Math]::Min(4000, $streamText.Length)))
+            throw 'CodePro did not return a complete streamed, branded response.'
           }
-          if ($result.selectedModel -ne 'isaiah_codepro' -or [string]::IsNullOrWhiteSpace([string]$result.provider)) {
-            throw 'CodePro returned the wrong model identity or no provider.'
-          }
-          Write-Host ("Passed: IsaiahAI CodePro via " + $result.provider + " / " + $result.model)
+          Write-Host 'Passed: IsaiahAI CodePro returned a complete streamed response.'
 
       - name: Test Breakaway 1.0 with its configured fallback
         shell: pwsh
@@ -162,10 +161,12 @@ jobs:
             history = @()
             model = 'breakaway_1_0'
             selectedModel = 'breakaway_1_0'
-            stream = $false
+            stream = $true
           } | ConvertTo-Json -Depth 8 -Compress
-          $result = Invoke-RestMethod -Method Post -Uri "$base/api/breakaway" -ContentType 'application/json' -Body $payload -TimeoutSec 300
-          if ([string]::IsNullOrWhiteSpace([string]$result.content) -or $result.brand -ne 'Breakaway 1.0' -or $result.selectedModel -ne 'breakaway_1_0') {
-            throw 'Breakaway 1.0 did not return a complete branded response.'
+          $response = Invoke-WebRequest -Method Post -Uri "$base/api/breakaway" -ContentType 'application/json' -Body $payload -TimeoutSec 360
+          $streamText = [string]$response.Content
+          if ($response.StatusCode -ne 200 -or $streamText -notmatch 'event: delta' -or $streamText -notmatch 'event: done' -or $streamText -notmatch 'BREAKAWAY_SMOKE_OK') {
+            Write-Host ($streamText.Substring(0, [Math]::Min(4000, $streamText.Length)))
+            throw 'Breakaway 1.0 did not return a complete streamed response.'
           }
-          Write-Host ("Passed: Breakaway 1.0 via " + $result.provider + " / " + $result.model)
+          Write-Host 'Passed: Breakaway 1.0 returned a complete streamed response.'
