@@ -1,7 +1,4 @@
-// Isaiahsi AI Image Generation Client
-// Behind-the-scenes engine powered by Claude AI visual synthesis and high-fidelity image models
-// Credited to Isaiahsi for naming the AI, with Claude AI & Puter engine credits
-
+// IsaiahAI Imagery 26 — Puter-authenticated image studio.
 export interface PuterUser {
   username?: string;
   email?: string;
@@ -31,115 +28,99 @@ declare global {
   }
 }
 
-/** Check if Puter SDK is available in window */
+const IMAGERY_26_SYSTEM_PROMPT = `You are IsaiahAI Imagery 26, a professional visual art director and image-prompt architect.
+Transform the user's idea into a precise, visually rich image-generation prompt. Preserve the requested subject and intent. Specify composition, camera position, lighting, materials, color harmony, depth, atmosphere, texture, and visual style where useful. Make the result coherent and production-ready. Avoid contradictory instructions and unnecessary filler. Do not add text, logos, signatures, watermarks, captions, or UI elements unless the user explicitly requests them. Respect the user's requested aspect ratio. Return only the final image prompt, with no preamble or explanation.`;
+
 export function isPuterLoaded(): boolean {
   return typeof window !== 'undefined' && typeof window.puter !== 'undefined';
 }
 
-/** Check if user is currently signed in to Puter */
 export function isPuterSignedIn(): boolean {
   if (!isPuterLoaded()) return false;
   try {
     return Boolean(window.puter.auth?.isSignedIn?.());
-  } catch (e) {
+  } catch {
     return false;
   }
 }
 
-/** Trigger background sign in if needed */
 export async function signInPuter(): Promise<PuterUser | null> {
-  if (!isPuterLoaded()) {
-    throw new Error('Image generation SDK is initializing. Please try again.');
-  }
+  if (!isPuterLoaded()) throw new Error('Puter is still loading. Refresh the page and try again.');
   try {
-    await window.puter.auth.signIn();
+    if (!isPuterSignedIn()) await window.puter.auth.signIn();
     return await getPuterUser();
   } catch (error: any) {
-    console.error('[Isaiahsi Auth] Sign in error:', error);
-    throw error;
+    console.error('[IsaiahAI Imagery 26] Puter sign-in failed:', error);
+    throw new Error(error?.message || 'Puter sign-in was not completed.');
   }
 }
 
-/** Retrieve current Puter user profile */
 export async function getPuterUser(): Promise<PuterUser | null> {
   if (!isPuterLoaded() || !isPuterSignedIn()) return null;
   try {
-    const user = await window.puter.auth.getUser();
-    return user || null;
-  } catch (e) {
+    return await window.puter.auth.getUser() || null;
+  } catch {
     return null;
   }
 }
 
-/**
- * Kept for compatibility with older UI imports. AI prompt generation is now handled
- * by the server-side image endpoint; the browser never calls Puter AI.
- */
-export async function enhancePromptWithClaude(basePrompt: string): Promise<string> {
-  return basePrompt;
+async function extractText(response: any): Promise<string> {
+  const content = response?.message?.content ?? response?.content ?? response?.text ?? '';
+  if (typeof content === 'string') return content.trim();
+  if (Array.isArray(content)) {
+    return content.map((part: any) => typeof part === 'string' ? part : String(part?.text || '')).join('').trim();
+  }
+  return '';
 }
 
-/**
- * Generate high-fidelity image credited exclusively to Isaiahsi for naming the AI.
- * Uses the server-side IsaiahAI image engine; provider keys remain server-side.
- * with no separate Puter UI window.
- */
+export async function enhancePromptWithClaude(basePrompt: string): Promise<string> {
+  const cleanPrompt = String(basePrompt || '').trim();
+  if (!cleanPrompt) throw new Error('Describe the image you want to create.');
+  if (!isPuterLoaded()) throw new Error('Puter is still loading. Try again in a moment.');
+  if (!isPuterSignedIn()) throw new Error('Sign in with Puter to unlock IsaiahAI Imagery 26.');
+
+  const response = await window.puter.ai.chat(
+    [
+      { role: 'system', content: IMAGERY_26_SYSTEM_PROMPT },
+      { role: 'user', content: 'Create a high-quality image prompt for this idea:\n\n' + cleanPrompt }
+    ],
+    { model: 'claude-sonnet-4-6', normalize: true }
+  );
+  const enhanced = await extractText(response);
+  if (!enhanced) throw new Error('Claude could not prepare the image prompt. Please retry.');
+  return enhanced;
+}
+
 export async function generateIsaiahsiImage(
-  prompt: string, 
+  prompt: string,
   options: ImageGenOptions = {}
 ): Promise<GeneratedIsaiahsiImage> {
-  let finalPrompt = prompt.trim();
-  let enhancedPrompt: string | undefined = undefined;
+  const cleanPrompt = String(prompt || '').trim();
+  if (!cleanPrompt) throw new Error('Describe the image you want to create.');
+  if (!isPuterLoaded()) throw new Error('Puter is still loading. Try again in a moment.');
+  if (!isPuterSignedIn()) throw new Error('Sign in with Puter to unlock IsaiahAI Imagery 26.');
 
-  // Add aspect ratio suffix if specified
-  if (options.aspectRatio && options.aspectRatio !== '1:1') {
-    const arMap: Record<string, string> = {
-      '16:9': 'widescreen 16:9 cinematic wallpaper',
-      '9:16': 'vertical 9:16 mobile portrait wallpaper',
-      '4:3': 'classic 4:3 photography format'
-    };
-    if (arMap[options.aspectRatio]) {
-      finalPrompt = `${finalPrompt}, ${arMap[options.aspectRatio]}`;
-    }
+  const enhancedPrompt = options.enhanceWithClaude === false
+    ? cleanPrompt
+    : await enhancePromptWithClaude(cleanPrompt);
+  const result = await window.puter.ai.txt2img(enhancedPrompt, {
+    model: 'gpt-image-2.6-flare',
+    quality: 'max',
+    aspect_ratio: options.aspectRatio || '1:1'
+  });
+  const imageUrl = String(result?.src || result?.toString?.() || '').trim();
+  if (!imageUrl || imageUrl === '[object HTMLImageElement]') {
+    throw new Error('The image service returned no usable image.');
   }
 
-  // Image generation always goes through the server-side provider integration.
-  // No browser-side Puter AI calls or provider credentials are used.
-  // 3. Robust High-Fidelity Server-side Fallback (Gemini / Imagen 3)
-  try {
-    const res = await fetch('/api/generate-image', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt: finalPrompt,
-        imageSize: '1024x1024',
-        isPro: true
-      })
-    });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'Image generation service offline');
-    }
-
-    const data = await res.json();
-    const imageUrl = data.imageUrl || (data.fallbackUrls && data.fallbackUrls[0]);
-
-    if (!imageUrl) {
-      throw new Error('Image generator returned no visual output');
-    }
-
-    return {
-      id: `isaiahsi-img-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      imageUrl,
-      prompt,
-      enhancedPrompt,
-      model: 'Isaiahsi',
-      namingCredit: 'Named by Isaiahsi',
-      engineCredit: 'Powered by IsaiahAI server-side image engine',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-  } catch (serverErr: any) {
-    throw new Error(serverErr.message || 'Isaiahsi Image synthesis could not complete.');
-  }
+  return {
+    id: 'imagery-26-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7),
+    imageUrl,
+    prompt: cleanPrompt,
+    enhancedPrompt,
+    model: 'IsaiahAI Imagery 26',
+    namingCredit: 'IsaiahAI Imagery 26',
+    engineCredit: 'Puter AI image generation',
+    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  };
 }
