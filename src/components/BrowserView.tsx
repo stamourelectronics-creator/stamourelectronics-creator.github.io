@@ -2264,12 +2264,12 @@ export function BrowserView({
     const existingUrls = new Set((searchResults.results || []).map(item => normalizeSearchResultUrl(item.url)).filter(Boolean));
     try {
       for (let attempt = 0; attempt < 3; attempt++) {
-        const offset = Math.max(30, searchResults.results?.length || 0, moreLinksOffsetRef.current);
+        const offset = Math.max(10, moreLinksOffsetRef.current);
         const response = await fetch('/api/more-search-links', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ query: activeSearch, engine: preferredSearchEngine, safeSearch: safeSearchFilter, offset }),
         });
-        moreLinksOffsetRef.current = offset + 30;
+        moreLinksOffsetRef.current = offset + 10;
         if (requestId !== searchRequestIdRef.current) return false;
         if (!response.ok || response.headers.get('content-type')?.includes('text/html')) throw new Error('Could not load the next result page');
         const incoming = enrichSearchResults(await response.json());
@@ -2413,7 +2413,7 @@ export function BrowserView({
     const requestId = ++searchRequestIdRef.current;
     briefRequestIdRef.current += 1;
     moreRequestIdRef.current += 1;
-    moreLinksOffsetRef.current = 30;
+    moreLinksOffsetRef.current = 10;
     setContinueChatText('');
     setIsLoadingBrief(false);
     setIsTypingBrief(false);
