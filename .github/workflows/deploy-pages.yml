@@ -60,6 +60,7 @@ jobs:
           GITHUB_PAGES: 'true'
           VITE_NETLIFY_IFRAME_WRAPPER: 'false'
           VITE_API_BASE_URL: 'https://isaiahsearch.netlify.app'
+          VITE_GATEWAY_API_BASE_URL: 'https://codepro-gateway-production.up.railway.app'
       - name: Include IsaiahSearch mobile app
         run: |
           rm -rf dist/mobile
@@ -178,28 +179,39 @@ jobs:
             console.warn('Breakaway 1.0 Gemini smoke test could not complete: ' + String(error?.message || error));
           }
           NODE
-      - name: Smoke test IsaiahSearch browser results
-        continue-on-error: true
+      - name: Smoke test IsaiahSearch direct result coverage
         run: |
           node --input-type=module <<'NODE'
-          try {
-            const response = await fetch('https://isaiahsearch.netlify.app/api/quick-search-links', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-              body: JSON.stringify({ query: 'OpenAI', engine: 'isaiah', safeSearch: 'Moderate' }),
-              signal: AbortSignal.timeout(30000),
-              cache: 'no-store'
-            });
-            const data = await response.json().catch(() => ({}));
-            const results = Array.isArray(data.results) ? data.results : [];
-            const directLinks = results.filter(item => String(item.url || '').startsWith('https://') || String(item.url || '').startsWith('http://')).length;
-            if (!response.ok || !directLinks) {
-              console.warn('IsaiahSearch browser-search smoke test did not return direct links: HTTP ' +
-                response.status + ' | ' + String(data.error || 'No usable results.'));
-            } else {
-              console.log('IsaiahSearch browser search returned ' + directLinks + ' direct web links.');
+          const endpoint = 'https://codepro-gateway-production.up.railway.app/api/quick-search-links';
+          let passed = false;
+          let last = 'no response';
+          for (let attempt = 1; attempt <= 12; attempt += 1) {
+            try {
+              const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ query: 'OpenAI artificial intelligence', engine: 'isaiah', safeSearch: 'Moderate' }),
+                signal: AbortSignal.timeout(45000),
+                cache: 'no-store'
+              });
+              const data = await response.json().catch(() => ({}));
+              const results = Array.isArray(data.results) ? data.results : [];
+              const usable = results.filter(item => {
+                try {
+                  const url = new URL(String(item.url || ''));
+                  return ['http:', 'https:'].includes(url.protocol) && item.title && !/^(www\\.)?(google|bing|duckduckgo|search\\.brave)\\./i.test(url.hostname);
+                } catch { return false; }
+              });
+              last = 'HTTP ' + response.status + ', ' + usable.length + ' direct results (' + results.length + ' returned)';
+              if (response.ok && usable.length >= 8) {
+                console.log('IsaiahSearch coverage passed: ' + usable.length + ' direct page links returned.');
+                passed = true;
+                break;
+              }
+            } catch (error) {
+              last = String(error?.message || error);
             }
-          } catch (error) {
-            console.warn('IsaiahSearch browser-search smoke test could not complete: ' + String(error?.message || error));
+            if (attempt < 12) await new Promise(resolve => setTimeout(resolve, 10000));
           }
+          if (!passed) throw new Error('IsaiahSearch did not return enough usable direct links: ' + last);
           NODE
