@@ -6,6 +6,7 @@ import {
   Layers, Volume2, Image as ImageIcon, Flame, Globe, Tag
 } from 'lucide-react';
 import { ChatSession, UserSettings } from '../types';
+import { BrandLogo } from './BrandLogo';
 
 interface SidebarProps {
   sessions: ChatSession[];
@@ -27,6 +28,7 @@ interface SidebarProps {
   onGoogleSignOut?: () => void;
   onToggleVoiceMode?: () => void;
   onSelectImageMode?: () => void;
+  puterSignedIn?: boolean;
 }
 
 export function Sidebar({
@@ -49,6 +51,7 @@ export function Sidebar({
   onGoogleSignOut,
   onToggleVoiceMode,
   onSelectImageMode,
+  puterSignedIn = false,
 }: SidebarProps) {
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editTitleValue, setEditTitleValue] = useState<string>('');
@@ -126,8 +129,8 @@ export function Sidebar({
       <div className="p-4 pb-3 flex-shrink-0 flex items-center justify-between border-b border-zinc-900/40">
         <div className="flex items-center gap-2.5">
           {/* Logo Icon */}
-          <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shadow-md">
-            <Sparkles className="w-4 h-4" />
+          <div className="w-8 h-8 rounded-xl bg-zinc-950 border border-amber-500/20 flex items-center justify-center shadow-md overflow-hidden">
+            <BrandLogo size={27} includeBackground={false} />
           </div>
           <div className="flex flex-col text-left leading-none">
             <span className="font-bold font-display text-base text-zinc-100 tracking-tight">Isaiah AI</span>
@@ -202,6 +205,20 @@ export function Sidebar({
           <Globe className="w-3.5 h-3.5 text-emerald-400" />
           <span className="truncate flex-1">IsaiahSearch</span>
           <span className="text-[8px] bg-emerald-500/20 text-emerald-400 px-1 py-0.5 rounded font-bold font-mono">AI + WEB</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            onSelectImageMode?.();
+            if (onCloseMobile) onCloseMobile();
+          }}
+          title={puterSignedIn ? "Open IsaiahAI Imagery 26" : "Sign in with Puter to unlock IsaiahAI Imagery 26"}
+          className={`w-full h-9 flex items-center gap-2.5 px-3 rounded-xl text-xs font-semibold transition-all text-left cursor-pointer border border-transparent ${puterSignedIn ? 'hover:bg-zinc-850 text-zinc-200 hover:text-white' : 'opacity-45 grayscale bg-zinc-900/40 text-zinc-500 border-zinc-800/50'}`}
+        >
+          <ImageIcon className="w-3.5 h-3.5 text-violet-400" />
+          <span className="truncate flex-1">IsaiahAI Image Studio</span>
+          <span className={`text-[8px] px-1 py-0.5 rounded font-bold font-mono ${puterSignedIn ? 'bg-emerald-500/20 text-emerald-400' : 'bg-zinc-800 text-zinc-500'}`}>{puterSignedIn ? 'READY' : 'LOCKED'}</span>
         </button>
 
         <a
