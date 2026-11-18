@@ -2574,7 +2574,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                       <button onClick={() => setChatMode('general')} className={`flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-semibold transition-all shadow-sm ${isLight ? 'bg-zinc-100 border-zinc-200 text-zinc-800' : 'bg-zinc-800 border-zinc-700 text-zinc-200'}`}>
                         <Sparkles className="w-4 h-4" /> Chat Suggestions
                       </button>
-                      <button onClick={() => setChatMode('image')} className={`flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-semibold transition-all shadow-sm ${isLight ? 'bg-zinc-100 border-zinc-200 text-zinc-800' : 'bg-zinc-800 border-zinc-700 text-zinc-200'}`}>
+                      <button onClick={() => { void openImageStudio(); }} className={`flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-semibold transition-all shadow-sm ${isLight ? 'bg-zinc-100 border-zinc-200 text-zinc-800' : 'bg-zinc-800 border-zinc-700 text-zinc-200'}`}>
                         <ImageIcon className="w-4 h-4" /> Create & Edit Images
                       </button>
                       <button onClick={() => startLiveVoiceSession()} className={`flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-semibold transition-all shadow-sm ${isLight ? 'bg-zinc-100 border-zinc-200 text-zinc-800' : 'bg-zinc-800 border-zinc-700 text-zinc-200'}`}>
@@ -3407,26 +3407,16 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                 </div>
               )}
 
-              {/* Loader placeholder block */}
+              {/* Truthful task status: search only during the search request, then model phases. */}
               {isGenerating && (
-                (isSearchingWebActive || (currentSearchPrompt && (
-                  currentSearchPrompt.toLowerCase().includes('search') ||
-                  currentSearchPrompt.toLowerCase().includes('index') ||
-                  currentSearchPrompt.toLowerCase().includes('wikipedia') ||
-                  currentSearchPrompt.toLowerCase().includes('duckduck') ||
-                  currentSearchPrompt.toLowerCase().includes('lookup') ||
-                  currentSearchPrompt.toLowerCase().includes('crawling') ||
-                  currentSearchPrompt.toLowerCase().includes('scann') ||
-                  currentSearchPrompt.toLowerCase().includes('sweep') ||
-                  currentSearchPrompt.toLowerCase().includes('wiki')
-                ))) ? (
+                requestPhase === 'searching' ? (
                   <div className={`max-w-2xl sm:max-w-3xl mx-auto w-full py-3 text-left animate-fade-in flex flex-col gap-1.5 ${isLight ? 'text-zinc-700' : 'text-zinc-400'}`}>
                     <div className={`flex items-center gap-1.5 font-medium text-xs ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>
                       <RotatingWebIcon size={14} color="#f59e0b" className="text-amber-500" />
                       <span className="font-semibold text-xs">Searching the web</span>
                     </div>
                     <div className={`pl-3 ml-1.5 border-l ${isLight ? 'border-zinc-300 text-zinc-600' : 'border-zinc-700 text-zinc-400'} text-[11px] font-normal leading-relaxed`}>
-                      {activeSearchQuery || currentSearchPrompt || 'Crawling matching domain indices...'}
+                      {activeSearchQuery}
                     </div>
                   </div>
                 ) : (
@@ -3436,7 +3426,9 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                       <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-bounce" style={{ animationDelay: '170ms', animationDuration: '0.85s' }} />
                       <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-bounce" style={{ animationDelay: '340ms', animationDuration: '0.85s' }} />
                     </div>
-                    <span className="tracking-normal text-[11px] font-normal text-zinc-400">Generating response</span>
+                    <span className="tracking-normal text-[11px] font-normal text-zinc-400">
+                      {requestPhase === 'writing' ? 'Writing response...' : 'Thinking...'}
+                    </span>
                   </div>
                 )
               )}
@@ -4056,7 +4048,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    setChatMode('image');
+                                    void openImageStudio();
                                     setChatModeDropdownOpen(false);
                                   }}
                                   className={`w-full text-left px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all cursor-pointer mt-0.5 ${
@@ -4440,7 +4432,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                               type="button"
                               id="image-generation-dropdown-option"
                               onClick={() => {
-                                setChatMode('image');
+                                void openImageStudio();
                                 setChatModeDropdownOpen(false);
                               }}
                               className={`w-full text-left px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all cursor-pointer mt-0.5 ${
@@ -4757,7 +4749,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                 type="button"
                 onClick={() => {
                   setShowMobilePlusMenu(false);
-                  setChatMode('image');
+                  void openImageStudio();
                   setInputText((prev) => prev ? `${prev} [Avatar]` : "Generate a sleek custom 3D avatar profile picture: ");
                 }}
                 className={`flex flex-col items-center justify-center min-w-[88px] h-[88px] rounded-2xl p-2 transition-all border cursor-pointer shrink-0 ${
@@ -4817,7 +4809,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
               <button
                 type="button"
                 onClick={() => {
-                  setChatMode('image');
+                  void openImageStudio();
                   setShowMobilePlusMenu(false);
                 }}
                 className={`w-full flex items-center gap-3.5 p-3 rounded-2xl text-left transition-all cursor-pointer ${
