@@ -2948,6 +2948,8 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                               let modelName = msg.modelDisplayName;
                               if (!modelName) {
                                 if (modelKey === 'maw_ai') modelName = 'Maw AI';
+                                else if (modelKey === 'isaiah_codepro') modelName = 'IsaiahAI CodePro';
+                                else if (modelKey === 'breakaway_1_0') modelName = 'Breakaway 1.0';
                                 else if (modelKey === 'isaiah_5_3') modelName = 'IsaiahAI 5.3 Flash';
                                 else if (modelKey === 'isaiahai_7_super') modelName = 'IsaiahAI 7.0 SUPER';
                                 else if (modelKey === 'school') modelName = 'IsaiahAI School Mode';
@@ -3759,7 +3761,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                               ? 'text-amber-400'
                               : isLight ? 'text-zinc-600 hover:text-zinc-900' : 'text-zinc-400 hover:text-white'
                           }`}
-                          title={`Current model: ${selectedAiModel === 'isaiah_5_3' ? '5.3 Flash (Fast)' : selectedAiModel === 'maw_ai' ? 'Maw AI' : selectedAiModel === 'isaiahai_7_super' ? 'IsaiahAI 7.0 SUPER' : selectedAiModel === 'open_isaiah' ? 'Open-Isaiah' : 'Max 6.0 (Smart)'} - Tap to toggle 5.3`}
+                          title={`Current model: ${selectedAiModel === 'isaiah_5_3' ? '5.3 Flash (Fast)' : selectedAiModel === 'maw_ai' ? 'Maw AI' : selectedAiModel === 'isaiahai_7_super' ? 'IsaiahAI 7.0 SUPER' : selectedAiModel === 'open_isaiah' ? 'Open-Isaiah' : selectedAiModel === 'isaiah_codepro' ? 'IsaiahAI CodePro' : selectedAiModel === 'breakaway_1_0' ? 'Breakaway 1.0' : 'Max 6.0 (Smart)'} - Tap to toggle 5.3`}
                         >
                           <Zap className="w-5 h-5 stroke-[1.8]" />
                         </button>
@@ -3781,7 +3783,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                           >
                             <span className="tracking-tight">
                               {chatMode === 'general'
-                                ? (selectedAiModel === 'isaiah_5_3' ? '5.3 Flash' : selectedAiModel === 'maw_ai' ? 'Maw AI' : selectedAiModel === 'isaiahai_7_super' ? '7.0 SUPER' : selectedAiModel === 'open_isaiah' ? 'Open-Isaiah' : 'Max 6.0')
+                                ? (selectedAiModel === 'isaiah_5_3' ? '5.3 Flash' : selectedAiModel === 'maw_ai' ? 'Maw AI' : selectedAiModel === 'isaiahai_7_super' ? '7.0 SUPER' : selectedAiModel === 'open_isaiah' ? 'Open-Isaiah' : selectedAiModel === 'isaiah_codepro' ? 'CodePro' : selectedAiModel === 'breakaway_1_0' ? 'Breakaway' : 'Max 6.0')
                                 : chatMode === 'school'
                                 ? 'School Mode'
                                 : chatMode === 'code'
@@ -3942,6 +3944,47 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                                   {chatMode === 'general' && selectedAiModel === 'open_isaiah' && (
                                     <Check className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                                   )}
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedAiModel('isaiah_codepro');
+                                    localStorage.setItem('isaiah_selected_model', 'isaiah_codepro');
+                                    setChatMode('general');
+                                    setChatModeDropdownOpen(false);
+                                  }}
+                                  className={`w-full text-left px-2.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all cursor-pointer mt-1 ${chatMode === 'general' && selectedAiModel === 'isaiah_codepro' ? 'bg-amber-500/15 text-white border-l-2 border-amber-500' : isLight ? 'text-zinc-700 hover:bg-zinc-100' : 'text-zinc-300 hover:text-white hover:bg-zinc-900/80'}`}
+                                >
+                                  <span className="text-base">🧑‍💻</span>
+                                  <div className="flex-grow min-w-0">
+                                    <div className={`font-semibold text-xs flex items-center justify-between ${isLight ? 'text-zinc-900' : 'text-white'}`}>
+                                      <span>IsaiahAI CodePro</span>
+                                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono font-bold uppercase">Agent</span>
+                                    </div>
+                                    <div className="text-[9px] text-zinc-400 font-normal">Long-running engineering agent</div>
+                                  </div>
+                                  {chatMode === 'general' && selectedAiModel === 'isaiah_codepro' && <Check className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedAiModel('breakaway_1_0');
+                                    localStorage.setItem('isaiah_selected_model', 'breakaway_1_0');
+                                    setChatMode('general');
+                                    setChatModeDropdownOpen(false);
+                                  }}
+                                  className={`w-full text-left px-2.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all cursor-pointer mt-1 ${chatMode === 'general' && selectedAiModel === 'breakaway_1_0' ? 'bg-amber-500/15 text-white border-l-2 border-amber-500' : isLight ? 'text-zinc-700 hover:bg-zinc-100' : 'text-zinc-300 hover:text-white hover:bg-zinc-900/80'}`}
+                                >
+                                  <span className="text-base">⚡</span>
+                                  <div className="flex-grow min-w-0">
+                                    <div className={`font-semibold text-xs flex items-center justify-between ${isLight ? 'text-zinc-900' : 'text-white'}`}>
+                                      <span>Breakaway 1.0</span>
+                                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-400 font-mono font-bold uppercase">Fast</span>
+                                    </div>
+                                    <div className="text-[9px] text-zinc-400 font-normal">Independent reasoning assistant</div>
+                                  </div>
+                                  {chatMode === 'general' && selectedAiModel === 'breakaway_1_0' && <Check className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
                                 </button>
 
                                 {/* Specialized Modes */}
@@ -4276,6 +4319,47 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                               {chatMode === 'general' && selectedAiModel === 'open_isaiah' && (
                                 <Check className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                               )}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedAiModel('isaiah_codepro');
+                                localStorage.setItem('isaiah_selected_model', 'isaiah_codepro');
+                                setChatMode('general');
+                                setChatModeDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-2.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all cursor-pointer mt-1 ${chatMode === 'general' && selectedAiModel === 'isaiah_codepro' ? 'bg-amber-500/15 text-white border-l-2 border-amber-500' : 'text-zinc-300 hover:text-white hover:bg-zinc-900/80'}`}
+                            >
+                              <span className="text-base">🧑‍💻</span>
+                              <div className="flex-grow min-w-0">
+                                <div className="font-semibold text-xs text-white flex items-center justify-between">
+                                  <span>IsaiahAI CodePro</span>
+                                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono font-bold uppercase">Agent</span>
+                                </div>
+                                <div className="text-[9px] text-zinc-400 font-normal">Long-running engineering agent</div>
+                              </div>
+                              {chatMode === 'general' && selectedAiModel === 'isaiah_codepro' && <Check className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedAiModel('breakaway_1_0');
+                                localStorage.setItem('isaiah_selected_model', 'breakaway_1_0');
+                                setChatMode('general');
+                                setChatModeDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-2.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all cursor-pointer mt-1 ${chatMode === 'general' && selectedAiModel === 'breakaway_1_0' ? 'bg-amber-500/15 text-white border-l-2 border-amber-500' : 'text-zinc-300 hover:text-white hover:bg-zinc-900/80'}`}
+                            >
+                              <span className="text-base">⚡</span>
+                              <div className="flex-grow min-w-0">
+                                <div className="font-semibold text-xs text-white flex items-center justify-between">
+                                  <span>Breakaway 1.0</span>
+                                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-400 font-mono font-bold uppercase">Fast</span>
+                                </div>
+                                <div className="text-[9px] text-zinc-400 font-normal">Independent reasoning assistant</div>
+                              </div>
+                              {chatMode === 'general' && selectedAiModel === 'breakaway_1_0' && <Check className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
                             </button>
 
                             <div className="border-t border-zinc-900/80 my-1 pt-1">
