@@ -536,7 +536,7 @@ async function askGroqCodePro(body: AnyRecord, systemInstruction: string) {
       reasoning_effort: reasoningEffort,
       max_completion_tokens: body.showThinking === true ? 8192 : 4096,
     }),
-    signal: AbortSignal.timeout(body.showThinking === true ? 32000 : 24000),
+    signal: AbortSignal.timeout(body.showThinking === true ? 26000 : 18000),
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(`Groq GPT-OSS 120B request failed (${response.status}): ${data?.error?.message || data?.message || 'Provider error'}`);
@@ -545,7 +545,7 @@ async function askGroqCodePro(body: AnyRecord, systemInstruction: string) {
   return { content, model: String(data?.model || 'openai/gpt-oss-120b') };
 }
 
-async function askOpenRouter(body: AnyRecord, systemInstruction: string, preferredModel: string, budgetOverrideMs = 26000) {
+async function askOpenRouter(body: AnyRecord, systemInstruction: string, preferredModel: string, budgetOverrideMs = 26000, requestOptions: AnyRecord = {}) {
   const messages: any[] = [{ role: 'system', content: systemInstruction }];
   for (const item of Array.isArray(body.history) ? body.history : []) {
     if (!item || typeof item.content !== 'string' || !item.content.trim()) continue;
@@ -621,7 +621,7 @@ async function askOpenRouter(body: AnyRecord, systemInstruction: string, preferr
       const selectedMessages = messages;
       const modelTimeoutMs = model === models.vision ? 15000 : model === models.reasoning ? 22000 : model === models.fast ? 13000 : 9000;
       const timeoutMs = Math.max(1000, Math.min(modelTimeoutMs, remainingMs - 250));
-      return await openRouterChat(model, selectedMessages, timeoutMs);
+      return await openRouterChat(model, selectedMessages, timeoutMs, requestOptions);
     } catch (error: any) {
       lastError = error;
       console.warn(`[OpenRouter] ${model} failed; trying another free model:`, error?.message || error);
@@ -818,7 +818,7 @@ Live web findings follow. Use them as evidence and cite useful URLs in Markdown.
     }
     if (!content && (env('OPENROUTER_API_KEY') || env('ISAIAH_OPENROUTER_API_KEY'))) {
       try {
-        const fallback = await askOpenRouter({ ...body, message: query }, system, 'openrouter/free', 17000);
+        const fallback = await askOpenRouter({ ...body, message: query }, system, 'openrouter/free', 15000, { reasoningEffort: 'medium', maxTokens: 4096, temperature: 0.35 });
         content = extractOpenRouterContent(fallback).trim();
         modelUsed = String(fallback?.model || 'OpenRouter free backup');
         provider = 'OpenRouter';
@@ -857,7 +857,7 @@ Live web findings follow. Use them as evidence and cite useful URLs in Markdown.
     }
     if (!content && (env('OPENROUTER_API_KEY') || env('ISAIAH_OPENROUTER_API_KEY'))) {
       try {
-        const fallback = await askOpenRouter({ ...body, message: query }, system, 'openrouter/free', 17000);
+        const fallback = await askOpenRouter({ ...body, message: query }, system, 'openrouter/free', 14000, { reasoning: false, maxTokens: 4096, temperature: 0.45 });
         content = extractOpenRouterContent(fallback).trim();
         modelUsed = String(fallback?.model || 'OpenRouter free backup');
         provider = 'OpenRouter';
@@ -869,7 +869,7 @@ Live web findings follow. Use them as evidence and cite useful URLs in Markdown.
   } else if (activeModel === 'open_isaiah') {
     if (env('OPENROUTER_API_KEY') || env('ISAIAH_OPENROUTER_API_KEY')) {
       try {
-        const result = await askOpenRouter({ ...body, message: query }, system, 'openrouter/free', 20000);
+        const result = await askOpenRouter({ ...body, message: query }, system, 'openrouter/free', 15000, { reasoning: false, maxTokens: 4096, temperature: 0.35 });
         content = extractOpenRouterContent(result).trim();
         modelUsed = String(result?.model || 'OpenRouter free pool');
         provider = 'OpenRouter';
