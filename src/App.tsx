@@ -174,6 +174,7 @@ async function optimizeMawSearchQuery(
   const fallback = input
     .trim()
     .replace(/^(?:please\s+)?(?:what\s+(?:is|are|was|were)|who\s+(?:is|are)|tell\s+me\s+about|explain|define|describe|give\s+me\s+(?:an?\s+)?(?:overview|summary)\s+of)\s+/i, '')
+    .replace(/^(?:a|an|the)\s+/i, '')
     .replace(/[?!.]+$/, '')
     .trim()
     .slice(0, 100);
