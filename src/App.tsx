@@ -117,7 +117,8 @@ function VersionsSandbox() {
 
 async function readIsaiahEventStream(
   response: Response,
-  onPhase: (phase: 'thinking' | 'writing') => void
+  onPhase: (phase: 'thinking' | 'writing') => void,
+  onDelta?: (text: string) => void
 ): Promise<any> {
   const reader = response.body?.getReader();
   if (!reader) throw new Error('The AI response stream was unavailable.');
@@ -139,6 +140,7 @@ async function readIsaiahEventStream(
       else if (payload.status !== 'checking') onPhase('thinking');
     } else if (eventName === 'delta') {
       accumulated += String(payload.text || '');
+      onDelta?.(accumulated);
     } else if (eventName === 'done') {
       completed = { ...completed, ...payload };
     } else if (eventName === 'error') {
@@ -163,6 +165,69 @@ async function readIsaiahEventStream(
   const content = String(completed.content || accumulated).trim();
   if (!content) throw new Error('The selected model returned an empty response.');
   return { ...completed, content };
+}
+
+async function optimizeMawSearchQuery(
+  input: string,
+  history: Array<{ role: string; content: string }> = []
+): Promise<string> {
+  const fallback = input
+    .trim()
+    .replace(/^(?:please\\s+)?(?:what\\s+(?:is|are|was|were)|who\\s+(?:is|are)|tell\\s+me\\s+about|explain|define|describe|give\\s+me\\s+(?:an?\\s+)?(?:overview|summary)\\s+of)\\s+/i, '')
+    .replace(/[?!.]+$/, '')
+    .trim()
+    .slice(0, 100);
+
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: input,
+        history: history.slice(-6),
+        model: 'isaiahai_7_super',
+        selectedModel: 'isaiahai_7_super',
+        chatMode: 'general',
+        stream: true,
+        searchWebEnabled: false,
+        reasoningMode: 'auto',
+        reasoningEffort: 'low',
+        showThinking: false,
+        systemInstruction: [
+          'You are IsaiahAI 7.0 SUPER acting only as a search-query simplifier for Maw AI.',
+          'Convert the user question into the shortest clear topic/entity search phrase Maw AI can look up in DuckDuckGo Instant Answers and Wikipedia.',
+          'Example: "What is a bear?" becomes "bear".',
+          'Example: "Why do polar bears have white fur?" becomes "polar bear white fur".',
+          'Preserve the key subject and distinguishing details. Remove conversational wording such as "what is", "tell me about", and "can you explain".',
+          'Return only the search phrase on one line. Do not answer the question, add commentary, or use quotation marks.'
+        ].join(' ')
+      })
+    });
+    if (!response.ok) {
+      const details = await response.json().catch(() => ({}));
+      throw new Error(details.error || 'IsaiahAI 7.0 SUPER could not simplify the Maw AI query.');
+    }
+    const result = response.headers.get('content-type')?.includes('text/event-stream')
+      ? await readIsaiahEventStream(response, () => {})
+      : await response.json();
+    let phrase = String(result?.content || result?.query || '').trim();
+    try {
+      const parsed = JSON.parse(phrase);
+      phrase = String(parsed.searchQuery || parsed.query || parsed.topic || phrase).trim();
+    } catch {
+      // The model is instructed to return a plain-text search phrase.
+    }
+    phrase = phrase
+      .split(/\\r?\\n/)[0]
+      .replace(/^(?:search query|topic|query)\\s*:\\s*/i, '')
+      .replace(/^[\\"'\x60]+|[\\"'\x60]+$/g, '')
+      .replace(/[?!.]+$/, '')
+      .trim();
+    if (phrase && phrase.length <= 100) return phrase;
+  } catch (error) {
+    console.warn('[Maw AI] IsaiahAI 7.0 SUPER query simplification failed; using a local fallback:', error);
+  }
+  return fallback || input.trim().slice(0, 100);
 }
 
 function promptNeedsLiveSearch(prompt: string): boolean {
@@ -580,6 +645,7 @@ export default function App() {
   const [inputText, setInputText] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [requestPhase, setRequestPhase] = useState<'thinking' | 'searching' | 'writing'>('thinking');
+  const [streamingAnswer, setStreamingAnswer] = useState<string>('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [currentSearchPrompt, setCurrentSearchPrompt] = useState<string | null>(null);
   const [gameGenPrompt, setGameGenPrompt] = useState<string>('');
@@ -1555,6 +1621,7 @@ export default function App() {
     setInputText('');
     setUploadedImages([]); // Clear preview list
     setIsGenerating(true);
+    setStreamingAnswer('');
 
     const activeModelKey = chatMode !== 'general' ? chatMode : selectedAiModel;
     const activeModelDisplayName = chatMode === 'school' ? 'IsaiahAI School Mode'
@@ -2092,7 +2159,10 @@ export default function App() {
         try {
           if (modelToSend === 'maw_ai' && mawAIRef.current) {
             data = {
-              content: await mawAIRef.current.generateResponse(rawPrompt),
+              content: await mawAIRef.current.generateResponse(
+                rawPrompt,
+                (question: string) => optimizeMawSearchQuery(question, chatHistoryMap)
+              ),
               sources: [],
               provider: 'Maw local core'
             };
@@ -2174,7 +2244,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
             if (response.headers.get('content-type')?.includes('text/html')) throw new Error('Received HTML error page');
             const responseType = response.headers.get('content-type') || '';
             data = responseType.includes('text/event-stream')
-              ? await readIsaiahEventStream(response, setRequestPhase)
+              ? await readIsaiahEventStream(response, setRequestPhase, setStreamingAnswer)
               : await response.json();
           }
         } catch (apiErr: any) {
@@ -2275,6 +2345,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
       });
     } finally {
       setIsGenerating(false);
+      setStreamingAnswer('');
       setIsSearchingWebActive(false);
       setActiveSearchQuery('');
       setCurrentSearchPrompt(null);
@@ -3515,6 +3586,15 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                       </div>
                     );
                   })}
+                </div>
+              )}
+
+              {isGenerating && streamingAnswer.trim() && (
+                <div className={`max-w-2xl sm:max-w-3xl mx-auto w-full py-3 text-left animate-fade-in ${isLight ? 'text-zinc-800' : 'text-zinc-100'}`}>
+                  <div className={`text-[10px] font-semibold uppercase tracking-wider mb-2 ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>Live response</div>
+                  <div className="text-sm leading-7 whitespace-pre-wrap break-words">
+                    <Markdown>{streamingAnswer}</Markdown>
+                  </div>
                 </div>
               )}
 
