@@ -1,7 +1,7 @@
 {
   "name": "isaiahsearch-browser",
   "productName": "IsaiahSearch",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "description": "IsaiahSearch desktop browser and IsaiahAI reasoning-first coding chat for Windows and Ubuntu, with full-screen agent chat, approved project-file review, built-in browser research, Search Assist, and Puter-powered IsaiahAI 26 Thinking.",
   "main": "main.cjs",
   "license": "UNLICENSED",
