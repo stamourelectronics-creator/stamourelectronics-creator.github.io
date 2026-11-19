@@ -23,6 +23,7 @@ import {
   auth, googleProvider, googleWorkspaceProvider, GoogleAuthProvider, signInWithPopup,
   signInWithRedirect, getRedirectResult, linkWithPopup, linkWithRedirect,
   signInAnonymously, signOut, onAuthStateChanged,
+  createUserWithEmailAndPassword, signInWithEmailAndPassword,
   db, doc, getDoc, setDoc, deleteDoc, getDocs, query, where, collection, onSnapshot
 } from './firebase';
 
@@ -228,6 +229,7 @@ export default function App() {
   const [authPassword, setAuthPassword] = useState<string>('');
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [authLoading, setAuthLoading] = useState<boolean>(false);
+  const [authFormError, setAuthFormError] = useState<string | null>(null);
 
   useEffect(() => {
     if (auth) {
@@ -256,6 +258,10 @@ export default function App() {
         if (user) {
           // Anonymous Firebase sessions are for cloud sync, not a signed-in Google account.
           setCurrentUser(user.isAnonymous ? null : user);
+          if (!user.isAnonymous) {
+            setShowAuthModal(false);
+            setAuthFormError(null);
+          }
           try {
             const profileRef = doc(db, 'user_profiles', user.uid);
             profileUnsubscribe = onSnapshot(profileRef, async (profileSnap) => {
@@ -442,6 +448,20 @@ export default function App() {
     if (code === 'auth/popup-closed-by-user') return "Google sign-in was cancelled before it finished.";
     if (code === 'auth/account-exists-with-different-credential') return "This email already uses another sign-in method. Sign in with that method first, then connect Google.";
     return err?.message || "Google sign-in could not be completed. Please try again.";
+  };
+
+  const describeCredentialAuthError = (err: any): string => {
+    const code = String(err?.code || '');
+    if (code === 'auth/invalid-email') return "That email address is not valid. Check it and try again.";
+    if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+      return "The email or password is incorrect. Check your details or create a new account.";
+    }
+    if (code === 'auth/email-already-in-use') return "An account already exists with this email. Choose Log In instead.";
+    if (code === 'auth/weak-password') return "Choose a stronger password with at least 6 characters.";
+    if (code === 'auth/operation-not-allowed') return "Email/password sign-in is disabled for this Firebase project. Enable Email/Password in Firebase Console → Authentication → Sign-in method.";
+    if (code === 'auth/network-request-failed') return "Firebase could not connect. Check your internet connection and try again.";
+    if (code === 'auth/too-many-requests') return "Too many attempts were made. Wait a little before trying again.";
+    return err?.message || "Your account request could not be completed. Please try again.";
   };
 
   const runGoogleSignIn = async (provider: any): Promise<string | null> => {
@@ -2573,7 +2593,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                   </div>
                 ) : (
                   <button
-                    onClick={handleGoogleSignIn}
+                    onClick={() => { setAuthFormError(null); setShowAuthModal(true); }}
                     className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 active:scale-95 text-zinc-950 font-bold font-mono text-[10px] rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
                     title="Authenticate to your account"
                   >
@@ -2610,7 +2630,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                 userNickname={settings.userNickname} 
                 activeTab={undefined} 
                 currentUser={currentUser}
-                onGoogleSignIn={handleGoogleSignIn}
+                onGoogleSignIn={() => { setAuthFormError(null); setShowAuthModal(true); }}
                 onGoogleSignOut={handleGoogleSignOut}
                 initialCreativePrompt={gameGenPrompt}
               />
@@ -5224,7 +5244,7 @@ Workspace Host: ${window.location.host}
       )}
 
       {/* 7. CREDENTIALS AUTHENTICATION FORM MODAL */}
-      {false && (
+      {showAuthModal && (
         <div id="credentials-auth-modal" className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-[9999] animate-fade-in text-slate-100">
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl relative text-left">
             <button
@@ -5242,6 +5262,12 @@ Workspace Host: ${window.location.host}
                 <p className="text-[9px] text-zinc-400 font-mono">COGNITIVE USER NODE REGISTER</p>
               </div>
             </div>
+
+            {authFormError && (
+              <div role="alert" className="rounded-xl border border-rose-500/30 bg-rose-950/50 px-3 py-2 text-[11px] leading-relaxed text-rose-100">
+                {authFormError}
+              </div>
+            )}
 
             {/* Mode selection tabs */}
             <div className="grid grid-cols-2 p-1 bg-zinc-950 rounded-xl border border-zinc-800">
@@ -5277,18 +5303,26 @@ Workspace Host: ${window.location.host}
                   setShareNotice("Please specify email and password values.");
                   return;
                 }
+                if (!auth) {
+                  setAuthFormError("Firebase Authentication is not configured for this site.");
+                  return;
+                }
                 setAuthLoading(true);
+                setAuthFormError(null);
                 try {
+                  const email = authEmail.trim();
                   if (authMode === 'login') {
-                    await (window as any).logInUser(authEmail, authPassword);
+                    await signInWithEmailAndPassword(auth, email, authPassword);
                   } else {
-                    await (window as any).signUpUser(authEmail, authPassword);
+                    await createUserWithEmailAndPassword(auth, email, authPassword);
                   }
                   setShowAuthModal(false);
                   setAuthEmail('');
                   setAuthPassword('');
+                  setAuthFormError(null);
                 } catch (err: any) {
-                  console.warn("Credentials Auth Action fail:", err);
+                  setAuthFormError(describeCredentialAuthError(err));
+                  console.warn("Firebase email/password sign-in failed:", err?.code || err?.message);
                 } finally {
                   setAuthLoading(false);
                 }
@@ -5315,9 +5349,10 @@ Workspace Host: ${window.location.host}
                   id="credentials-password"
                   type="password"
                   required
+                  minLength={6}
                   value={authPassword}
                   onChange={(e) => setAuthPassword(e.target.value)}
-                  placeholder="••••••••••••"
+                  placeholder="At least 6 characters"
                   className="w-full bg-zinc-950 border border-zinc-850 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500 transition-colors font-mono"
                   disabled={authLoading}
                 />
@@ -5346,9 +5381,9 @@ Workspace Host: ${window.location.host}
             {/* Google Authentication redirect */}
             <button
               type="button"
-              onClick={async () => {
+              onClick={() => {
                 setShowAuthModal(false);
-                await setShowAuthModal(true);
+                void handleGoogleSignIn();
               }}
               className="w-full py-2.5 bg-zinc-950 hover:bg-zinc-850 text-zinc-300 font-semibold rounded-xl text-xs transition-all border border-zinc-800 cursor-pointer flex items-center justify-center gap-2"
             >
