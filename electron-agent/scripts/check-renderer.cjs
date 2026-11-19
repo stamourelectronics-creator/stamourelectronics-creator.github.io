@@ -132,7 +132,9 @@ if (!main.includes("ipcMain.handle('workspace:run-command'") ||
     !main.includes("'Run command'") ||
     !main.includes('cwd: root') ||
     !main.includes('LOCAL_COMMAND_ALLOWLIST') ||
-    !main.includes('BLOCKED_SECRET_PATTERN')) {
+    !main.includes('BLOCKED_SECRET_PATTERN') ||
+    !main.includes('function createWorkspaceCommandEnv') ||
+    !main.includes('env: createWorkspaceCommandEnv()')) {
   throw new Error('The local command runner must be restricted to the selected workspace and require native user approval.');
 }
 if (!main.includes('shell: false') || !main.includes('windowsHide: true') || !main.includes('120000')) {
