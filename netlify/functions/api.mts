@@ -724,12 +724,12 @@ async function makeThinkingSummary(question: string, answer: string, provider: '
   return 'I focused on the question, relevant context and constraints, then organized the most useful points into the answer. This is a brief explanation of the approach, not a transcript of private internal reasoning.';
 }
 function normalizeMawQueryFallback(input: string): string {
-  const original = String(input || '').trim().replace(/\\s+/g, ' ');
+  const original = String(input || '').trim().replace(/\s+/g, ' ');
   if (!original) return '';
-  if (/\\d\\s*(?:[+*/^%]|-(?=\\s*\\d)|\\bplus\\b|\\bminus\\b|\\btimes\\b|\\bdivided by\\b)\\s*\\d/i.test(original)) return original;
+  if (/\d\s*(?:[+*/^%]|-(?=\s*\d)|\bplus\b|\bminus\b|\btimes\b|\bdivided by\b)\s*\d/i.test(original)) return original;
   const query = original
-    .replace(/^(?:hey|hi|hello|please|can you|could you|would you|tell me|explain to me|explain|describe|what is|what are|who is|who are|where is|where are|when is|when was|how does|how do|how did|why does|why do|why is|why are|give me (?:some )?(?:information|info) about|information about|tell me about)\\s+/i, '')
-    .replace(/^(?:a|an|the)\\s+/i, '')
+    .replace(/^(?:hey|hi|hello|please|can you|could you|would you|tell me|explain to me|explain|describe|what is|what are|who is|who are|where is|where are|when is|when was|how does|how do|how did|why does|why do|why is|why are|give me (?:some )?(?:information|info) about|information about|tell me about)\s+/i, '')
+    .replace(/^(?:a|an|the)\s+/i, '')
     .replace(/[?!.]+$/g, '')
     .trim();
   return query || original;
@@ -746,9 +746,9 @@ async function normalizeMawQueryWithIsaiahSuper(input: string): Promise<string> 
     { reasoningEffort: 'low', maxTokens: 70, temperature: 0.1 }
   );
   const rewritten = extractOpenRouterContent(result).trim()
-    .split(/\\r?\\n/)[0]
+    .split(/\r?\n/)[0]
     .replace(/^["'`]+|["'`]+$/g, '')
-    .replace(/^(?:search phrase|search query):\\s*/i, '')
+    .replace(/^(?:search phrase|search query):\s*/i, '')
     .trim();
   if (!rewritten || rewritten.length > 180) throw new Error('IsaiahAI 7.0 SUPER did not return a short Maw search phrase.');
   return rewritten;
