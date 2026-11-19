@@ -869,7 +869,7 @@ async function readGatewayEventStream(response,callbacks,label){
   if(!raw)return;
   let payload;try{payload=JSON.parse(raw);}catch{return;}
   if(eventName==='status'){
-   if(callbacks&&typeof callbacks.onStatus==='function')callbacks.onStatus(String(payload.message||payload.status||('Thinking with '+label+'…'));
+   if(callbacks&&typeof callbacks.onStatus==='function')callbacks.onStatus(String(payload.message||payload.status||('Thinking with '+label+'…')));
   }else if(eventName==='delta'){
    const delta=String(payload.text||'');if(delta){content+=delta;if(callbacks&&typeof callbacks.onDelta==='function')callbacks.onDelta(delta);}
   }else if(eventName==='done'){
