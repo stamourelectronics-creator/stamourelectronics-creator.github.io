@@ -964,7 +964,8 @@ async function requestChatTurn(message,history,selectedModel,images,files,showSu
     body:JSON.stringify({message:message,history:history,stream:true,showThinking:showSummary,reasoningEffort:showSummary?'high':'medium'}),
     signal:AbortSignal.timeout(150000),cache:'no-store'
    });
-   return await readGatewayEventStream(response,callbacks,'IsaiahAI CodePro');
+   const data=await readGatewayEventStream(response,callbacks,'IsaiahAI CodePro');
+    return {...data,selectedProvider:'IsaiahAI CodePro',selectedModel:'isaiah_codepro',model:'IsaiahAI CodePro'};
   },2,callbacks&&callbacks.onRetry);
  }
 
