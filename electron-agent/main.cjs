@@ -697,3 +697,135 @@ ipcMain.handle('workspace:write', async (_event, payload) => {
   await fs.writeFile(item.file, content, { encoding: 'utf8', flag: 'wx' });
   return { saved: true, created: true, backup: null };
 });
+
+
+const LOCAL_COMMAND_ALLOWLIST = new Set([
+  'npm','npx','pnpm','yarn','bun','node','python','python3','py','pytest','uv','ruff','black',
+  'dotnet','cargo','rustc','go','java','javac','mvn','gradle','cmake','ctest','make',
+  'gcc','g++','clang','clang++','git',
+  'get-childitem','get-content','get-location','get-item','test-path','resolve-path',
+  'select-string','write-output','write-host','measure-object','compare-object',
+  'pwd','ls','dir','cat','type','where.exe','findstr','echo'
+]);
+const BLOCKED_COMMAND_PATTERN = /\b(?:sudo|runas|start-process|invoke-expression|iex|invoke-command|start-job|remove-item|del|erase|rmdir|rd|format|diskpart|shutdown|restart-computer|stop-computer|clear-disk|reg(?:\.exe)?|set-executionpolicy|taskkill|wmic|netsh|schtasks|bcdedit|takeown|icacls|get-credential|curl|wget|invoke-webrequest|invoke-restmethod|ssh|scp|sftp|ftp|telnet)\b/i;
+const BLOCKED_SECRET_PATTERN = /(?:\.env(?:\.[a-z0-9_-]+)?|secrets?|credentials?|password|api[_-]?key|access[_-]?token|authorization|private[_-]?key|id_rsa|id_ed25519|\.ssh|\.aws|\.azure|appdata|localappdata)/i;
+
+function validateWorkspaceCommand(payload) {
+  const requestedShell = String(payload && payload.shell || '').trim().toLowerCase();
+  const expectedShell = process.platform === 'win32' ? 'powershell' : process.platform === 'linux' ? 'bash' : '';
+  if (!expectedShell) throw new Error('Approved local commands are supported on Windows and Ubuntu only.');
+  if (requestedShell !== expectedShell && !(expectedShell === 'powershell' && requestedShell === 'pwsh')) {
+    throw new Error('The requested command shell does not match this operating system.');
+  }
+  const command = String(payload && payload.command || '').trim();
+  if (!command || command.length > 1800) throw new Error('The command is empty or exceeds the 1,800-character limit.');
+  if (/[\r\n\x00-\x1f]/.test(command)) throw new Error('Run one command at a time. Multi-line commands are blocked.');
+  if (/[;&|<>$()\\]/.test(command) || command.includes(String.fromCharCode(96))) {
+    throw new Error('This command contains shell operators or expansion syntax that the local safety check blocks.');
+  }
+  if (BLOCKED_COMMAND_PATTERN.test(command) || BLOCKED_SECRET_PATTERN.test(command)) {
+    throw new Error('This command includes a blocked system, network, or credential operation.');
+  }
+  if (/(^|\s)(?:[a-z]:[\\/]|\\\\|\/|~[\\/])/i.test(command) || /(^|[\s"'])\.\.([\\/]|$)/.test(command)) {
+    throw new Error('Absolute paths and parent-directory traversal are blocked. Commands must stay in the selected project folder.');
+  }
+  const executable = String(command.match(/^[a-z0-9_.-]+/i)?.[0] || '').toLowerCase();
+  if (!LOCAL_COMMAND_ALLOWLIST.has(executable)) throw new Error('That executable is not on the approved project-command list.');
+  const argsText = command.slice(executable.length).trim();
+  if (executable === 'git') {
+    const subcommand = String(argsText.match(/^[a-z-]+/i)?.[0] || '').toLowerCase();
+    if (!['status','diff','log','show','branch','rev-parse','ls-files','check-ignore'].includes(subcommand)) {
+      throw new Error('Only read-only Git inspection commands are enabled.');
+    }
+  }
+  if (['npm','pnpm','yarn','bun'].includes(executable)) {
+    const subcommand = String(argsText.match(/^[a-z-]+/i)?.[0] || '').toLowerCase();
+    if (!['install','ci','test','run','build','start','lint','check','list','outdated','audit','typecheck','format'].includes(subcommand)) {
+      throw new Error('That package-manager operation is not on the approved project task list.');
+    }
+  }
+  return { shell: expectedShell, command };
+}
+
+function runApprovedWorkspaceCommand(command) {
+  const root = path.resolve(requireWorkspace());
+  const windows = process.platform === 'win32';
+  const executable = windows
+    ? (process.env.SystemRoot ? path.join(process.env.SystemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe') : 'powershell.exe')
+    : '/bin/bash';
+  const args = windows
+    ? ['-NoLogo','-NoProfile','-NonInteractive','-Command', "$ErrorActionPreference='Stop'\n" + command + "\nif ($LASTEXITCODE -is [int]) { exit $LASTEXITCODE }"]
+    : ['--noprofile','--norc','-lc','set -e\n' + command];
+
+  return new Promise((resolve,reject) => {
+    let settled = false;
+    let stdout = '';
+    let stderr = '';
+    let timedOut = false;
+    const MAX_OUTPUT_CHARS = 18000;
+    const append = (current, chunk) => {
+      const next = current + String(chunk || '');
+      return next.length > MAX_OUTPUT_CHARS ? next.slice(-MAX_OUTPUT_CHARS) : next;
+    };
+    let child;
+    try {
+      child = spawn(executable, args, {
+        cwd: root,
+        windowsHide: true,
+        shell: false,
+        env: process.env,
+        stdio: ['ignore','pipe','pipe']
+      });
+    } catch (error) {
+      reject(new Error('The local command could not be started: ' + String(error && error.message || error)));
+      return;
+    }
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      try { child.kill('SIGTERM'); } catch {}
+      const forceStop = setTimeout(() => { try { child.kill('SIGKILL'); } catch {} }, 2500);
+      forceStop.unref?.();
+    }, 120000);
+    child.stdout.on('data', chunk => { stdout = append(stdout, chunk); });
+    child.stderr.on('data', chunk => { stderr = append(stderr, chunk); });
+    child.once('error', error => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      reject(new Error('The local command process failed: ' + String(error && error.message || error)));
+    });
+    child.once('close', (code, signal) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      let output = stdout.trim();
+      if (stderr.trim()) output += (output ? '\n\n' : '') + '[stderr]\n' + stderr.trim();
+      if (timedOut) output += (output ? '\n\n' : '') + 'Command stopped after the 120-second time limit.';
+      if (!output) output = signal ? 'Process ended with signal ' + signal + '.' : '(no output)';
+      resolve({ approved: true, cwd: root, exitCode: Number.isInteger(code) ? code : (timedOut ? 124 : 1), timedOut, output });
+    });
+  });
+}
+
+let workspaceCommandInProgress = false;
+ipcMain.handle('workspace:run-command', async (_event, payload) => {
+  if (workspaceCommandInProgress) throw new Error('A local command is already running. Wait for it to finish first.');
+  const root = await fs.realpath(requireWorkspace());
+  const validated = validateWorkspaceCommand(payload);
+  const detail = [
+    'Working folder: ' + root,
+    '',
+    'Command:',
+    validated.command,
+    '',
+    'This runs locally in the selected project folder, without Administrator privileges.',
+    'A project script may create or change project files or install dependencies.',
+    'System commands, network transfer tools, credential access, and absolute/out-of-folder paths are blocked.'
+  ].join('\n');
+  const approved = await confirmAction('Approve local command?', 'Allow IsaiahAI to run this command on this computer?', detail, 'Run command');
+  if (!approved) return { approved: false, canceled: true, cwd: root };
+  workspaceCommandInProgress = true;
+  try { return await runApprovedWorkspaceCommand(validated.command); }
+  finally { workspaceCommandInProgress = false; }
+});
+
