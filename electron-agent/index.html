@@ -915,7 +915,7 @@ async function requestBreakawayBackup(message,history,images,files,callbacks){
 
 function isTransientModelError(error){
  const status=Number(error&&error.status||0),message=safeError(error).toLowerCase();
- return [408,425,429,500,502,503,504].includes(status)||/high demand|overload|overloaded|temporarily unavailable|try again|rate.?limit|too many requests|service busy|capacity|timed out|timeout|network error|fetch failed|connection reset|resource_exhausted|server_error/.test(message);
+ return [408,425,429,500,502,503,504].includes(status)||/high demand|overload|overloaded|temporarily unavailable|try again|rate.?limit|too many requests|service busy|capacity|quota|resource exhausted|over capacity|\b429\b|\b503\b|timed out|timeout|network error|fetch failed|connection reset|resource_exhausted|server_error/.test(message);
 }
 async function withAutomaticRetries(label,operation,maxAttempts,onRetry){
  const total=Math.max(1,Number(maxAttempts)||3);
