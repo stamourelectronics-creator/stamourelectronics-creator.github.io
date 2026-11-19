@@ -166,7 +166,11 @@ main{height:100%;height:100dvh;min-height:0;width:100%;margin:0;padding:0;overfl
 .widget-action{padding:7px 10px;border:1px solid #9cbaff2a;border-radius:9px;background:#9dbaff15;color:#c7dcff;font-size:10px;font-weight:800}.widget-action:hover{background:#9dbaff25}
 .newtab-footer{display:flex;justify-content:space-between;gap:16px;margin-top:auto;padding-top:22px;color:#60728e;font-size:8px;letter-spacing:1.1px}
 .browser-views{order:5;flex:1;min-width:0;min-height:0;width:100%;height:100%;background:#fff}.browser-views[hidden],.browser-home[hidden]{display:none!important}
-#panel-chat.chat-drawer{display:none!important}#panel-chat.chat-drawer.chat-open{position:fixed;z-index:1200;top:0;right:0;bottom:0;width:min(490px,96vw);height:100dvh;min-height:0;display:flex!important;flex-direction:column;background:linear-gradient(160deg,#10192a,#0a101d);border-left:1px solid #9bbcff2e;box-shadow:-24px 0 70px #0008}
+.panel[hidden]{display:none!important}
+#panel-chat.chat-drawer[hidden]{display:none!important}
+#panel-chat.chat-drawer:not([hidden]){position:fixed!important;inset:0!important;z-index:1200!important;width:100vw!important;max-width:none!important;height:100dvh!important;min-height:0;display:flex!important;flex-direction:row!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;background:#0b0e14;color:#e7ebf2;border:0!important;border-radius:0!important;box-shadow:none!important}
+#panel-chat.chat-drawer:not([hidden])>.chat{display:flex!important;flex:1;min-width:0;width:auto;height:100%;min-height:0}
+#panel-browser[hidden]{display:none!important}
 #panel-chat .chat{height:100%;min-height:0;background:transparent}.chat-drawer-head{flex:none;min-height:67px;display:flex;align-items:center;justify-content:space-between;gap:9px;padding:10px 13px 10px 16px;border-bottom:1px solid #ffffff12;background:#111b2d}
 .chat-drawer-brand{display:flex;align-items:center;gap:10px;min-width:0}.chat-drawer-mark{width:35px;height:35px;flex:none;display:grid;place-items:center;border:1px solid #b2a1ff42;border-radius:12px;background:linear-gradient(145deg,#8fc9ff,#b9a2ff);color:#10172b;font-size:20px;font-weight:900}
 .chat-drawer-brand strong{display:block;color:#eff5ff;font-size:12px}.chat-drawer-brand small{display:block;color:#8295b2;font-size:9px;margin-top:2px}
@@ -397,7 +401,7 @@ body.night-theme .search-form input{color:#f6efff!important}
 </style></head><body>
 
 <main>
-<section id="panel-chat" class="panel chat-drawer" aria-label="IsaiahAI Chat coding workspace">
+<section id="panel-chat" class="panel chat-drawer" hidden aria-hidden="true" aria-label="IsaiahAI Chat coding workspace">
 <aside class="ide-rail" aria-label="Workspace navigation">
  <div class="ide-rail-brand" title="IsaiahAI">✦</div>
  <button type="button" id="railChatBtn" class="active" title="Chat" aria-label="Chat">⌁</button>
@@ -986,7 +990,7 @@ async function sendChat(prompt){
 
 $('chatForm').addEventListener('submit',function(event){event.preventDefault();sendChat($('chatInput').value).catch(function(error){stopThinking();appendMessage('assistant','Something went wrong: '+safeError(error));$('sendBtn').disabled=false;});});
 $('closeChatBtn').addEventListener('click',closeChat);
-$('railChatBtn').addEventListener('click',function(){$('chatInput').focus();$('transcript').scrollTo({top:$('transcript').scrollHeight,behavior:'smooth'});});
+$('railChatBtn').addEventListener('click',function(){openChat();$('transcript').scrollTo({top:$('transcript').scrollHeight,behavior:'smooth'});});
 document.querySelectorAll('[data-prompt]').forEach(function(button){button.addEventListener('click',function(){sendChat(button.dataset.prompt).catch(function(error){stopThinking();appendMessage('assistant','Something went wrong: '+safeError(error));$('sendBtn').disabled=false;});});});
 function resizeChatInput(){const input=$('chatInput');input.style.height='auto';input.style.height=Math.min(input.scrollHeight,180)+'px';}
  $('chatInput').addEventListener('input',resizeChatInput);
@@ -1197,10 +1201,31 @@ function closeBrowserTab(id){
  else renderBrowserTabs();
 }
 function activatePanel(name){
- currentPanel=name==='chat'?'chat':'browser';const drawer=$('panel-chat');
- if(name==='chat'){drawer.classList.add('chat-open','chat-fullscreen');setTimeout(()=>$('chatInput').focus(),70);}
- else{drawer.classList.remove('chat-open','chat-fullscreen');if(!browserTabs.length)createBrowserTab('',true);setTimeout(()=>$('address').focus(),25);}
- syncNativeBrowserView();requestAnimationFrame(updateBrowserBounds);
+ const showChat=name==='chat';
+ currentPanel=showChat?'chat':'browser';
+ const drawer=$('panel-chat'),browser=$('panel-browser');
+
+ // Change the actual panel visibility, not just a CSS animation class. This
+ // prevents the packaged Windows renderer from leaving the browser above chat.
+ drawer.hidden=!showChat;
+ browser.hidden=showChat;
+ drawer.setAttribute('aria-hidden',String(!showChat));
+ browser.setAttribute('aria-hidden',String(showChat));
+ drawer.classList.toggle('active',showChat);
+ browser.classList.toggle('active',!showChat);
+ drawer.classList.toggle('chat-open',showChat);
+ drawer.classList.toggle('chat-fullscreen',showChat);
+
+ if(showChat){
+  setTimeout(function(){
+   if(currentPanel==='chat'&&!drawer.hidden){$('chatInput').focus();$('transcript').scrollTop=$('transcript').scrollHeight;}
+  },90);
+ }else{
+  if(!browserTabs.length)createBrowserTab('',true);
+  setTimeout(()=>$('address').focus(),25);
+ }
+ syncNativeBrowserView();
+ requestAnimationFrame(updateBrowserBounds);
 }
 function openChat(){activatePanel('chat');}function closeChat(){activatePanel('browser');}
 function showBrowserHome(){
@@ -1260,7 +1285,7 @@ $('browserForm').addEventListener('submit',function(event){
 $('browserSearchForm').addEventListener('submit',function(event){event.preventDefault();searchBrowser($('browserSearchInput').value);});
 $('homeBtn').addEventListener('click',showBrowserHome);
  $('bookmarkPageBtn').addEventListener('click',toggleBrowserBookmark);
- $('aiChatBtn').addEventListener('click',openChat);$('homeAgentBtn').addEventListener('click',openChat);
+ $('aiChatBtn').addEventListener('click',function(event){event.preventDefault();openChat();});$('homeAgentBtn').addEventListener('click',function(event){event.preventDefault();openChat();});
  $('shortcutGrid').addEventListener('click',function(event){const button=event.target.closest('[data-open-url]');if(button&&isHttpUrl(button.dataset.openUrl))navigateBrowser(button.dataset.openUrl,{newTab:true});});
 
 function makeCustomShortcut(item){
