@@ -127,6 +127,8 @@ export {
   linkWithRedirect,
   signInWithPopup,
   signInAnonymously,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
   collection,
