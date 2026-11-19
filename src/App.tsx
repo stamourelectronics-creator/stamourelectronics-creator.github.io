@@ -2157,8 +2157,8 @@ export default function App() {
               provider: 'Maw local core'
             };
           } else {
-            const chatApiEndpoint = modelToSend === 'breakaway_1_0' ? '/api/breakaway' : '/api/chat';
-            const response = await fetch(chatApiEndpoint, {
+            // All selectable chat models are handled by the shared /api/chat route.
+            const response = await fetch('/api/chat', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
