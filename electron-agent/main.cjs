@@ -703,11 +703,11 @@ const LOCAL_COMMAND_ALLOWLIST = new Set([
   'npm','npx','pnpm','yarn','bun','node','python','python3','py','pytest','uv','ruff','black',
   'dotnet','cargo','rustc','go','java','javac','mvn','gradle','cmake','ctest','make',
   'gcc','g++','clang','clang++','git',
-  'get-childitem','get-content','get-location','get-item','test-path','resolve-path',
+  'get-childitem','get-content','get-location','get-item','get-process','get-service','get-date','get-computerinfo','test-path','resolve-path',
   'select-string','write-output','write-host','measure-object','compare-object',
-  'pwd','ls','dir','cat','type','where.exe','findstr','echo'
+  'pwd','ls','dir','cat','type','where.exe','findstr','echo','systeminfo','tasklist','whoami','ps','uname','df','free','uptime','lscpu'
 ]);
-const BLOCKED_COMMAND_PATTERN = /\b(?:sudo|runas|start-process|invoke-expression|iex|invoke-command|start-job|remove-item|del|erase|rmdir|rd|format|diskpart|shutdown|restart-computer|stop-computer|clear-disk|reg(?:\.exe)?|set-executionpolicy|taskkill|wmic|netsh|schtasks|bcdedit|takeown|icacls|get-credential|curl|wget|invoke-webrequest|invoke-restmethod|ssh|scp|sftp|ftp|telnet)\b/i;
+const BLOCKED_COMMAND_PATTERN = /\b(?:sudo|runas|start-process|invoke-expression|iex|invoke-command|start-job|remove-item|del|erase|rmdir|rd|format|diskpart|shutdown|restart-computer|stop-computer|clear-disk|reg(?:\.exe)?|set-executionpolicy|taskkill|wmic|netsh|schtasks|bcdedit|takeown|icacls|get-credential|curl|wget|invoke-webrequest|invoke-restmethod|ssh|scp|sftp|ftp|telnet|powershell|pwsh|cmd(?:\.exe)?|bash|sh|wsl)\b/i;
 const BLOCKED_SECRET_PATTERN = /(?:\.env(?:\.[a-z0-9_-]+)?|secrets?|credentials?|password|api[_-]?key|access[_-]?token|authorization|private[_-]?key|id_rsa|id_ed25519|\.ssh|\.aws|\.azure|appdata|localappdata)/i;
 
 function validateWorkspaceCommand(payload) {
@@ -726,7 +726,7 @@ function validateWorkspaceCommand(payload) {
   if (BLOCKED_COMMAND_PATTERN.test(command) || BLOCKED_SECRET_PATTERN.test(command)) {
     throw new Error('This command includes a blocked system, network, or credential operation.');
   }
-  if (/(^|\s)(?:[a-z]:[\\/]|\\\\|\/|~[\\/])/i.test(command) || /(^|[\s"'])\.\.([\\/]|$)/.test(command)) {
+  if (/(^|[\s"'=])(?:[a-z]:[\\/]|\\\\|\/|~[\\/])/i.test(command) || /(^|[\/\s"'=])\.\.([\\/]|$)/.test(command)) {
     throw new Error('Absolute paths and parent-directory traversal are blocked. Commands must stay in the selected project folder.');
   }
   const executable = String(command.match(/^[a-z0-9_.-]+/i)?.[0] || '').toLowerCase();
@@ -745,6 +745,20 @@ function validateWorkspaceCommand(payload) {
     }
   }
   return { shell: expectedShell, command };
+}
+
+
+function createWorkspaceCommandEnv() {
+  const windows = process.platform === 'win32';
+  const names = windows
+    ? ['PATH','Path','SystemRoot','WINDIR','TEMP','TMP','USERPROFILE','APPDATA','LOCALAPPDATA','ProgramData','ProgramFiles','ProgramFiles(x86)','HOMEDRIVE','HOMEPATH','PATHEXT','ComSpec','SystemDrive','NUMBER_OF_PROCESSORS','PROCESSOR_ARCHITECTURE']
+    : ['PATH','HOME','TMPDIR','USER','LOGNAME','LANG','LC_ALL','TERM','SHELL','XDG_CACHE_HOME'];
+  const safe = {};
+  for (const name of names) {
+    if (typeof process.env[name] === 'string') safe[name] = process.env[name];
+  }
+  if (!safe.PATH && safe.Path) safe.PATH = safe.Path;
+  return safe;
 }
 
 function runApprovedWorkspaceCommand(command) {
@@ -773,7 +787,7 @@ function runApprovedWorkspaceCommand(command) {
         cwd: root,
         windowsHide: true,
         shell: false,
-        env: process.env,
+        env: createWorkspaceCommandEnv(),
         stdio: ['ignore','pipe','pipe']
       });
     } catch (error) {
@@ -819,7 +833,7 @@ ipcMain.handle('workspace:run-command', async (_event, payload) => {
     validated.command,
     '',
     'This runs locally in the selected project folder, without Administrator privileges.',
-    'A project script may create or change project files or install dependencies.',
+    'A project script may create or change project files or install dependencies. Only approve commands and project scripts you trust.',
     'System commands, network transfer tools, credential access, and absolute/out-of-folder paths are blocked.'
   ].join('\n');
   const approved = await confirmAction('Approve local command?', 'Allow IsaiahAI to run this command on this computer?', detail, 'Run command');
