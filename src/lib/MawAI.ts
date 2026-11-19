@@ -167,7 +167,10 @@ class MawAI {
   async searchDuckDuckGo(query) {
     const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_redirect=1&no_html=1`;
     try {
-      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      const res = await fetch(url, {
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(6000)
+      });
       const data = await res.json();
       // Prefer AbstractText, then Answer, then Definition
       if (data.AbstractText && data.AbstractText.trim() !== '') {
@@ -185,15 +188,48 @@ class MawAI {
   }
 
   async searchWikipedia(query: any) {
-    const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`;
-    try {
-      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-      if (!res.ok) return null;
-      const data = await res.json();
+    const searchTerm = String(query || '').trim();
+    if (!searchTerm) return null;
+
+    const fetchSummary = async (title: string) => {
+      const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
+      const response = await fetch(summaryUrl, {
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(6000)
+      });
+      if (!response.ok) return null;
+      const data = await response.json();
       if (data.extract && data.extract.trim() !== '') {
-        return { text: data.extract, source: data.content_urls?.desktop?.page || 'Wikipedia' };
+        return {
+          text: data.extract,
+          source: data.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(title.replace(/ /g, '_'))}`
+        };
       }
       return null;
+    };
+
+    try {
+      // Try the normalized topic directly first ("bear" -> the Bear article).
+      const direct = await fetchSummary(searchTerm);
+      if (direct) return direct;
+
+      // If the phrase is not an exact article title, resolve it to the best matching page.
+      const searchUrl = 'https://en.wikipedia.org/w/api.php?' + new URLSearchParams({
+        action: 'query',
+        list: 'search',
+        srsearch: searchTerm,
+        srlimit: '1',
+        format: 'json',
+        origin: '*'
+      }).toString();
+      const searchResponse = await fetch(searchUrl, {
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(6000)
+      });
+      if (!searchResponse.ok) return null;
+      const searchData = await searchResponse.json();
+      const title = searchData?.query?.search?.[0]?.title;
+      return title ? await fetchSummary(title) : null;
     } catch (e) {
       console.warn('Wikipedia search failed:', e);
       return null;
@@ -201,7 +237,7 @@ class MawAI {
   }
 
   // ------------------- Main response generator -------------------
-  async generateResponse(input: any) {
+  async generateResponse(input: any, queryOptimizer?: (input: string) => Promise<string>) {
     const cleanInput = input.toLowerCase().trim();
 
     // 1. Name recognition (needs access to this.userName)
@@ -229,33 +265,47 @@ class MawAI {
       if (mathRes) return mathRes;
     }
 
-    // 5. Check cache first
-    if (this.cache.has(cleanInput)) {
-      return this.cache.get(cleanInput);
+    // 5. Optimize only the web-search fallback. Local greetings, jokes, math,
+    // names, and time requests stay fully local and do not need another model call.
+    let searchQuery = String(input || '').trim();
+    if (typeof queryOptimizer === 'function') {
+      try {
+        const optimized = await queryOptimizer(searchQuery);
+        if (typeof optimized === 'string' && optimized.trim()) {
+          searchQuery = optimized.trim().slice(0, 100);
+        }
+      } catch (e) {
+        console.warn('Maw AI query optimization failed; searching the original prompt:', e);
+      }
     }
 
-    // 6. Web search fallback
-    console.log('🔄 Searching web for:', input);
+    // 6. Cache by normalized topic so different phrasings share the same result.
+    const cacheKey = searchQuery.toLowerCase();
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey);
+    }
+
+    // 7. Web search fallback
+    console.log('🔄 Maw AI searching web for:', searchQuery);
     let answer = null;
 
-    // Try DuckDuckGo first (fast instant answers)
-    const ddg = await this.searchDuckDuckGo(input);
+    // Try DuckDuckGo Instant Answers first, then the best matching Wikipedia page.
+    const ddg = await this.searchDuckDuckGo(searchQuery);
     if (ddg && ddg.text) {
-      answer = `${ddg.text}\n\n_📚 Source: [${ddg.source}](${ddg.source})_`;
+      answer = `${ddg.text}\\n\\n_📚 Source: [${ddg.source}](${ddg.source})_`;
     } else {
-      // Fallback to Wikipedia
-      const wiki = await this.searchWikipedia(input);
+      const wiki = await this.searchWikipedia(searchQuery);
       if (wiki && wiki.text) {
-        answer = `${wiki.text}\n\n_📚 Source: [Wikipedia](${wiki.source})_`;
+        answer = `${wiki.text}\\n\\n_📚 Source: [Wikipedia](${wiki.source})_`;
       }
     }
 
     if (answer) {
-      this.cache.set(cleanInput, answer);
+      this.cache.set(cacheKey, answer);
       return answer;
     }
 
-    // 7. Ultimate fallback
+    // 8. Ultimate fallback
     return "I couldn't find a good answer for that, even after searching the web. Could you rephrase the question? 🤔";
   }
 }
