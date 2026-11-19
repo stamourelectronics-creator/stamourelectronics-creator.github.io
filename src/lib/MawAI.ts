@@ -260,7 +260,7 @@ class MawAI {
     }
 
     // 4. Dynamic: math
-    const hasExplicitMath = /\\d\\s*(?:[+*/^%]|-(?=\\s*\\d)|\\bplus\\b|\\bminus\\b|\\btimes\\b|\\bdivided by\\b)\\s*\\d/i.test(cleanInput);
+    const hasExplicitMath = /\d\s*(?:[+*/^%]|-(?=\s*\d)|\bplus\b|\bminus\b|\btimes\b|\bdivided by\b)\s*\d/i.test(cleanInput);
     if (this.knowledge.math.keywords.some(kw => cleanInput.includes(kw)) || hasExplicitMath) {
       const mathRes = this.knowledge.math.getResponse(cleanInput);
       if (mathRes) return mathRes;
