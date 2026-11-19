@@ -173,8 +173,8 @@ async function optimizeMawSearchQuery(
 ): Promise<string> {
   const fallback = input
     .trim()
-    .replace(/^(?:please\s+)?(?:what\s+(?:is|are|was|were)|who\s+(?:is|are)|tell\s+me\s+about|explain|define|describe|give\s+me\s+(?:an?\s+)?(?:overview|summary)\s+of)\s+/i, '')
-    .replace(/^(?:a|an|the)\s+/i, '')
+    .replace(/^(?:please\\s+)?(?:what\\s+(?:is|are|was|were)|who\\s+(?:is|are)|tell\\s+me\\s+about|explain|define|describe|give\\s+me\\s+(?:an?\\s+)?(?:overview|summary)\\s+of)\\s+/i, '')
+    .replace(/^(?:a|an|the)\\s+/i, '')
     .replace(/[?!.]+$/, '')
     .trim()
     .slice(0, 100);
@@ -184,44 +184,33 @@ async function optimizeMawSearchQuery(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        taskType: 'maw-query-normalize',
         message: input,
-        history: history.slice(-6),
+        history: history.slice(-4),
         model: 'isaiahai_7_super',
         selectedModel: 'isaiahai_7_super',
-        chatMode: 'general',
-        stream: true,
+        disableWebSearch: true,
         searchWebEnabled: false,
-        reasoningMode: 'auto',
-        reasoningEffort: 'low',
-        showThinking: false,
-        systemInstruction: [
-          'You are IsaiahAI 7.0 SUPER acting only as a search-query simplifier for Maw AI.',
-          'Convert the user question into the shortest clear topic/entity search phrase Maw AI can look up in DuckDuckGo Instant Answers and Wikipedia.',
-          'Example: "What is a bear?" becomes "bear".',
-          'Example: "Why do polar bears have white fur?" becomes "polar bear white fur".',
-          'Preserve the key subject and distinguishing details. Remove conversational wording such as "what is", "tell me about", and "can you explain".',
-          'Return only the search phrase on one line. Do not answer the question, add commentary, or use quotation marks.'
-        ].join(' ')
-      })
+        stream: false,
+      }),
+      signal: AbortSignal.timeout(9500),
     });
     if (!response.ok) {
       const details = await response.json().catch(() => ({}));
       throw new Error(details.error || 'IsaiahAI 7.0 SUPER could not simplify the Maw AI query.');
     }
-    const result = response.headers.get('content-type')?.includes('text/event-stream')
-      ? await readIsaiahEventStream(response, () => {})
-      : await response.json();
-    let phrase = String(result?.content || result?.query || '').trim();
+    const result = await response.json();
+    let phrase = String(result?.query || result?.content || '').trim();
     try {
       const parsed = JSON.parse(phrase);
       phrase = String(parsed.searchQuery || parsed.query || parsed.topic || phrase).trim();
     } catch {
-      // The model is instructed to return a plain-text search phrase.
+      // The API is instructed to return a plain-text phrase.
     }
     phrase = phrase
-      .split(/\r?\n/)[0]
-      .replace(/^(?:search query|topic|query)\s*:\s*/i, '')
-      .replace(/^[\"'\x60]+|[\"'\x60]+$/g, '')
+      .split(/\\r?\\n/)[0]
+      .replace(/^(?:search phrase|search query|topic|query)\\s*:\\s*/i, '')
+      .replace(/^[\\\"'\\x60]+|[\\\"'\\x60]+$/g, '')
       .replace(/[?!.]+$/, '')
       .trim();
     if (phrase && phrase.length <= 100) return phrase;
