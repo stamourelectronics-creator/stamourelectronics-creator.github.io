@@ -173,7 +173,7 @@ async function optimizeMawSearchQuery(
 ): Promise<string> {
   const fallback = input
     .trim()
-    .replace(/^(?:please\\s+)?(?:what\\s+(?:is|are|was|were)|who\\s+(?:is|are)|tell\\s+me\\s+about|explain|define|describe|give\\s+me\\s+(?:an?\\s+)?(?:overview|summary)\\s+of)\\s+/i, '')
+    .replace(/^(?:please\s+)?(?:what\s+(?:is|are|was|were)|who\s+(?:is|are)|tell\s+me\s+about|explain|define|describe|give\s+me\s+(?:an?\s+)?(?:overview|summary)\s+of)\s+/i, '')
     .replace(/^(?:a|an|the)\\s+/i, '')
     .replace(/[?!.]+$/, '')
     .trim()
@@ -208,9 +208,9 @@ async function optimizeMawSearchQuery(
       // The API is instructed to return a plain-text phrase.
     }
     phrase = phrase
-      .split(/\\r?\\n/)[0]
-      .replace(/^(?:search phrase|search query|topic|query)\\s*:\\s*/i, '')
-      .replace(/^[\\\"'\\x60]+|[\\\"'\\x60]+$/g, '')
+      .split(/\r?\n/)[0]
+      .replace(/^(?:search phrase|search query|topic|query)\s*:\s*/i, '')
+      .replace(/^["'\x60]+|["'\x60]+$/g, '')
       .replace(/[?!.]+$/, '')
       .trim();
     if (phrase && phrase.length <= 100) return phrase;
