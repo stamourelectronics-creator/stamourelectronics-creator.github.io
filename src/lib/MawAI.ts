@@ -82,7 +82,7 @@ class MawAI {
         }
       },
       math: {
-        keywords: ['calculate', 'math', 'solve', 'what is', 'compute', 'multiply', 'divide', 'add', 'subtract', 'percent', 'square', 'cube', 'plus', 'minus', 'times', 'divided'],
+        keywords: ['calculate', 'math', 'solve', 'compute', 'multiply', 'divide', 'add', 'subtract', 'percent', 'square', 'cube', 'plus', 'minus', 'times', 'divided'],
         getResponse: function(input) {
           const mathMatch = input.match(/([\d\s\+\-\*\/\(\)\.\^\%]+)/g);
           if (mathMatch) {
@@ -260,7 +260,8 @@ class MawAI {
     }
 
     // 4. Dynamic: math
-    if (this.knowledge.math.keywords.some(kw => cleanInput.includes(kw))) {
+    const hasExplicitMath = /\\d\\s*(?:[+*/^%]|-(?=\\s*\\d)|\\bplus\\b|\\bminus\\b|\\btimes\\b|\\bdivided by\\b)\\s*\\d/i.test(cleanInput);
+    if (this.knowledge.math.keywords.some(kw => cleanInput.includes(kw)) || hasExplicitMath) {
       const mathRes = this.knowledge.math.getResponse(cleanInput);
       if (mathRes) return mathRes;
     }
