@@ -65,6 +65,12 @@ const requiredHtml = [
   'Retrying automatically',
   'SEARCH_API',
   'requestChatTurn',
+  'readGatewayEventStream',
+  'extractLocalCommandProposal',
+  "CODEPRO_API+'/api/agent'",
+  'stream:true',
+  'runWorkspaceCommand',
+  'id="chooseWorkspaceBtn"',
   'maxActions=10',
   'function extractBrowserProposal',
   'createBrowserView',
@@ -75,8 +81,12 @@ const requiredHtml = [
 for (const item of requiredHtml) {
   if (!html.includes(item)) throw new Error('Desktop renderer feature check missing: ' + item);
 }
-if (/runShellCommand|runApprovedPreset|onAgentCommandOutput|unrestrictedModeToggle|terminalOutput|extractCommandProposal|workspace:run-custom-command/.test(html)) {
-  throw new Error('The renderer must not expose local shell, terminal, or unrestricted computer-control features.');
+if (/runShellCommand|runApprovedPreset|onAgentCommandOutput|unrestrictedModeToggle|terminalOutput/.test(html)) {
+  throw new Error('The renderer must not expose a generic or unrestricted local command interface.');
+}
+if (!html.includes('Every command is shown in a Windows approval dialog') ||
+    !html.includes("window.isaiahDesktop.runWorkspaceCommand({shell:commandProposal.shell,command:commandProposal.command})")) {
+  throw new Error('Local command proposals must be sent through the native approval-gated desktop bridge.');
 }
 if (!html.includes('writeWorkspaceFile') || !html.includes('inspectBrowserView')) {
   throw new Error('Project-file review/saving and browser-aware agent capabilities must remain available.');
@@ -116,8 +126,17 @@ new vm.Script(main, { filename: 'electron-agent-main.js' });
 if (!main.includes("DEFAULT_API_BASE_URL = 'https://codepro-gateway-production.up.railway.app/api'")) {
   throw new Error('Desktop model requests must use the shared Railway /api route.');
 }
-if (/node:child_process|\bspawn\(|runProcess|workspace:run-custom-command|workspace:run-preset|agent:unrestricted/.test(main)) {
-  throw new Error('The Electron main process must not expose shell, terminal, or unrestricted computer-command execution.');
+if (!main.includes("ipcMain.handle('workspace:run-command'") ||
+    !main.includes('function validateWorkspaceCommand') ||
+    !main.includes('function runApprovedWorkspaceCommand') ||
+    !main.includes("'Run command'") ||
+    !main.includes('cwd: root') ||
+    !main.includes('LOCAL_COMMAND_ALLOWLIST') ||
+    !main.includes('BLOCKED_SECRET_PATTERN')) {
+  throw new Error('The local command runner must be restricted to the selected workspace and require native user approval.');
+}
+if (!main.includes('shell: false') || !main.includes('windowsHide: true') || !main.includes('120000')) {
+  throw new Error('Local commands must not spawn through an implicit shell and must have a time limit.');
 }
 if (!main.includes("ipcMain.handle('workspace:write'") || !main.includes('confirmAction')) {
   throw new Error('Approved project-file saving must remain available.');
@@ -134,7 +153,10 @@ if (!main.includes('DEFAULT_LOCAL_UI_PORT = 41737') ||
 const preload = fs.readFileSync(path.join(root, 'preload.cjs'), 'utf8');
 new vm.Script(preload, { filename: 'electron-agent-preload.js' });
 if (/runShellCommand|runApprovedPreset|onAgentCommandOutput|getUnrestrictedMode|setUnrestrictedMode|getSystemInfo/.test(preload)) {
-  throw new Error('The preload must not expose local command execution or unrestricted computer-agent controls.');
+  throw new Error('The preload must not expose unrestricted computer-agent controls.');
+}
+if (!preload.includes("runWorkspaceCommand: payload => ipcRenderer.invoke('workspace:run-command', payload)")) {
+  throw new Error('The preload must expose only the approval-gated local workspace command request.');
 }
 if (!preload.includes('writeWorkspaceFile:') || !preload.includes('inspectBrowserView:')) {
   throw new Error('Approved project-file saving and browser inspection must remain available.');
