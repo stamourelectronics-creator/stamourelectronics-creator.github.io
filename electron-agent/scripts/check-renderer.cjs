@@ -88,10 +88,14 @@ if (!html.includes("currentPanel='browser'") ||
 if (!html.includes("createBrowserTab('',true)") || !html.includes('function toggleBrowserBookmark')) {
   throw new Error('The browser must launch to a blank new tab and include local bookmarks.');
 }
-if (!html.includes("classList.add('chat-open','chat-fullscreen')") ||
-    !html.includes("currentPanel=name==='chat'?'chat':'browser'") ||
+if (!html.includes('class="panel chat-drawer" hidden aria-hidden="true"') ||
+    !html.includes('drawer.hidden=!showChat') ||
+    !html.includes('browser.hidden=showChat') ||
+    !html.includes("drawer.classList.toggle('chat-open',showChat)") ||
+    !html.includes("browser.classList.toggle('active',!showChat)") ||
+    !html.includes('#panel-chat.chat-drawer:not([hidden])') ||
     !html.includes('#panel-chat.chat-drawer.chat-open.chat-fullscreen')) {
-  throw new Error('The AI chat must open full-screen and suspend the browser panel.');
+  throw new Error('The AI chat must explicitly reveal its full-screen panel and hide the browser while open.');
 }
 if (!html.includes("window.puter.auth.signIn()") ||
     !html.includes("window.puter.ai.chat(messagesForPuter,{model:puterModelId,reasoning_effort:'none',stream:true,signal:controller.signal})")) {
