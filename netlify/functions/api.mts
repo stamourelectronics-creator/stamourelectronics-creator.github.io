@@ -1153,8 +1153,9 @@ export default async function handler(request: Request) {
     if (path === '/health' && request.method === 'GET') {
       const models = {
         isaiahai_7_super: Boolean(env('OPENROUTER_API_KEY') || env('ISAIAH_OPENROUTER_API_KEY') || env('GEMINI_API_KEY_70') || env('GEMINI_API_KEY')),
-        breakaway_1_0: Boolean(env('GEMINI_API_KEY')),
-        isaiah_codepro: Boolean(env('GROQ_API_KEY')),
+        open_isaiah: Boolean(env('OPENROUTER_API_KEY') || env('ISAIAH_OPENROUTER_API_KEY') || env('GEMINI_API_KEY')),
+        breakaway_1_0: Boolean(env('GEMINI_API_KEY') || env('OPENROUTER_API_KEY') || env('ISAIAH_OPENROUTER_API_KEY')),
+        isaiah_codepro: Boolean(env('GROQ_API_KEY') || env('OPENROUTER_API_KEY') || env('ISAIAH_OPENROUTER_API_KEY') || env('GEMINI_API_KEY')),
       };
       const aiConfigured = Object.values(models).some(Boolean);
       return json({ ok: true, service: 'IsaiahAI', aiConfigured, models });
