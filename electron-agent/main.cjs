@@ -3,6 +3,7 @@ const { autoUpdater } = require('electron-updater');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const http = require('node:http');
+const { spawn } = require('node:child_process');
 
 let mainWindow;
 let appServer = null;
@@ -591,7 +592,7 @@ ipcMain.handle('app:config', () => {
     if (parsed.protocol !== 'https:') throw new Error('The CodePro API must use HTTPS.');
     codeProApiBaseUrl = parsed.href.replace(/\/$/, '');
   } catch { /* use the default Railway CodePro API */ }
-  return { apiBaseUrl, codeProApiBaseUrl };
+  return { apiBaseUrl, codeProApiBaseUrl, platform: process.platform };
 });
 
 function requireWorkspace() {
