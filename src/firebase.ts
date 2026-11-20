@@ -9,6 +9,7 @@ import {
   signOut, 
   onAuthStateChanged, 
   GoogleAuthProvider,
+  OAuthProvider,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInAnonymously
@@ -114,12 +115,20 @@ googleWorkspaceProvider.setCustomParameters({
   include_granted_scopes: 'true',
 });
 
+// Microsoft school/work accounts only; `organizations` excludes personal Microsoft accounts.
+const microsoftProvider = new OAuthProvider('microsoft.com');
+microsoftProvider.setCustomParameters({
+  prompt: 'select_account',
+  tenant: 'organizations',
+});
+
 export {
   isFirebaseConfigured,
   auth,
   db,
   googleProvider,
   googleWorkspaceProvider,
+  microsoftProvider,
   GoogleAuthProvider,
   signInWithRedirect,
   getRedirectResult,
