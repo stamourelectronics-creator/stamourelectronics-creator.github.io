@@ -20,13 +20,14 @@ import { RotatingWebIcon } from './components/RotatingWebIcon';
 import { Sparkles, FileText, Send, Bot, CornerDownLeft, MessageSquare, Settings, Gamepad2, Info, ArrowUp, AlertCircle, HelpCircle, ExternalLink, Loader2, Wifi, Trash2, ShieldCheck, HelpCircle as HelpIcon, Mic, Paperclip, ChevronDown, Plus, Globe, Volume2, VolumeX, Menu, LogIn, LogOut, X, Layers, Copy, Check, Download, Edit3, Brain, Headphones, Ghost, ImageIcon, Camera, Mail, Share2, Zap, AudioLines, SlidersHorizontal, Crown, Code2, Rocket, HardDrive, CheckCircle2, GraduationCap, BookOpen } from 'lucide-react';
 import { ChatSession, Message, UserSettings, SearchResultBox } from './types';
 import { 
-  auth, googleProvider, googleWorkspaceProvider, GoogleAuthProvider, signInWithPopup,
+  auth, googleProvider, googleWorkspaceProvider, microsoftProvider, GoogleAuthProvider, signInWithPopup,
   signInWithRedirect, getRedirectResult, linkWithPopup, linkWithRedirect,
   signInAnonymously, signOut, onAuthStateChanged,
   createUserWithEmailAndPassword, signInWithEmailAndPassword,
   db, doc, getDoc, setDoc, deleteDoc, getDocs, query, where, collection, onSnapshot
 } from './firebase';
 
+const ISAIAHSEARCH_GATEWAY_BASE_URL = String((import.meta as any).env?.VITE_GATEWAY_API_BASE_URL || 'https://codepro-gateway-production.up.railway.app').replace(/\/+$/, '');
 
 const PREVIOUS_VERSIONS = [
   { id: 'v1', name: 'Version 1 (Classic Core)', url: 'https://classic-isaiah-ai.netlify.app/', desc: 'Sleek terminal shell with essential text processing.', releasedAt: 'Q1' },
@@ -291,13 +292,16 @@ export default function App() {
       // Complete popup-blocked sign-ins that were continued through redirect.
       void getRedirectResult(auth).then((result) => {
         if (!result) return;
-        const credential = GoogleAuthProvider.credentialFromResult(result);
-        const token = credential?.accessToken || null;
-        if (token) {
-          setGoogleAccessToken(token);
-          sessionStorage.setItem('google_access_token', token);
-          localStorage.setItem('google_access_token', token);
+        if (result.providerId === 'google.com') {
+          const credential = GoogleAuthProvider.credentialFromResult(result);
+          const token = credential?.accessToken || null;
+          if (token) {
+            setGoogleAccessToken(token);
+            sessionStorage.setItem('google_access_token', token);
+            localStorage.setItem('google_access_token', token);
+          }
         }
+        // Microsoft school sign-in only needs Firebase identity; no Graph token is requested here.
         setGoogleAuthError(null);
       }).catch((error: any) => {
         const code = String(error?.code || '');
@@ -578,6 +582,62 @@ export default function App() {
       setGoogleAuthError(describeGoogleAuthError(err));
       console.warn("Google account sign-in failed:", code || err?.message);
       return null;
+    }
+  };
+
+  const describeMicrosoftAuthError = (err: any): string => {
+    const code = String(err?.code || '');
+    if (code === 'auth/operation-not-allowed') return 'Microsoft school sign-in is not enabled yet. In Firebase Console → Authentication → Sign-in method, enable Microsoft and enter the Microsoft Entra application Client ID and secret.';
+    if (code === 'auth/unauthorized-domain') return 'This site is not authorized for Firebase sign-in. Add stamourelectronics-creator.github.io under Firebase Console → Authentication → Settings → Authorized domains.';
+    if (code === 'auth/invalid-credential' || code === 'auth/invalid-oauth-client-id') return 'Microsoft sign-in credentials are not valid. Check the Entra Client ID, client secret, and Firebase redirect URI.';
+    if (code === 'auth/account-exists-with-different-credential' || code === 'auth/credential-already-in-use') return 'An account with this email already uses another sign-in method. Sign in with that method first, then connect Microsoft.';
+    if (code === 'auth/popup-closed-by-user') return 'The Microsoft sign-in window was closed before sign-in finished.';
+    if (code === 'auth/network-request-failed') return 'Firebase could not reach Microsoft sign-in. Check your connection and try again.';
+    return err?.message || 'Microsoft school sign-in could not be completed. Please try again.';
+  };
+
+  const startMicrosoftRedirect = async (): Promise<boolean> => {
+    const activeUser = auth?.currentUser;
+    if (activeUser?.isAnonymous) await linkWithRedirect(activeUser, microsoftProvider);
+    else await signInWithRedirect(auth, microsoftProvider);
+    setGoogleAuthError('Opening Microsoft school sign-in…');
+    return true;
+  };
+
+  const handleMicrosoftSignIn = async (): Promise<void> => {
+    if (!auth) {
+      setGoogleAuthError('Firebase Authentication is not configured for this site.');
+      return;
+    }
+    try {
+      const activeUser = auth?.currentUser;
+      if (activeUser?.isAnonymous) {
+        try {
+          await linkWithPopup(activeUser, microsoftProvider);
+        } catch (linkError: any) {
+          if (['auth/credential-already-in-use', 'auth/provider-already-linked'].includes(String(linkError?.code || ''))) {
+            await signInWithPopup(auth, microsoftProvider);
+          } else {
+            throw linkError;
+          }
+        }
+      } else {
+        await signInWithPopup(auth, microsoftProvider);
+      }
+      setGoogleAuthError(null);
+    } catch (err: any) {
+      const code = String(err?.code || '');
+      if (['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment', 'auth/web-storage-unsupported'].includes(code)) {
+        try {
+          await startMicrosoftRedirect();
+          return;
+        } catch (redirectError: any) {
+          setGoogleAuthError(describeMicrosoftAuthError(redirectError));
+          return;
+        }
+      }
+      setGoogleAuthError(describeMicrosoftAuthError(err));
+      console.warn('Microsoft school sign-in failed:', code || err?.message);
     }
   };
 
@@ -2051,10 +2111,10 @@ export default function App() {
 
         setCurrentSearchPrompt(`IsaiahSearch Wide Sweep: "${wideQuery}"`);
 
-        const response = await fetch('/api/search-wide', {
+        const response = await fetch(`${ISAIAHSEARCH_GATEWAY_BASE_URL}/api/search-wide`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: wideQuery }),
+          body: JSON.stringify({ query: wideQuery, safeSearch: 'Moderate' }),
         });
 
         if (!response.ok) {
@@ -5338,6 +5398,11 @@ Workspace Host: ${window.location.host}
                 {authFormError}
               </div>
             )}
+            {googleAuthError && (
+              <div role="alert" className="rounded-xl border border-amber-500/30 bg-amber-950/40 px-3 py-2 text-[11px] leading-relaxed text-amber-100">
+                {googleAuthError}
+              </div>
+            )}
 
             {/* Mode selection tabs */}
             <div className="grid grid-cols-2 p-1 bg-zinc-950 rounded-xl border border-zinc-800">
@@ -5452,13 +5517,24 @@ Workspace Host: ${window.location.host}
             <button
               type="button"
               onClick={() => {
-                setShowAuthModal(false);
+                setGoogleAuthError(null);
                 void handleGoogleSignIn();
               }}
               className="w-full py-2.5 bg-zinc-950 hover:bg-zinc-850 text-zinc-300 font-semibold rounded-xl text-xs transition-all border border-zinc-800 cursor-pointer flex items-center justify-center gap-2"
             >
               <LogIn className="w-3.5 h-3.5 text-amber-500" />
               <span>Continue with Google Account</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setGoogleAuthError(null);
+                void handleMicrosoftSignIn();
+              }}
+              className="w-full py-2.5 bg-zinc-950 hover:bg-zinc-850 text-zinc-300 font-semibold rounded-xl text-xs transition-all border border-zinc-800 cursor-pointer flex items-center justify-center gap-2"
+            >
+              <GraduationCap className="w-3.5 h-3.5 text-sky-400" />
+              <span>Continue with Microsoft School Account</span>
             </button>
           </div>
         </div>
