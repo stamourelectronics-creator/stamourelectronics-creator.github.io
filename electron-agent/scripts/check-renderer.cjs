@@ -95,7 +95,7 @@ if (html.includes("agentModeToggle').addEventListener") ||
 if (/runShellCommand|runApprovedPreset|onAgentCommandOutput|unrestrictedModeToggle|terminalOutput/.test(html)) {
   throw new Error('The renderer must not expose a generic or unrestricted local command interface.');
 }
-if (!html.includes('Every command is shown in a Windows approval dialog') ||
+if (!html.includes('native approval dialog') ||
     !html.includes("window.isaiahDesktop.runWorkspaceCommand({shell:commandProposal.shell,command:commandProposal.command})")) {
   throw new Error('Local command proposals must be sent through the native approval-gated desktop bridge.');
 }
