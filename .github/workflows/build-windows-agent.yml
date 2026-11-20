@@ -88,11 +88,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: isaiahsearch-browser-build-${{ github.run_number }}
-          name: IsaiahSearch Desktop 1.6.4 · build ${{ github.run_number }}
+          name: IsaiahSearch Desktop 1.6.5 · build ${{ github.run_number }}
           body: |
-            IsaiahSearch Desktop 1.6.4 for Windows x64 and Ubuntu x64.
+            IsaiahSearch Desktop 1.6.5 for Windows x64 and Ubuntu x64.
 
-            Includes streamed AI responses across the hosted models, lower-latency CodePro defaults with provider fallback, the IsaiahSearch browser, browser-aware coding agent, approved project-file review/saving, and the optional IsaiahAI 26 Thinking model. CodePro can request one local project command at a time. Each command is shown in a native approval dialog and runs only in the selected project folder without Administrator/root privileges. System commands, credential access, network-transfer tools, shell chaining, and paths outside the selected project are blocked. The Puter-powered model is unlocked only after the user signs in to their own Puter account. No model-provider API key is embedded in either installer.
+            Includes streamed AI responses across the hosted models, the IsaiahSearch browser, browser-aware agent tools enabled across every desktop model, approved project-file review/saving, and the optional IsaiahAI 26 Thinking model. All hosted models can request one local project command at a time. Each command is shown in a native approval dialog and runs only in the selected project folder without Administrator/root privileges. Destructive system commands, credential access, network-transfer tools, shell chaining, and paths outside the selected project are blocked. The desktop does not grant unrestricted mouse/keyboard or system-settings control. The Puter-powered model is unlocked only after the user signs in to their own Puter account. No model-provider API key is embedded in either installer.
 
             Windows: NSIS setup and portable executable.
             Ubuntu: AppImage (recommended for automatic updates) and Debian package. AppImage builds check GitHub Releases and install updates automatically. Debian package installations can be updated by installing the new .deb release.
