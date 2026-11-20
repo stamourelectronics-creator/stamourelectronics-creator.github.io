@@ -1006,16 +1006,19 @@ async function generateSummary(
       const ai = new GoogleGenAI({ apiKey: summaryKey });
       let timeout: ReturnType<typeof setTimeout> | undefined;
       try {
-        const timeoutMs = mode === 'more' ? 26000 : 18000;
+        const summaryModel = mode === 'brief'
+          ? (env('ISAIAH_SEARCH_FAST_MODEL') || 'gemini-3.5-flash-lite')
+          : (env('ISAIAH_SEARCH_DEEP_MODEL') || 'gemini-3.8-flash');
+        const timeoutMs = mode === 'brief' ? 7500 : mode === 'more' ? 26000 : 18000;
         const response = await Promise.race([
           ai.models.generateContent({
-            model: 'gemini-3.8-flash',
+            model: summaryModel,
             contents: prompt,
             config: {
               systemInstruction: 'You are IsaiahAI Search Assist, part of the IsaiahAI ecosystem by St.Amour Electronics. Identify as IsaiahAI Search Assist only. Answer directly from the supplied search snippets, compare sources where possible, cite only the URLs supplied, disclose uncertainty, and never invent article contents, dates, statistics, quotations, or citations. Do not reveal hidden chain-of-thought.',
-              maxOutputTokens: mode === 'more' ? 5200 : 1500,
-              temperature: 0.3,
-              ...(mode === 'more' ? {} : { thinkingConfig: { thinkingLevel: 'LOW' } }),
+              maxOutputTokens: mode === 'brief' ? 560 : mode === 'more' ? 4800 : 1400,
+              temperature: 0.2,
+              ...(mode === 'brief' ? {} : { thinkingConfig: { thinkingLevel: 'LOW' } }),
             } as any,
           }),
           new Promise((_, reject) => {
@@ -1037,10 +1040,15 @@ async function generateSummary(
     // source-backed fallback below keeps the Search Assist panel useful.
   } else if (env('GEMINI_API_KEY')) {
     const ai = new GoogleGenAI({ apiKey: env('GEMINI_API_KEY') });
-    const attempts = [
-      { model: 'gemini-4-argon', timeoutMs: 8500, highReasoning: true },
-      { model: 'gemini-3.8-flash', timeoutMs: 5500, highReasoning: true },
-    ];
+    const attempts = mode === 'brief'
+      ? [
+          { model: env('ISAIAH_SEARCH_FAST_MODEL') || 'gemini-3.5-flash-lite', timeoutMs: 7000, highReasoning: false },
+          { model: 'gemini-3.8-flash', timeoutMs: 4000, highReasoning: false },
+        ]
+      : [
+          { model: 'gemini-4-argon', timeoutMs: 8500, highReasoning: true },
+          { model: 'gemini-3.8-flash', timeoutMs: 5500, highReasoning: true },
+        ];
     for (const attempt of attempts) {
       let timeout: ReturnType<typeof setTimeout> | undefined;
       try {
@@ -1050,7 +1058,7 @@ async function generateSummary(
             contents: prompt,
             config: {
               systemInstruction: 'You are IsaiahAI Search Assist. Be evidence-first, cite only supplied URLs, compare source dates, explain contradictions, and disclose when only search snippets were supplied.',
-              maxOutputTokens: mode === 'more' ? 6000 : 1800,
+              maxOutputTokens: mode === 'brief' ? 560 : mode === 'more' ? 6000 : 1800,
               ...(attempt.highReasoning ? { thinkingConfig: { thinkingLevel: 'HIGH' } } : {}),
             } as any,
           }),
@@ -1114,7 +1122,7 @@ async function handleIsaiahWideSearch(query: string) {
     try { domain = new URL(item.url).hostname.replace(/^www\./, ''); } catch { /* ignore */ }
     return { title: item.title, uri: item.url, description: item.snippet, domain, sourceLogo: `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(domain)}` };
   });
-  const summary = await generateSummary(query, data.results, 'brief');
+  const summary = await generateSummary(query, data.results, 'brief', 'isaiahai_7_super');
   return { summary, boxes };
 }
 
