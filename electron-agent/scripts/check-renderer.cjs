@@ -61,6 +61,8 @@ const requiredHtml = [
   '1,050,000 tokens',
   '128,000 tokens',
   'function withAutomaticRetries',
+  'Agent tools enabled for every model',
+  'desktopAgent:true',
   'high demand',
   'Retrying automatically',
   'SEARCH_API',
@@ -81,6 +83,14 @@ const requiredHtml = [
 for (const item of requiredHtml) {
   if (!html.includes(item)) throw new Error('Desktop renderer feature check missing: ' + item);
 }
+if (html.includes("agentModeToggle').addEventListener") ||
+    html.includes('Agent mode is off') ||
+    !html.includes('const commandProposal=extractLocalCommandProposal(answer);') ||
+    !html.includes('const browserProposal=extractBrowserProposal(answer);') ||
+    !html.includes("const agentInstructions=browserAgentIntro+' '+desktopProtocol;")) {
+  throw new Error('Every desktop model must always receive the agent prompt and route approved local/browser tool proposals.');
+}
+
 if (/runShellCommand|runApprovedPreset|onAgentCommandOutput|unrestrictedModeToggle|terminalOutput/.test(html)) {
   throw new Error('The renderer must not expose a generic or unrestricted local command interface.');
 }
