@@ -172,11 +172,13 @@ if (!main.includes('shell: false') || !main.includes('windowsHide: true') || !ma
 }
 if (!main.includes("ipcMain.handle('desktop:launch-app'") ||
     !main.includes('DESKTOP_APP_CATALOG') ||
-    !main.includes('function launchSupportedDesktopApp') ||
+    !main.includes('function resolveWindowsApplication') ||
+    !main.includes('function chooseWindowsApplication') ||
+    !main.includes('BLOCKED_LAUNCH_EXECUTABLES') ||
     !main.includes("'Open app'") ||
     !main.includes('detached: true') ||
     !main.includes('shell: false')) {
-  throw new Error('Desktop app launching must use the fixed Windows app catalog and native approval dialog.');
+  throw new Error('Desktop app launching must use a native executable picker, a blocked-system-utility list and native approval dialog.');
 }
 if (!main.includes("ipcMain.handle('workspace:write'") || !main.includes('confirmAction')) {
   throw new Error('Approved project-file saving must remain available.');
