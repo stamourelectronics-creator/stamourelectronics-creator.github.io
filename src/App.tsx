@@ -33,11 +33,12 @@ const PREVIOUS_VERSIONS = [
   { id: 'v1', name: 'Version 1 (Classic Core)', url: 'https://classic-isaiah-ai.netlify.app/', desc: 'Sleek terminal shell with essential text processing.', releasedAt: 'Q1' },
   { id: 'v3', name: 'Version 3 (Suite Index)', url: 'https://isaiah-ai-v3.netlify.app/', desc: 'IsaiahSearch web-index aggregation and dynamic search pages.', releasedAt: 'Q2' },
   { id: 'v4', name: 'Version 4 (Cognitive)', url: 'https://isaiah-ai-v9.netlify.app/', desc: 'Advanced cognitive node, multimodality & smart layouts.', releasedAt: 'Q3' },
-  { id: 'v5', name: 'Version 5 (Handheld v5)', url: 'https://isaiah-mobile.netlify.app/', desc: 'Responsive handheld viewport optimization.', releasedAt: 'Q4' }
+  { id: 'v5', name: 'Version 5 (Handheld v5)', url: 'https://isaiah-mobile.netlify.app/', desc: 'Responsive handheld viewport optimization.', releasedAt: 'Q4' },
+  { id: 'v6', name: 'Version 6', url: 'https://isaiah-ai.netlify.app/', desc: 'The previous public IsaiahAI release.', releasedAt: 'Legacy' }
 ];
 
 function VersionsSandbox() {
-  const [selectedVersion, setSelectedVersion] = useState(PREVIOUS_VERSIONS[1]); // Default to v3 as requested
+  const [selectedVersion, setSelectedVersion] = useState(PREVIOUS_VERSIONS[PREVIOUS_VERSIONS.length - 1]); // Open the newest archived release by default
   const [loading, setLoading] = useState(true);
   const [iframeKey, setIframeKey] = useState(Date.now());
 
@@ -56,8 +57,9 @@ function VersionsSandbox() {
             <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
               <Layers className="w-4.5 h-4.5 text-amber-500" />
               <span>IsaiahAI Live Versions Sandbox</span>
+              <span className="ml-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-mono font-semibold tracking-wide text-emerald-300">CURRENT SITE · VERSION 7</span>
             </h3>
-            <p className="text-[11px] text-zinc-500 font-sans mt-0.5">Test previous generations and search architectures in live sandboxed iframes securely.</p>
+            <p className="text-[11px] text-zinc-500 font-sans mt-0.5">Version 7 is the current site. Browse previous public releases below.</p>
           </div>
           <a
             href={selectedVersion.url}
