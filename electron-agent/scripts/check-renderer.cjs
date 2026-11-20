@@ -141,10 +141,10 @@ const sendChatStart = html.indexOf('async function sendChat(prompt)');
 const sendChatEnd = html.indexOf("$('chatForm').addEventListener('submit'", sendChatStart);
 const sendChatSource = sendChatStart >= 0 && sendChatEnd > sendChatStart ? html.slice(sendChatStart, sendChatEnd) : '';
 const liveDraftDeclaration = sendChatSource.indexOf("requestMessage='',liveDraft=null;");
-const requestTry = sendChatSource.indexOf('try{\n  await workspaceReady;');
+const requestTry = sendChatSource.indexOf('await workspaceReady;');
 if (!sendChatSource || liveDraftDeclaration < 0 || requestTry < 0 || liveDraftDeclaration > requestTry ||
-    sendChatSource.includes('let liveDraft=null;')) {
-  throw new Error('liveDraft must be declared in sendChat scope before its try/catch/finally handlers.');
+    (sendChatSource.match(/liveDraft=null;/g) || []).length !== 1) {
+  throw new Error('liveDraft must be declared exactly once in sendChat scope before its request try/catch/finally handlers.');
 }
 if (!html.includes("const directDesktopApp=extractDirectDesktopAppIntent(prompt,desktopPlatform);") ||
     !html.includes("const desktopAppProposal=extractDesktopAppProposal(answer,desktopPlatform);")) {
