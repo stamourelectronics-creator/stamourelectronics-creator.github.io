@@ -69,6 +69,10 @@ const requiredHtml = [
   'requestChatTurn',
   'readGatewayEventStream',
   'extractLocalCommandProposal',
+  'extractDesktopAppProposal',
+  'extractDirectDesktopAppIntent',
+  'desktop-app',
+  'launchDesktopApp',
   "CODEPRO_API+'/api/agent'",
   'stream:true',
   'runWorkspaceCommand',
@@ -132,6 +136,21 @@ if (/codeProHealth\.provider(?!Ready)/.test(html) ||
   throw new Error('The CodePro interface must keep the IsaiahAI name and hide the underlying provider.');
 }
 
+
+const sendChatStart = html.indexOf('async function sendChat(prompt)');
+const sendChatEnd = html.indexOf("$('chatForm').addEventListener('submit'", sendChatStart);
+const sendChatSource = sendChatStart >= 0 && sendChatEnd > sendChatStart ? html.slice(sendChatStart, sendChatEnd) : '';
+const liveDraftDeclaration = sendChatSource.indexOf("requestMessage='',liveDraft=null;");
+const requestTry = sendChatSource.indexOf('try{\n  await workspaceReady;');
+if (!sendChatSource || liveDraftDeclaration < 0 || requestTry < 0 || liveDraftDeclaration > requestTry ||
+    sendChatSource.includes('let liveDraft=null;')) {
+  throw new Error('liveDraft must be declared in sendChat scope before its try/catch/finally handlers.');
+}
+if (!html.includes("const directDesktopApp=extractDirectDesktopAppIntent(prompt,desktopPlatform);") ||
+    !html.includes("const desktopAppProposal=extractDesktopAppProposal(answer,desktopPlatform);")) {
+  throw new Error('Direct app-launch intent and model desktop-app proposals must both be routed.');
+}
+
 const main = fs.readFileSync(path.join(root, 'main.cjs'), 'utf8');
 new vm.Script(main, { filename: 'electron-agent-main.js' });
 if (!main.includes("DEFAULT_API_BASE_URL = 'https://codepro-gateway-production.up.railway.app/api'")) {
@@ -151,6 +170,14 @@ if (!main.includes("ipcMain.handle('workspace:run-command'") ||
 if (!main.includes('shell: false') || !main.includes('windowsHide: true') || !main.includes('120000')) {
   throw new Error('Local commands must not spawn through an implicit shell and must have a time limit.');
 }
+if (!main.includes("ipcMain.handle('desktop:launch-app'") ||
+    !main.includes('DESKTOP_APP_CATALOG') ||
+    !main.includes('function launchSupportedDesktopApp') ||
+    !main.includes("'Open app'") ||
+    !main.includes('detached: true') ||
+    !main.includes('shell: false')) {
+  throw new Error('Desktop app launching must use the fixed Windows app catalog and native approval dialog.');
+}
 if (!main.includes("ipcMain.handle('workspace:write'") || !main.includes('confirmAction')) {
   throw new Error('Approved project-file saving must remain available.');
 }
@@ -167,6 +194,9 @@ const preload = fs.readFileSync(path.join(root, 'preload.cjs'), 'utf8');
 new vm.Script(preload, { filename: 'electron-agent-preload.js' });
 if (/runShellCommand|runApprovedPreset|onAgentCommandOutput|getUnrestrictedMode|setUnrestrictedMode|getSystemInfo/.test(preload)) {
   throw new Error('The preload must not expose unrestricted computer-agent controls.');
+}
+if (!preload.includes("launchDesktopApp: payload => ipcRenderer.invoke('desktop:launch-app', payload)")) {
+  throw new Error('The preload must expose only the allowlisted, approval-gated desktop app launch request.');
 }
 if (!preload.includes("runWorkspaceCommand: payload => ipcRenderer.invoke('workspace:run-command', payload)")) {
   throw new Error('The preload must expose only the approval-gated local workspace command request.');

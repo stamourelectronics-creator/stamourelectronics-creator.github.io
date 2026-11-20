@@ -634,6 +634,64 @@ async function confirmAction(title, message, detail, confirmLabel) {
   });
   return result.response === 1;
 }
+
+const DESKTOP_APP_CATALOG = Object.freeze({
+  notepad: { label: 'Notepad', executable: 'notepad.exe' },
+  calculator: { label: 'Calculator', executable: 'calc.exe' },
+  paint: { label: 'Paint', executable: 'mspaint.exe' },
+  'file-explorer': { label: 'File Explorer', executable: 'explorer.exe' },
+  'task-manager': { label: 'Task Manager', executable: 'taskmgr.exe' }
+});
+
+async function launchSupportedDesktopApp(appId) {
+  if (process.platform !== 'win32') throw new Error('Built-in desktop app launching is currently supported on Windows only.');
+  const definition = DESKTOP_APP_CATALOG[String(appId || '').trim().toLowerCase()];
+  if (!definition) throw new Error('That app is not on the approved Windows app list.');
+  const systemRoot = String(process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows');
+  const system32 = path.resolve(systemRoot, 'System32');
+  const executable = path.resolve(system32, definition.executable);
+  if (!executable.toLowerCase().startsWith(system32.toLowerCase() + path.sep)) {
+    throw new Error('The requested app path failed its Windows system-folder check.');
+  }
+  await fs.access(executable);
+  return await new Promise((resolve, reject) => {
+    let settled = false;
+    const child = spawn(executable, [], {
+      cwd: app.getPath('home'),
+      detached: true,
+      windowsHide: false,
+      shell: false,
+      stdio: 'ignore'
+    });
+    child.once('error', error => {
+      if (settled) return;
+      settled = true;
+      reject(new Error('Windows could not start ' + definition.label + ': ' + String(error && error.message || error)));
+    });
+    child.once('spawn', () => {
+      if (settled) return;
+      settled = true;
+      child.unref();
+      resolve({ app: String(appId), label: definition.label, executable });
+    });
+  });
+}
+
+ipcMain.handle('desktop:launch-app', async (_event, payload) => {
+  const appId = String(payload && payload.app || '').trim().toLowerCase();
+  const definition = DESKTOP_APP_CATALOG[appId];
+  if (!definition) throw new Error('That app is not on the approved Windows app list.');
+  if (process.platform !== 'win32') throw new Error('Built-in desktop app launching is currently supported on Windows only.');
+  const approved = await confirmAction(
+    'Approve app launch?',
+    'Allow IsaiahAI to open ' + definition.label + '?',
+    'This starts the built-in Windows application only. It does not grant mouse/keyboard control, read the app contents, change settings, or run a shell command.',
+    'Open app'
+  );
+  if (!approved) return { approved: false, canceled: true, app: appId, label: definition.label };
+  const launched = await launchSupportedDesktopApp(appId);
+  return { approved: true, ...launched };
+});
 ipcMain.handle('workspace:choose', async () => {
   const picked = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
   if (picked.canceled || !picked.filePaths[0]) return { canceled: true };
