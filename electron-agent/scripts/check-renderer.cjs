@@ -85,9 +85,10 @@ for (const item of requiredHtml) {
 }
 if (html.includes("agentModeToggle').addEventListener") ||
     html.includes('Agent mode is off') ||
-    !html.includes('const commandProposal=extractLocalCommandProposal(answer);') ||
+    !html.includes('const commandProposal=extractLocalCommandProposal(answer,desktopPlatform);') ||
     !html.includes('const browserProposal=extractBrowserProposal(answer);') ||
-    !html.includes("const agentInstructions=browserAgentIntro+' '+desktopProtocol;")) {
+    !html.includes("const agentInstructions=browserAgentIntro+' '+desktopProtocol;") ||
+    (html.match(/desktopAgent:true/g) || []).length < 3) {
   throw new Error('Every desktop model must always receive the agent prompt and route approved local/browser tool proposals.');
 }
 
