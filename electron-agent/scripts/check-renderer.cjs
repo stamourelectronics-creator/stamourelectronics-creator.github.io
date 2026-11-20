@@ -143,7 +143,7 @@ const sendChatSource = sendChatStart >= 0 && sendChatEnd > sendChatStart ? html.
 const liveDraftDeclaration = sendChatSource.indexOf("requestMessage='',liveDraft=null;");
 const requestTry = sendChatSource.indexOf('await workspaceReady;');
 if (!sendChatSource || liveDraftDeclaration < 0 || requestTry < 0 || liveDraftDeclaration > requestTry ||
-    (sendChatSource.match(/liveDraft=null;/g) || []).length !== 1) {
+    (sendChatSource.match(/\blet\b[^;]*\bliveDraft\s*=\s*null\s*;/g) || []).length !== 1) {
   throw new Error('liveDraft must be declared exactly once in sendChat scope before its request try/catch/finally handlers.');
 }
 if (!html.includes("const directDesktopApp=extractDirectDesktopAppIntent(prompt,desktopPlatform);") ||
