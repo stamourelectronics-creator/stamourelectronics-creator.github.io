@@ -518,6 +518,7 @@ export default function App() {
     if (code === 'auth/email-already-in-use') return "An account already exists with this email. Choose Log In instead.";
     if (code === 'auth/weak-password') return "Choose a stronger password with at least 6 characters.";
     if (code === 'auth/operation-not-allowed') return "Email/password sign-in is disabled for this Firebase project. Enable Email/Password in Firebase Console → Authentication → Sign-in method.";
+    if (code === 'auth/unauthorized-domain') return `This site (${window.location.hostname}) is not in Firebase's Authorized domains. Add it under Firebase Console → Authentication → Settings.`;
     if (code === 'auth/network-request-failed') return "Firebase could not connect. Check your internet connection and try again.";
     if (code === 'auth/too-many-requests') return "Too many attempts were made. Wait a little before trying again.";
     return err?.message || "Your account request could not be completed. Please try again.";
@@ -588,7 +589,7 @@ export default function App() {
   const describeMicrosoftAuthError = (err: any): string => {
     const code = String(err?.code || '');
     if (code === 'auth/operation-not-allowed') return 'Microsoft school sign-in is not enabled yet. In Firebase Console → Authentication → Sign-in method, enable Microsoft and enter the Microsoft Entra application Client ID and secret.';
-    if (code === 'auth/unauthorized-domain') return 'This site is not authorized for Firebase sign-in. Add stamourelectronics-creator.github.io under Firebase Console → Authentication → Settings → Authorized domains.';
+    if (code === 'auth/unauthorized-domain') return `This site (${window.location.hostname}) is not authorized for Firebase sign-in. Add ${window.location.hostname} under Firebase Console → Authentication → Settings → Authorized domains.`;
     if (code === 'auth/invalid-credential' || code === 'auth/invalid-oauth-client-id') return 'Microsoft sign-in credentials are not valid. Check the Entra Client ID, client secret, and Firebase redirect URI.';
     if (code === 'auth/account-exists-with-different-credential' || code === 'auth/credential-already-in-use') return 'An account with this email already uses another sign-in method. Sign in with that method first, then connect Microsoft.';
     if (code === 'auth/popup-closed-by-user') return 'The Microsoft sign-in window was closed before sign-in finished.';
