@@ -168,6 +168,13 @@ if (!html.includes("const directDesktopApp=extractDirectDesktopAppIntent(prompt,
   throw new Error('Direct app-launch intent and model desktop-app proposals must both be routed.');
 }
 
+if (!html.includes('id="googleAccountStatus"') ||
+    !html.includes('id="googleAccountBtn"') ||
+    !html.includes("$('googleAccountBtn').addEventListener('click',toggleGoogleAccount)") ||
+    !html.includes("status.textContent=signedIn?'Signed in · '+accountName:'Not signed in'") ||
+    !html.includes("else if(checking)status.textContent='Checking Google account…'")) {
+  throw new Error('The browser header must visibly show the Google account state and provide a working sign-in/sign-out button.');
+}
 if (!html.includes('function queueGoogleBrowserStateSave()') ||
     !html.includes("$('googleSignInBtn').addEventListener('click'") ||
     !html.includes('signInWorkspace: async () =>') ||
@@ -183,7 +190,7 @@ if (signInStart < 0 || signInEnd <= signInStart || html.slice(signInStart, signI
 }
 const main = fs.readFileSync(path.join(root, 'main.cjs'), 'utf8');
 new vm.Script(main, { filename: 'electron-agent-main.js' });
-if (!main.includes("DEFAULT_API_BASE_URL = 'https://codepro-gateway-production.up.railway.app/api'") || !main.includes("nativeTheme.themeSource = 'dark'") || !main.includes("setBackgroundColor('#0b1020')")) {
+if (!main.includes("DEFAULT_API_BASE_URL = 'https://codepro-gateway-production.up.railway.app/api'") || !main.includes("nativeTheme.themeSource = 'dark'") || main.includes('webContents.setBackgroundColor(')) {
   throw new Error('Desktop model requests must use the shared Railway /api route.');
 }
 if (!main.includes("ipcMain.handle('system:run-diagnostic'") ||

@@ -411,7 +411,6 @@ ipcMain.handle('browser:create', async (_event, payload) => {
       allowRunningInsecureContent: false
     }
   });
-  view.webContents.setBackgroundColor('#0b1020');
   view.webContents.on('before-input-event', toggleFullscreenShortcut);
   // A new WebContentsView must start hidden; the renderer explicitly activates it after navigation is ready.
   view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
