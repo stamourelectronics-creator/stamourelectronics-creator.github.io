@@ -198,6 +198,22 @@ service cloud.firestore {
       allow delete: if isSignedIn();
     }
 
+    // 11. Cross-device IsaiahSearch browser state (tabs, bookmarks, recent history)
+    match /user_browser_state/{userId} {
+      allow get: if isSignedIn() && request.auth.uid == userId;
+      allow create, update: if (
+        isVerifiedUser() &&
+        request.auth.uid == userId &&
+        request.resource.data.tabs is list &&
+        request.resource.data.tabs.size() <= 100 &&
+        request.resource.data.bookmarks is list &&
+        request.resource.data.bookmarks.size() <= 100 &&
+        request.resource.data.recentSites is list &&
+        request.resource.data.recentSites.size() <= 200
+      );
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
     // 11. User Browser Bookmarks (Synchronized to Google Account)
     match /user_bookmarks/{userId} {
       allow read, write: if isSignedIn() && request.auth.uid == userId;
