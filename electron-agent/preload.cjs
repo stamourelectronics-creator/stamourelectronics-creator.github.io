@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('isaiahDesktop', {
   runWorkspaceCommand: payload => ipcRenderer.invoke('workspace:run-command', payload),
   runSystemDiagnostic: payload => ipcRenderer.invoke('system:run-diagnostic', payload),
   launchDesktopApp: payload => ipcRenderer.invoke('desktop:launch-app', payload),
+  installWindowsApp: payload => ipcRenderer.invoke('windows:install-approved', payload),
   createBrowserView: payload => ipcRenderer.invoke('browser:create', payload),
   navigateBrowserView: (tabId, url) => ipcRenderer.invoke('browser:navigate', { tabId, url }),
   setBrowserViewActive: (tabId, visible) => ipcRenderer.invoke('browser:set-active', { tabId, visible }),
