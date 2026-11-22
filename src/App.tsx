@@ -32,7 +32,7 @@ const ISAIAHSEARCH_GATEWAY_BASE_URL = String((import.meta as any).env?.VITE_GATE
 const GOOGLE_AGENT_SYSTEM_INSTRUCTION = `
 GOOGLE ACCOUNT AGENT:
 When the user asks you to access their connected Google account, Gmail, Calendar, Drive, Tasks, Contacts, Docs, Sheets, or Google Chat, you may request a Google action by returning exactly one \`\`\`google_action block containing valid JSON. Do not invent results.
-Supported actions: gmail.list, gmail.send, calendar.list, calendar.create, drive.list, tasks.list, contacts.list.
+Supported actions: gmail.list, gmail.get, gmail.send, gmail.modify, gmail.trash, gmail.delete, calendar.list, calendar.create, calendar.update, calendar.delete, drive.list, tasks.list, contacts.list.
 Read actions may run automatically after Google access is granted. Sending email or creating calendar events requires explicit confirmation in the IsaiahSearch UI.
 Never claim a write action succeeded until the Google API confirms it.
 `;
@@ -2337,7 +2337,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
           const googleAction = extractGoogleAgentAction(data.content);
           if (googleAction) {
             data.content = removeGoogleAgentAction(data.content) || 'I prepared a Google account action for you.';
-            const writeAction = googleAction.action === 'gmail.send' || googleAction.action === 'calendar.create';
+            const writeAction = ['gmail.send','gmail.modify','gmail.trash','gmail.delete','calendar.create','calendar.update','calendar.delete'].includes(googleAction.action);
             if (writeAction) {
               setGoogleActionPending({ ...googleAction, sessionId: targetSessionId });
               data.content += '\\n\\n**Google Agent action ready:** ' + googleAction.action.replace('.', ' → ') + '. Review and confirm it below.';
