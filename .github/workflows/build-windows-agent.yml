@@ -96,9 +96,9 @@ jobs:
 
             
 
-Windows setup upgrades the registered IsaiahSearch installation in place: it stages and verifies the new package first, then runs the previous version's uninstaller before copying in the new application files. The install directory cannot be changed during an upgrade, the app ID remains stable, and uninstalling the old application files does not delete browser settings, bookmarks, or Google sign-in data.
+            Windows setup upgrades the registered IsaiahSearch installation in place: it stages and verifies the new package first, then runs the previous version's uninstaller before copying in the new application files. The install directory cannot be changed during an upgrade, the app ID remains stable, and uninstalling the old application files does not delete browser settings, bookmarks, or Google sign-in data.
 
-Windows: NSIS setup and portable executable.
+            Windows: NSIS setup and portable executable.
             Ubuntu: AppImage (recommended for automatic updates) and Debian package. AppImage builds check GitHub Releases and install updates automatically. Debian package installations can be updated by installing the new .deb release.
           files: release-assets/*
           make_latest: true
