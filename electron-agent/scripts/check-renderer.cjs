@@ -178,7 +178,7 @@ if (!main.includes("ipcMain.handle('system:run-diagnostic'") ||
     !main.includes('commands.length > 100') ||
     !main.includes("ipcMain.handle('windows:install-approved'") ||
     !main.includes("Start-Process -FilePath $installer -Verb RunAs -Wait -PassThru") ||
-    !main.includes("Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\\\\msiexec.exe')") ||
+    !main.includes("Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\\msiexec.exe')") ||
     !main.includes('Approve command batch?') ||
     !main.includes('confirmAction(') ||
     !main.includes('between one and one hundred separate commands') ||
