@@ -1017,8 +1017,8 @@ function validateWorkspaceCommandBatch(payload) {
   const commands = Array.isArray(payload && payload.commands)
     ? payload.commands
     : (typeof (payload && payload.command) === 'string' ? [payload.command] : []);
-  if (!commands.length || commands.length > 5) {
-    throw new Error('A command batch must contain between one and five separate commands.');
+  if (!commands.length || commands.length > 100) {
+    throw new Error('A command batch must contain between one and one hundred separate commands.');
   }
   const shell = String(payload && payload.shell || '').trim().toLowerCase();
   const validated = commands.map(command => validateWorkspaceCommand({ shell, command }));
