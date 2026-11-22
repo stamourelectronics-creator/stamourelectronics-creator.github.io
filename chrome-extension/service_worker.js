@@ -6,7 +6,39 @@ const DEFAULT_API_BASES = [
   'https://isaiahai.netlify.app'
 ];
 
-async function getApiBases() {
+
+async function exportChromeState() {
+  const tabs = await chrome.tabs.query({});
+  const safeTabs = tabs.filter(tab => /^https?:\\/\\//i.test(String(tab.url || ''))).map(tab => ({
+    id: tab.id, title: String(tab.title || '').slice(0, 200), url: String(tab.url || ''), pinned: Boolean(tab.pinned),
+    windowId: tab.windowId, active: Boolean(tab.active), lastAccessed: tab.lastAccessed || 0
+  }));
+  const history = await chrome.history.search({ text: '', startTime: 0, maxResults: 500 });
+  const safeHistory = (history || []).filter(item => /^https?:\\/\\//i.test(String(item.url || ''))).map(item => ({
+    id: item.id, title: String(item.title || '').slice(0, 200), url: String(item.url || ''), lastVisitTime: item.lastVisitTime || 0, visitCount: item.visitCount || 0
+  }));
+  const tree = await chrome.bookmarks.getTree();
+  const bookmarks = [];
+  const walk = nodes => (nodes || []).forEach(node => {
+    if (node.url && /^https?:\\/\\//i.test(node.url)) bookmarks.push({ id: node.id, title: String(node.title || '').slice(0, 200), url: node.url });
+    walk(node.children);
+  });
+  walk(tree);
+  const extensions = (await chrome.management.getAll()).filter(item => item.type === 'extension').map(item => ({
+    id: item.id, name: item.name, version: item.version, enabled: Boolean(item.enabled), homepageUrl: item.homepageUrl || '', updateUrl: item.updateUrl || ''
+  }));
+  let syncedSessions = [];
+  try {
+    const devices = await chrome.sessions.getDevices({ maxResults: 25 });
+    syncedSessions = (devices || []).flatMap(device => (device.sessions || []).map(session => ({
+      deviceName: device.deviceName || 'Chrome device',
+      lastModified: session.lastModified || 0,
+      tab: session.tab ? { title: session.tab.title || '', url: session.tab.url || '' } : null
+    }))).filter(item => item.tab && /^https?:\\/\\//i.test(String(item.tab.url || ''))).slice(0, 100);
+  } catch (_) {}
+  return { tabs: safeTabs, history: safeHistory, bookmarks: bookmarks.slice(0, 500), extensions, syncedSessions };
+}
+\nasync function getApiBases() {
   const stored = await chrome.storage.local.get(['isaiahAiApiBase']);
   const custom = String(stored.isaiahAiApiBase || '').trim().replace(/\/+$/, '');
   const bases = custom ? [custom, ...DEFAULT_API_BASES] : DEFAULT_API_BASES;
@@ -149,5 +181,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type !== 'ISAIAHAI_PAGE_ASSIST' && message.type !== 'ISAIAHAI_POPUP_ASK') return;
   askIsaiahAI(message, sender).then(data => sendResponse({ ok: true, data }))
     .catch(error => sendResponse({ ok: false, error: asError(error) }));
+  return true;
+});
+\nchrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (!message || message.type !== 'ISAIAH_CHROME_STATE') return;
+  exportChromeState().then(data => sendResponse(data)).catch(error => sendResponse({ tabs: [], history: [], bookmarks: [], extensions: [], error: asError(error) }));
   return true;
 });
