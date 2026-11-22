@@ -1107,7 +1107,12 @@ function runApprovedWorkspaceCommand(command, workingDirectory) {
       if (stderr.trim()) output += (output ? '\n\n' : '') + '[stderr]\n' + stderr.trim();
       if (timedOut) output += (output ? '\n\n' : '') + 'Command stopped after the 300-second time limit.';
       if (!output) output = signal ? 'Process ended with signal ' + signal + '.' : '(no output)';
-      resolve({ approved: true, cwd: root, exitCode: Number.isInteger(code) ? code : (timedOlet workspaceCommandInProgress = false;
+      resolve({ approved: true, cwd: root, exitCode: Number.isInteger(code) ? code : (timedOut ? 124 : 1), timedOut, output });
+    });
+  });
+}
+
+let workspaceCommandInProgress = false;
 ipcMain.handle('workspace:run-command', async (_event, payload) => {
   if (workspaceCommandInProgress) throw new Error('A local command batch is already running. Wait for it to finish first.');
   const root = await resolveCommandWorkingDirectory();
