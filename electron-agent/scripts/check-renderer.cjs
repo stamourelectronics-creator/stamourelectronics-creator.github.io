@@ -168,6 +168,18 @@ if (!html.includes("const directDesktopApp=extractDirectDesktopAppIntent(prompt,
   throw new Error('Direct app-launch intent and model desktop-app proposals must both be routed.');
 }
 
+const googleUiStart = html.indexOf('function updateGoogleSignInButton(user)');
+const googleUiEnd = html.indexOf('function describeGoogleAuthError(error)', googleUiStart);
+const googleUiSource = googleUiStart >= 0 && googleUiEnd > googleUiStart ? html.slice(googleUiStart, googleUiEnd) : '';
+if (!googleUiSource ||
+    !googleUiSource.includes('chatButton.hidden=false') ||
+    !googleUiSource.includes("signedIn?'Google connected':'Sign in with Google'") ||
+    !googleUiSource.includes('browserButton.hidden=false') ||
+    !googleUiSource.includes("signedIn?'Connected':'Sign in'") ||
+    !html.includes('#panel-chat .chat-drawer-actions #googleSignInBtn{display:inline-flex!important') ||
+    !html.includes('.google-account-button{display:inline-flex!important')) {
+  throw new Error('Google sign-in controls must remain visible and clearly show when the account is connected.');
+}
 if (!html.includes('id="googleAccountStatus"') ||
     !html.includes('id="googleAccountBtn"') ||
     !html.includes("$('googleAccountBtn').addEventListener('click',toggleGoogleAccount)") ||
@@ -271,6 +283,17 @@ if (!preload.includes('writeWorkspaceFile:') || !preload.includes('inspectBrowse
 }
 
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+if (pkg.build.appId !== 'com.stamourelectronics.isaiahsearch') {
+  throw new Error('The IsaiahSearch appId must remain stable so NSIS recognizes existing installations for upgrades.');
+}
+const nsis = pkg.build.nsis || {};
+const windowsTargets = (pkg.build.win.target || []).map(item => typeof item === 'string' ? item : item.target);
+if (!windowsTargets.includes('nsis') ||
+    nsis.oneClick !== false ||
+    nsis.allowToChangeInstallationDirectory !== false ||
+    nsis.deleteAppDataOnUninstall !== false) {
+  throw new Error('Windows setup must upgrade in the registered install location and preserve user data.');
+}
 if (!pkg.build || !pkg.build.linux || !pkg.build.win) throw new Error('Both Windows and Linux electron-builder targets must exist.');
 const linuxTargets = pkg.build.linux.target.map(item => item.target);
 if (!linuxTargets.includes('AppImage') || !linuxTargets.includes('deb')) {

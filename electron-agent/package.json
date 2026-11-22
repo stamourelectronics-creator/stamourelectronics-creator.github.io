@@ -1,8 +1,8 @@
 {
   "name": "isaiahsearch-browser",
   "productName": "IsaiahSearch",
-  "version": "1.6.15",
-  "description": "IsaiahSearch desktop browser and IsaiahAI agent for Windows and Ubuntu, with refined browser UI, Google account login/cloud sync, persistent website permissions, Chrome migration, and autonomous multi-command agent workflows.",
+  "version": "1.6.16",
+  "description": "IsaiahSearch desktop browser and IsaiahAI agent for Windows and Ubuntu, with refined browser UI, persistent Google account state, safe in-place installer upgrades, cloud sync, and autonomous multi-command agent workflows.",
   "main": "main.cjs",
   "license": "UNLICENSED",
   "scripts": {
@@ -54,9 +54,10 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
+      "allowToChangeInstallationDirectory": false,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "deleteAppDataOnUninstall": false
     },
     "portable": {
       "artifactName": "IsaiahSearch-Portable-${version}-${arch}.${ext}"

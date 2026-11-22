@@ -493,6 +493,9 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 .newtab-hero>p{font-size:13px;margin-bottom:20px}
 @media(max-width:800px){.app-chrome-header{gap:8px;padding:0 8px}.app-chrome-brand{min-width:0;font-size:13px}.app-chrome-logo{width:25px;height:25px}.app-section-tab{padding:0 9px;font-size:10px}.app-chrome-status{display:none}.app-chrome-account{gap:5px}.app-chrome-account-status{max-width:125px;font-size:9px}.google-account-button{padding:5px 7px;font-size:9px}.newtab-feature-brand img{width:54px;height:54px}.newtab-feature-brand h1{font-size:38px}}
 
+#panel-chat .chat-drawer-actions #googleSignInBtn{display:inline-flex!important;visibility:visible!important;opacity:1;align-items:center;justify-content:center;flex:none;min-width:112px;white-space:nowrap}
+#panel-chat .chat-drawer-actions #googleSignInBtn[aria-pressed="true"]{border-color:#287d67;background:#12372f;color:#a7f3d0}
+.google-account-button{display:inline-flex!important;visibility:visible!important;align-items:center;justify-content:center}
 </style></head><body>
 
 <main>
@@ -1612,14 +1615,17 @@ function updateGoogleSignInButton(user){
  }
  const chatButton=$('googleSignInBtn');
  if(chatButton){
-  chatButton.textContent=checking?'Checking…':signedIn?'Sign out':'Sign in with Google';
+  chatButton.hidden=false;
+  chatButton.textContent=checking?'Checking…':signedIn?'Google connected':'Sign in with Google';
   chatButton.setAttribute('aria-pressed',String(signedIn));
-  chatButton.title=signedIn?'Signed in as '+accountName+'. Click to sign out.':'Sign in with Google to sync browser bookmarks and recent sites.';
+  chatButton.setAttribute('aria-label',signedIn?'Google connected. Click to sign out.':'Sign in with Google');
+  chatButton.title=signedIn?'Signed in as '+accountName+'. This button stays visible; click it to sign out.':'Sign in with Google to sync browser bookmarks and recent sites.';
   chatButton.disabled=!available||checking||busy||!!cloudAuthError;
  }
  const browserButton=$('googleAccountBtn');
  if(browserButton){
-  browserButton.textContent=checking?'Checking…':signedIn?'Sign out':'Sign in';
+  browserButton.hidden=false;
+  browserButton.textContent=checking?'Checking…':signedIn?'Connected':'Sign in';
   browserButton.setAttribute('aria-pressed',String(signedIn));
   browserButton.title=signedIn?'Signed in as '+accountName+'. Click to sign out.':'Sign in with Google to sync browser bookmarks and recent sites.';
   browserButton.disabled=!available||checking||busy||!!cloudAuthError;

@@ -9,7 +9,7 @@ on:
       - 'src/App.tsx'
   workflow_dispatch:
 concurrency:
-  group: isaiahsearch-desktop-release-v5-${{ github.ref }}
+  group: isaiahsearch-desktop-release-v6-${{ github.ref }}
   cancel-in-progress: true
 permissions:
   contents: write
@@ -88,13 +88,17 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: isaiahsearch-browser-build-${{ github.run_number }}
-          name: IsaiahSearch Desktop 1.6.15 · build ${{ github.run_number }}
+          name: IsaiahSearch Desktop 1.6.16 · build ${{ github.run_number }}
           body: |
-            IsaiahSearch Desktop 1.6.15 for Windows x64 and Ubuntu x64.
+            IsaiahSearch Desktop 1.6.16 for Windows x64 and Ubuntu x64.
 
             Fixes Chromium startup by removing an unsupported Electron webContents background-color call that prevented browser views from being created. Keeps the dark preferred color scheme and dark browser chrome. Adds a visible Google account indicator and sign-in/sign-out button to the main browser header, shows the account email when connected, and displays a checking state until Firebase finishes restoring the session. Also includes the 1.6.14 startup, Firebase login, cloud-sync and Railway search fixes. All hosted models can request fixed read-only Windows system diagnostics without per-command approval, including OS, CPU, GPU, memory, disks, drivers, USB devices, installed applications, Defender status, battery, audio, processes, services, network adapters, and Windows updates. These requests run only app-defined queries as the current user; the models cannot supply arbitrary command text for unattended execution. Local command batches can contain up to 100 commands, including PowerShell/Bash pipelines and HTTP downloads. Every command batch requires a native approval dialog and then runs sequentially as the signed-in user, without Administrator/root elevation, stopping at the first failure. The selected working folder may be outside the project workspace, and explicit paths can access locations the user account can access, including Downloads. General-purpose elevation, credential/secret access, remote shells, disk formatting, registry/security changes and system shutdown/restart remain blocked. When the user explicitly asks to install a downloaded Windows .exe or .msi, IsaiahAI can request that specific installer through a separate native approval dialog; Windows then presents its own UAC prompt for administrator approval. IsaiahAI cannot bypass or auto-accept UAC, and installer completion is reported from the process exit code. File saves remain separately approval-gated. The desktop does not grant unrestricted mouse/keyboard or system-settings control. The Puter-powered model is unlocked only after the user signs in to their own Puter account. No model-provider API key is embedded in either installer.
 
-            Windows: NSIS setup and portable executable.
+            
+
+Windows setup upgrades the registered IsaiahSearch installation in place: it stages and verifies the new package first, then runs the previous version's uninstaller before copying in the new application files. The install directory cannot be changed during an upgrade, the app ID remains stable, and uninstalling the old application files does not delete browser settings, bookmarks, or Google sign-in data.
+
+Windows: NSIS setup and portable executable.
             Ubuntu: AppImage (recommended for automatic updates) and Debian package. AppImage builds check GitHub Releases and install updates automatically. Debian package installations can be updated by installing the new .deb release.
           files: release-assets/*
           make_latest: true
