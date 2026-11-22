@@ -14,6 +14,7 @@ import { InteractiveQuizCard, parseQuizFromText } from './components/Interactive
 import { SchoolDocSyncModal } from './components/SchoolDocSyncModal';
 import { generateIsaiahsiImage, signInPuter, isPuterSignedIn } from './lib/puterClient';
 import { formatMathAndFractions, MATH_FRACTION_SYMBOLS, MATH_OPERATION_SYMBOLS } from './lib/mathFormatter';
+import { runGoogleAgentAction } from './lib/googleWorkspace';
 import { pickLocalFile, pickLocalDirectory, readFileText, writeFileText, extractCodeBlockFromResponse, LocalFileItem, isFileSystemAccessSupported } from './lib/localWorkspace';
 import MawAI from "./lib/MawAI";
 import { RotatingWebIcon } from './components/RotatingWebIcon';
@@ -28,6 +29,30 @@ import {
 } from './firebase';
 
 const ISAIAHSEARCH_GATEWAY_BASE_URL = String((import.meta as any).env?.VITE_GATEWAY_API_BASE_URL || 'https://codepro-gateway-production.up.railway.app').replace(/\/+$/, '');
+const GOOGLE_AGENT_SYSTEM_INSTRUCTION = `
+GOOGLE ACCOUNT AGENT:
+When the user asks you to access their connected Google account, Gmail, Calendar, Drive, Tasks, Contacts, Docs, Sheets, or Google Chat, you may request a Google action by returning exactly one \`\`\`google_action block containing valid JSON. Do not invent results.
+Supported actions: gmail.list, gmail.send, calendar.list, calendar.create, drive.list, tasks.list, contacts.list.
+Read actions may run automatically after Google access is granted. Sending email or creating calendar events requires explicit confirmation in the IsaiahSearch UI.
+Never claim a write action succeeded until the Google API confirms it.
+`;
+function extractGoogleAgentAction(content: string): { action: string; args: any } | null {
+  const match = String(content || '').match(/\`\`\`google_action\\s*\\n([\\s\\S]*?)\\n\`\`\`/i);
+  if (!match) return null;
+  try { const parsed = JSON.parse(match[1]); return parsed && typeof parsed.action === 'string' ? { action: parsed.action, args: parsed.args || {} } : null; } catch { return null; }
+}
+function removeGoogleAgentAction(content: string): string {
+  return String(content || '').replace(/\`\`\`google_action\\s*\\n[\\s\\S]*?\\n\`\`\`/gi, '').trim();
+}
+function formatGoogleAgentResult(action: string, result: any): string {
+  if (action === 'gmail.list') return '### Gmail\\n' + ((Array.isArray(result) && result.length) ? result.map((m: any) => `- **${m.subject || '(no subject)'}** — ${m.from || 'unknown sender'}\\n  ${m.snippet || ''}`).join('\\n') : 'No matching Gmail messages were found.');
+  if (action === 'calendar.list') return '### Calendar\\n' + ((Array.isArray(result) && result.length) ? result.map((e: any) => `- **${e.summary}** — ${e.start || ''}`).join('\\n') : 'No upcoming Calendar events were found.');
+  if (action === 'drive.list') return '### Google Drive\\n' + ((Array.isArray(result?.files) && result.files.length) ? result.files.map((x: any) => `- **${x.name}** — ${x.mimeType || 'file'}`).join('\\n') : 'No files were found.');
+  if (action === 'tasks.list') return '### Google Tasks\\n' + ((Array.isArray(result) && result.length) ? result.map((x: any) => `- **${x.title}**${x.due ? ' — due ' + x.due : ''}`).join('\\n') : 'No open tasks were found.');
+  if (action === 'contacts.list') return '### Google Contacts\\n' + ((Array.isArray(result) && result.length) ? result.map((x: any) => `- **${x.name || '(unnamed)'}** — ${(x.emails || []).join(', ')}`).join('\\n') : 'No contacts were found.');
+  return 'Google Agent completed **' + action + '** successfully.';
+}
+
 
 const PREVIOUS_VERSIONS = [
   { id: 'v1', name: 'Version 1 (Classic Core)', url: 'https://classic-isaiah-ai.netlify.app/', desc: 'Sleek terminal shell with essential text processing.', releasedAt: 'Q1' },
@@ -279,6 +304,7 @@ export default function App() {
     return sessionStorage.getItem('google_access_token') || localStorage.getItem('google_access_token');
   });
   const [usernameSetupRequired, setUsernameSetupRequired] = useState<boolean>(false);
+  const [googleActionPending, setGoogleActionPending] = useState<{ action: string; args: any; sessionId: string } | null>(null);
   const [chosenUsernameText, setChosenUsernameText] = useState<string>('');
 
   // Credentials Auth Form States
@@ -2239,7 +2265,7 @@ export default function App() {
                 data: img.data,
                 mimeType: img.mimeType,
               })),
-              systemInstruction: chatMode === 'school'
+              systemInstruction: (chatMode === 'school'
                 ? `You are IsaiahAI School Mode by St.Amour Electronics, an elite personal tutor and academic study coach across all subjects (Math, Science, Humanities, and Coding).
 CRITICAL PEDAGOGICAL DIRECTIVES:
 1. NEVER just give the student the final answer to their homework or problem! Teach them how to solve it through guided inquiry, conceptual explanations, and Socratic hints.
@@ -2288,7 +2314,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
 1. Every single response you write MUST be super smart, highly articulate, and written in thorough, high-density paragraph form (at least one complete, well-reasoned, highly detailed paragraph per response).
 2. Avoid shallow one-liner bullet lists or lazy short answers. Provide deep technical and conceptual explanations with speed, clarity, and authority.
 3. Identify exclusively as Isaiah Max 6.0. NEVER mention "Gemini" or "Google".\n\nADDITIONAL INSTRUCTIONS:\n1. If the user asks "find me a job" or asks for local jobs, you MUST first ask for their exact location. Once they provide it, output a simulated search result of nearby jobs.\n2. If the user searches for or requests the "St.Amour database", check their email (${currentUser?.email || "unauthenticated"}). If their email is exactly precise26@gmail.com, azndibroblox2@gmail.com, azndibroblox@gmail.com, precise26@hotmail.com, or stamourisaiah@gmail.com, grant them access with ZERO LIMITS.`,
-              }),
+              }) + '\\n\\n' + GOOGLE_AGENT_SYSTEM_INSTRUCTION,
             });
             if (!response.ok) {
               const errData = await response.json().catch(() => ({}));
@@ -2303,6 +2329,24 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
         } catch (apiErr: any) {
           // Do not silently route a failed model to a different model or provider.
           throw apiErr;
+        }
+
+        // Google account agent actions requested by the model.
+        if (data?.content) {
+          const googleAction = extractGoogleAgentAction(data.content);
+          if (googleAction) {
+            data.content = removeGoogleAgentAction(data.content) || 'I prepared a Google account action for you.';
+            const writeAction = googleAction.action === 'gmail.send' || googleAction.action === 'calendar.create';
+            if (writeAction) {
+              setGoogleActionPending({ ...googleAction, sessionId: targetSessionId });
+              data.content += '\\n\\n**Google Agent action ready:** ' + googleAction.action.replace('.', ' → ') + '. Review and confirm it below.';
+            } else {
+              let token = googleAccessToken || sessionStorage.getItem('google_access_token') || localStorage.getItem('google_access_token');
+              if (!token) token = await handleGoogleWorkspaceSignIn();
+              if (token) data.content += '\\n\\n' + formatGoogleAgentResult(googleAction.action, await runGoogleAgentAction(token, googleAction.action, googleAction.args));
+              else data.content += '\\n\\nGoogle access is not connected yet. Sign in with Google to let me access that account data.';
+            }
+          }
         }
 
         // Auto-edit local file on PC in background if code block was returned
@@ -5372,6 +5416,30 @@ Workspace Host: ${window.location.host}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* GOOGLE ACCOUNT AGENT CONFIRMATION */}
+      {googleActionPending && (
+        <div className="fixed inset-0 z-[100000] bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-zinc-950 border border-cyan-500/30 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+            <div><div className="text-[10px] uppercase tracking-widest text-cyan-400 font-bold">Google Account Agent</div><h3 className="text-lg font-bold text-white mt-1">Approve this action?</h3><p className="text-xs text-zinc-400 mt-2">IsaiahAI is requesting permission to perform this action using your connected Google account.</p></div>
+            <pre className="max-h-60 overflow-auto rounded-xl bg-black/40 border border-zinc-800 p-3 text-[11px] text-zinc-300 whitespace-pre-wrap">{JSON.stringify(googleActionPending, null, 2)}</pre>
+            <div className="flex gap-2 justify-end">
+              <button type="button" onClick={() => setGoogleActionPending(null)} className="px-4 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300">Cancel</button>
+              <button type="button" onClick={async () => {
+                const pending = googleActionPending; setGoogleActionPending(null);
+                try {
+                  let token = googleAccessToken || sessionStorage.getItem('google_access_token') || localStorage.getItem('google_access_token');
+                  if (!token) token = await handleGoogleWorkspaceSignIn();
+                  if (!token) throw new Error('Google access was not granted.');
+                  const result = await runGoogleAgentAction(token, pending.action, pending.args);
+                  const success: Message = { id: 'msg-' + Date.now() + '-google-agent', role: 'assistant', content: formatGoogleAgentResult(pending.action, result), model: 'google_agent', modelDisplayName: 'Google Account Agent', timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
+                  setSessions(prev => prev.map(session => session.id === pending.sessionId ? { ...session, messages: [...session.messages, success], updatedAt: new Date().toISOString() } : session));
+                } catch (error: any) { setShareNotice('Google Agent action failed: ' + String(error?.message || error)); }
+              }} className="px-4 py-2 rounded-xl bg-cyan-400 text-zinc-950 font-bold">Approve</button>
+            </div>
           </div>
         </div>
       )}
