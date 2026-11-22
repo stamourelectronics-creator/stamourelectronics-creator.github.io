@@ -80,6 +80,7 @@ const requiredHtml = [
   'stream:true',
   'runWorkspaceCommand',
   'id="chooseWorkspaceBtn"',
+  'id="chooseCommandFolderBtn"',
   'maxActions=20',
   'function extractBrowserProposal',
   'createBrowserView',
@@ -105,7 +106,9 @@ if (/runShellCommand|runApprovedPreset|onAgentCommandOutput|unrestrictedModeTogg
 if (!html.includes('native approval dialog') ||
     !html.includes('const maxActions=20;') ||
     !html.includes("window.isaiahDesktop.runWorkspaceCommand({shell:commandProposal.shell,commands:commandProposal.commands})") ||
-    !html.includes('up to five separate commands')) {
+    !html.includes('up to five separate commands') ||
+    !html.includes('Choose command folder') ||
+    (html.split('const browserProposal=extractBrowserProposal(answer);').length - 1) !== 1) {
   throw new Error('Local command proposals must be sent through the native approval-gated desktop bridge.');
 }
 if (!html.includes('writeWorkspaceFile') || !html.includes('inspectBrowserView')) {
@@ -175,13 +178,17 @@ if (!main.includes("ipcMain.handle('system:run-diagnostic'") ||
     !main.includes('function runApprovedWorkspaceCommand') ||
     !main.includes("'Run all commands'") ||
     !main.includes('cwd: root') ||
-    !main.includes('LOCAL_COMMAND_ALLOWLIST') ||
+    !main.includes('commandRoot') ||
+    !main.includes("ipcMain.handle('command:choose-folder'") ||
+    !main.includes('BLOCKED_PRIVILEGE_PATTERN') ||
     !main.includes('BLOCKED_SECRET_PATTERN') ||
+    !main.includes('HTTP download tools such as Invoke-WebRequest, curl, and wget are enabled') ||
+    !main.includes('including outside the project workspace') ||
     !main.includes('function createWorkspaceCommandEnv') ||
     !main.includes('env: createWorkspaceCommandEnv()')) {
-  throw new Error('The local command runner must be restricted to the selected workspace and require native user approval.');
+  throw new Error('The local command runner must support a user-selected folder, explicit approval, normal user permissions, and downloads outside the project workspace.');
 }
-if (!main.includes('shell: false') || !main.includes('windowsHide: true') || !main.includes('120000')) {
+if (!main.includes('shell: false') || !main.includes('windowsHide: true') || !main.includes('300000')) {
   throw new Error('Local commands must not spawn through an implicit shell and must have a time limit.');
 }
 if (!main.includes("ipcMain.handle('desktop:launch-app'") ||
@@ -217,8 +224,10 @@ if (!preload.includes("runSystemDiagnostic: payload => ipcRenderer.invoke('syste
 if (!preload.includes("launchDesktopApp: payload => ipcRenderer.invoke('desktop:launch-app', payload)")) {
   throw new Error('The preload must expose only the allowlisted, approval-gated desktop app launch request.');
 }
-if (!preload.includes("runWorkspaceCommand: payload => ipcRenderer.invoke('workspace:run-command', payload)")) {
-  throw new Error('The preload must expose only the approval-gated local workspace command request.');
+if (!preload.includes("runWorkspaceCommand: payload => ipcRenderer.invoke('workspace:run-command', payload)") ||
+    !preload.includes("chooseCommandFolder: () => ipcRenderer.invoke('command:choose-folder')") ||
+    !preload.includes("getCommandFolderPath: () => ipcRenderer.invoke('command:folder-path')")) {
+  throw new Error('The preload must expose the approval-gated command runner and the native command-folder picker.');
 }
 if (!preload.includes('writeWorkspaceFile:') || !preload.includes('inspectBrowserView:')) {
   throw new Error('Approved project-file saving and browser inspection must remain available.');

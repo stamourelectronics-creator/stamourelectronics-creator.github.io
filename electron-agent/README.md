@@ -1,10 +1,10 @@
 # IsaiahSearch Desktop
 
-## Desktop 1.6.1
+## Desktop 1.6.11
 
 - Rebuilt the new-tab home to match the IsaiahSearch light purple-to-cyan visual identity, including the updated orbital-search logo, clock/date, appearance toggle, Top Sites, Add Site, bookmarks, recent pages, and IsaiahSearch Agent card.
 - Made IsaiahAI Chat a full-window reasoning-first coding agent on Windows and Ubuntu, with an always-visible **Exit chat** control and working Chat, Project Files, Limits, and Puter navigation.
-- Removed PowerShell, Command Prompt, Bash, terminal presets, and automatic local command execution from the agent. Browser navigation remains available, and project-file changes still require explicit approval.
+- Added approval-gated batches of up to five PowerShell/Bash commands, with the user's chosen command folder separate from the project-file workspace. Commands can download files to Downloads or other user-accessible folders, while running without Administrator/root privileges.
 - Fixed the renderer's search endpoint so desktop web search no longer targets the CodePro chat-only gateway.
 - Added persistent custom Top Sites shortcuts and a light/dark new-tab appearance preference.
 - Kept the same desktop code path for Windows and Ubuntu so the shared UI fixes apply to both builds.
@@ -39,7 +39,7 @@ A private project workspace is saved under the user's Documents folder by defaul
 - Windows: `Documents/IsaiahSearch Workspace`
 - Ubuntu: `~/Documents/IsaiahSearch Workspace`
 
-Users can attach supported text/code files to a chat and ask IsaiahAI to review them. Generated code can be saved only after an explicit confirmation; replacing an existing file creates a dated backup first. The agent does not execute local shell commands, open a terminal, or run computer-control actions.
+Users can attach supported text/code files to a chat and ask IsaiahAI to review them. Generated code can be saved only after an explicit confirmation; replacing an existing file creates a dated backup first. Local commands are grouped into batches of up to five and shown in a native approval dialog before execution. Choose a separate command working folder (for example, Downloads) to set the starting directory; commands may also use explicit paths outside that folder, subject to the signed-in user's normal file permissions. HTTP download tools such as Invoke-WebRequest, curl, and wget are supported. Commands do not run elevated, and high-risk system/credential operations remain blocked.
 
 ## Building from source
 

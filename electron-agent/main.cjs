@@ -9,6 +9,7 @@ let mainWindow;
 let appServer = null;
 let appOrigin = null;
 let workspaceRoot = null;
+let commandRoot = null;
 let defaultBrowserPrompted = false;
 let updateCheckTimer = null;
 const browserViews = new Map();
@@ -49,9 +50,11 @@ const DEFAULT_API_BASE_URL = 'https://codepro-gateway-production.up.railway.app/
 const DEFAULT_CODEPRO_API_BASE_URL = 'https://codepro-gateway-production.up.railway.app';
 async function loadSavedWorkspace() {
   let candidate = '';
+  let commandCandidate = '';
   try {
     const saved = JSON.parse(await fs.readFile(settingsFile, 'utf8'));
     candidate = typeof saved.workspaceRoot === 'string' ? saved.workspaceRoot : '';
+    commandCandidate = typeof saved.commandRoot === 'string' ? saved.commandRoot : '';
     defaultBrowserPrompted = saved.defaultBrowserPrompted === true;
   } catch { /* first launch or reset: use the private default workspace */ }
   if (candidate) {
@@ -66,12 +69,20 @@ async function loadSavedWorkspace() {
     const defaultFolder = path.join(documents, 'IsaiahSearch Workspace');
     await fs.mkdir(defaultFolder, { recursive: true });
     workspaceRoot = await fs.realpath(defaultFolder);
-    await persistWorkspace();
   }
+  if (commandCandidate) {
+    try {
+      const real = await fs.realpath(commandCandidate);
+      const stat = await fs.stat(real);
+      if (stat.isDirectory()) commandRoot = real;
+    } catch { /* default command folder to the project workspace */ }
+  }
+  if (!commandRoot) commandRoot = workspaceRoot;
+  await persistWorkspace();
 }
 async function persistWorkspace() {
   await fs.mkdir(path.dirname(settingsFile), { recursive: true });
-  await fs.writeFile(settingsFile, JSON.stringify({ workspaceRoot, defaultBrowserPrompted }, null, 2), { encoding: 'utf8', mode: 0o600 });
+  await fs.writeFile(settingsFile, JSON.stringify({ workspaceRoot, commandRoot, defaultBrowserPrompted }, null, 2), { encoding: 'utf8', mode: 0o600 });
 }
 const skippedDirs = new Set(['.git', 'node_modules', 'dist', 'build', 'release', '.next', '.cache', '.idea', '.vscode']);
 const textExtensions = new Set(['.txt', '.md', '.json', '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.css', '.html', '.htm', '.py', '.rs', '.go', '.java', '.cs', '.xml', '.yml', '.yaml', '.toml', '.ini', '.sh', '.bat', '.ps1', '.sql', '.svg', '.env.example']);
@@ -868,9 +879,14 @@ ipcMain.handle('system:run-diagnostic', async (_event, payload) => {
 });
 
 ipcMain.handle('workspace:choose', async () => {
-  const picked = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
+  const picked = await dialog.showOpenDialog(mainWindow, {
+    title: 'Choose project folder',
+    properties: ['openDirectory', 'createDirectory']
+  });
   if (picked.canceled || !picked.filePaths[0]) return { canceled: true };
+  const previousWorkspaceRoot = workspaceRoot;
   workspaceRoot = await fs.realpath(picked.filePaths[0]);
+  if (!commandRoot || commandRoot === previousWorkspaceRoot) commandRoot = workspaceRoot;
   await persistWorkspace();
   return { canceled: false, path: workspaceRoot };
 });
@@ -880,6 +896,30 @@ ipcMain.handle('workspace:clear', async () => {
   return { cleared: true };
 });
 ipcMain.handle('workspace:path', () => workspaceRoot);
+ipcMain.handle('command:choose-folder', async () => {
+  const initialPath = commandRoot || workspaceRoot || app.getPath('downloads') || app.getPath('home');
+  const picked = await dialog.showOpenDialog(mainWindow, {
+    title: 'Choose local command working folder',
+    buttonLabel: 'Use this folder',
+    defaultPath: initialPath,
+    properties: ['openDirectory', 'createDirectory']
+  });
+  if (picked.canceled || !picked.filePaths[0]) return { canceled: true };
+  const real = await fs.realpath(picked.filePaths[0]);
+  const stat = await fs.stat(real);
+  if (!stat.isDirectory()) throw new Error('Choose a folder for local commands.');
+  commandRoot = real;
+  await persistWorkspace();
+  return { canceled: false, path: commandRoot };
+});
+ipcMain.handle('command:folder-path', async () => {
+  const candidate = commandRoot || workspaceRoot || app.getPath('home');
+  const real = await fs.realpath(candidate);
+  const stat = await fs.stat(real);
+  if (!stat.isDirectory()) throw new Error('The selected command folder is no longer available. Choose another folder.');
+  commandRoot = real;
+  return commandRoot;
+});
 ipcMain.handle('workspace:list', async () => {
   const root = requireWorkspace();
   const output = [];
@@ -932,54 +972,30 @@ ipcMain.handle('workspace:write', async (_event, payload) => {
 });
 
 
-const LOCAL_COMMAND_ALLOWLIST = new Set([
-  'npm','npx','pnpm','yarn','bun','node','python','python3','py','pytest','uv','ruff','black',
-  'dotnet','cargo','rustc','go','java','javac','mvn','gradle','cmake','ctest','make',
-  'gcc','g++','clang','clang++','git',
-  'get-childitem','get-content','get-location','get-item','get-process','get-service','get-date','get-computerinfo','test-path','resolve-path',
-  'select-string','write-output','write-host','measure-object','compare-object',
-  'pwd','ls','dir','cat','type','where.exe','findstr','echo','systeminfo','tasklist','whoami','ps','uname','df','free','uptime','lscpu'
-]);
-const BLOCKED_COMMAND_PATTERN = /\b(?:sudo|runas|start-process|invoke-expression|iex|invoke-command|start-job|remove-item|del|erase|rmdir|rd|format|diskpart|shutdown|restart-computer|stop-computer|clear-disk|reg(?:\.exe)?|set-executionpolicy|taskkill|wmic|netsh|schtasks|bcdedit|takeown|icacls|get-credential|curl|wget|invoke-webrequest|invoke-restmethod|ssh|scp|sftp|ftp|telnet|powershell|pwsh|cmd(?:\.exe)?|bash|sh|wsl)\b/i;
+const BLOCKED_PRIVILEGE_PATTERN = /\b(?:sudo|runas|invoke-expression|iex|invoke-command|enter-pssession|new-pssession|ssh|scp|sftp|ftp|telnet|diskpart|clear-disk|initialize-disk|remove-partition|format-volume|format-disk|format-partition|shutdown(?:\.exe)?|restart-computer|stop-computer|reg(?:\.exe)?|set-executionpolicy|bcdedit|takeown|icacls|taskkill|wmic|netsh|schtasks|powershell|pwsh|cmd(?:\.exe)?|bash|sh|wsl)\b/i;
 const BLOCKED_SECRET_PATTERN = /(?:\.env(?:\.[a-z0-9_-]+)?|secrets?|credentials?|password|api[_-]?key|access[_-]?token|authorization|private[_-]?key|id_rsa|id_ed25519|\.ssh|\.aws|\.azure|appdata|localappdata)/i;
 
 function validateWorkspaceCommand(payload) {
   const requestedShell = String(payload && payload.shell || '').trim().toLowerCase();
   const expectedShell = process.platform === 'win32' ? 'powershell' : process.platform === 'linux' ? 'bash' : '';
-  if (!expectedShell) throw new Error('Approved local commands are supported on Windows and Ubuntu only.');
+  if (!expectedShell) throw new Error('Approval-gated local commands are supported on Windows and Ubuntu only.');
   if (requestedShell !== expectedShell && !(expectedShell === 'powershell' && requestedShell === 'pwsh')) {
     throw new Error('The requested command shell does not match this operating system.');
   }
   const command = String(payload && payload.command || '').trim();
-  if (!command || command.length > 1800) throw new Error('The command is empty or exceeds the 1,800-character limit.');
-  if (/[\r\n\x00-\x1f]/.test(command)) throw new Error('Run one command at a time. Multi-line commands are blocked.');
-  if (/[;&|<>$()\\]/.test(command) || command.includes(String.fromCharCode(96))) {
-    throw new Error('This command contains shell operators or expansion syntax that the local safety check blocks.');
+  if (!command || command.length > 4000) throw new Error('The command is empty or exceeds the 4,000-character limit.');
+  if (/[\\r\\n\\x00]/.test(command)) throw new Error('Put exactly one command line in each command block.');
+  if (BLOCKED_PRIVILEGE_PATTERN.test(command)) {
+    throw new Error('This command contains a blocked administrator, remote-shell, system-security, or disk-management operation.');
   }
-  if (BLOCKED_COMMAND_PATTERN.test(command) || BLOCKED_SECRET_PATTERN.test(command)) {
-    throw new Error('This command includes a blocked system, network, or credential operation.');
+  if (BLOCKED_SECRET_PATTERN.test(command)) {
+    throw new Error('This command appears to access a secret, credential, password store, or private configuration path.');
   }
-  if (/(^|[\s"'=])(?:[a-z]:[\\/]|\\\\|\/|~[\\/])/i.test(command) || /(^|[\/\s"'=])\.\.([\\/]|$)/.test(command)) {
-    throw new Error('Absolute paths and parent-directory traversal are blocked. Commands must stay in the selected project folder.');
-  }
-  const executable = String(command.match(/^[a-z0-9_.-]+/i)?.[0] || '').toLowerCase();
-  if (!LOCAL_COMMAND_ALLOWLIST.has(executable)) throw new Error('That executable is not on the approved project-command list.');
-  const argsText = command.slice(executable.length).trim();
-  if (executable === 'git') {
-    const subcommand = String(argsText.match(/^[a-z-]+/i)?.[0] || '').toLowerCase();
-    if (!['status','diff','log','show','branch','rev-parse','ls-files','check-ignore'].includes(subcommand)) {
-      throw new Error('Only read-only Git inspection commands are enabled.');
-    }
-  }
-  if (['npm','pnpm','yarn','bun'].includes(executable)) {
-    const subcommand = String(argsText.match(/^[a-z-]+/i)?.[0] || '').toLowerCase();
-    if (!['install','ci','test','run','build','start','lint','check','list','outdated','audit','typecheck','format'].includes(subcommand)) {
-      throw new Error('That package-manager operation is not on the approved project task list.');
-    }
+  if (/-verb\\s+runas|--asroot|--privileged\\b/i.test(command)) {
+    throw new Error('Administrator/root elevation is not available to the desktop agent.');
   }
   return { shell: expectedShell, command };
 }
-
 
 function validateWorkspaceCommandBatch(payload) {
   const commands = Array.isArray(payload && payload.commands)
@@ -993,13 +1009,22 @@ function validateWorkspaceCommandBatch(payload) {
   return { shell: validated[0].shell, commands: validated.map(item => item.command) };
 }
 
-async function runApprovedWorkspaceCommandBatch(commands) {
-  const cwd = path.resolve(requireWorkspace());
+async function resolveCommandWorkingDirectory() {
+  const candidate = commandRoot || workspaceRoot || app.getPath('home');
+  const real = await fs.realpath(candidate);
+  const stat = await fs.stat(real);
+  if (!stat.isDirectory()) throw new Error('The selected command folder is no longer available. Choose another folder.');
+  commandRoot = real;
+  return real;
+}
+
+async function runApprovedWorkspaceCommandBatch(commands, workingDirectory) {
+  const cwd = path.resolve(workingDirectory);
   const results = [];
   let stoppedOnFailure = false;
   for (const command of commands) {
     try {
-      const result = await runApprovedWorkspaceCommand(command);
+      const result = await runApprovedWorkspaceCommand(command, cwd);
       results.push({ command, exitCode: result.exitCode, timedOut: result.timedOut, output: result.output });
       if (result.exitCode !== 0 || result.timedOut) {
         stoppedOnFailure = true;
@@ -1027,8 +1052,8 @@ function createWorkspaceCommandEnv() {
   return safe;
 }
 
-function runApprovedWorkspaceCommand(command) {
-  const root = path.resolve(requireWorkspace());
+function runApprovedWorkspaceCommand(command, workingDirectory) {
+  const root = path.resolve(workingDirectory || commandRoot || requireWorkspace());
   const windows = process.platform === 'win32';
   const executable = windows
     ? (process.env.SystemRoot ? path.join(process.env.SystemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe') : 'powershell.exe')
@@ -1065,7 +1090,7 @@ function runApprovedWorkspaceCommand(command) {
       try { child.kill('SIGTERM'); } catch {}
       const forceStop = setTimeout(() => { try { child.kill('SIGKILL'); } catch {} }, 2500);
       forceStop.unref?.();
-    }, 120000);
+    }, 300000);
     child.stdout.on('data', chunk => { stdout = append(stdout, chunk); });
     child.stderr.on('data', chunk => { stderr = append(stderr, chunk); });
     child.once('error', error => {
@@ -1080,29 +1105,26 @@ function runApprovedWorkspaceCommand(command) {
       clearTimeout(timeout);
       let output = stdout.trim();
       if (stderr.trim()) output += (output ? '\n\n' : '') + '[stderr]\n' + stderr.trim();
-      if (timedOut) output += (output ? '\n\n' : '') + 'Command stopped after the 120-second time limit.';
+      if (timedOut) output += (output ? '\n\n' : '') + 'Command stopped after the 300-second time limit.';
       if (!output) output = signal ? 'Process ended with signal ' + signal + '.' : '(no output)';
-      resolve({ approved: true, cwd: root, exitCode: Number.isInteger(code) ? code : (timedOut ? 124 : 1), timedOut, output });
-    });
-  });
-}
-
-let workspaceCommandInProgress = false;
+      resolve({ approved: true, cwd: root, exitCode: Number.isInteger(code) ? code : (timedOlet workspaceCommandInProgress = false;
 ipcMain.handle('workspace:run-command', async (_event, payload) => {
   if (workspaceCommandInProgress) throw new Error('A local command batch is already running. Wait for it to finish first.');
-  const root = await fs.realpath(requireWorkspace());
+  const root = await resolveCommandWorkingDirectory();
   const validated = validateWorkspaceCommandBatch(payload);
   const detail = [
-    'Working folder: ' + root,
+    'Command working folder: ' + root,
     '',
     'The following ' + validated.commands.length + ' commands will run sequentially:',
     ...validated.commands.map((command, index) => (index + 1) + '. ' + command),
     '',
-    'All commands run locally in the selected project folder, without Administrator privileges.',
-    'The batch stops at the first non-zero exit code or timeout. Each command is independently checked before this dialog appears.',
-    'Project scripts may create/change project files or install dependencies. Only approve commands and scripts you trust.',
-    'System paths, network transfer tools, credential access, shell chaining, and parent-directory paths remain blocked.'
-  ].join('\n');
+    'Commands run locally as the signed-in user, without Administrator/root privileges.',
+    'The chosen folder is the starting directory, not a sandbox: commands may read, create, replace, delete, or download files anywhere this user account has permission, including outside the project workspace, by using explicit paths.',
+    'HTTP download tools such as Invoke-WebRequest, curl, and wget are enabled. Check the exact URL and destination shown in each command.',
+    'The batch stops at the first non-zero exit code or timeout. Each command is checked before this dialog appears.',
+    'Commands may install software or change user files and settings. Only approve commands you understand and trust.',
+    'Administrator/root elevation, credential and secret-file access, remote shells, disk formatting, registry/security/network changes, and system shutdown/restart are blocked.'
+  ].join('\\n');
   workspaceCommandInProgress = true;
   try {
     const approved = await confirmAction(
@@ -1112,9 +1134,8 @@ ipcMain.handle('workspace:run-command', async (_event, payload) => {
       'Run all commands'
     );
     if (!approved) return { approved: false, canceled: true, cwd: root, results: [] };
-    return await runApprovedWorkspaceCommandBatch(validated.commands);
+    return await runApprovedWorkspaceCommandBatch(validated.commands, root);
   } finally {
     workspaceCommandInProgress = false;
   }
 });
-

@@ -6,6 +6,8 @@ contextBridge.exposeInMainWorld('isaiahDesktop', {
   chooseWorkspace: () => ipcRenderer.invoke('workspace:choose'),
   clearWorkspace: () => ipcRenderer.invoke('workspace:clear'),
   getWorkspacePath: () => ipcRenderer.invoke('workspace:path'),
+  chooseCommandFolder: () => ipcRenderer.invoke('command:choose-folder'),
+  getCommandFolderPath: () => ipcRenderer.invoke('command:folder-path'),
   listWorkspaceFiles: () => ipcRenderer.invoke('workspace:list'),
   readWorkspaceFile: path => ipcRenderer.invoke('workspace:read', path),
   writeWorkspaceFile: payload => ipcRenderer.invoke('workspace:write', payload),
