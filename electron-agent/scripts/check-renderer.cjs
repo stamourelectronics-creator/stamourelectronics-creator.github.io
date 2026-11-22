@@ -95,7 +95,7 @@ if (html.includes("agentModeToggle').addEventListener") ||
     html.includes('Agent mode is off') ||
     !html.includes('const commandProposal=extractLocalCommandProposals(answer,desktopPlatform);') ||
     !html.includes('const browserProposal=extractBrowserProposal(answer);') ||
-    !html.includes("const agentInstructions=browserAgentIntro+' '+desktopProtocol;") ||
+    !html.includes("const agentInstructions=browserAgentIntro+' '+desktopProtocol+' The current selected command working folder is '") ||
     (html.match(/desktopAgent:true/g) || []).length < 3) {
   throw new Error('Every desktop model must always receive the agent prompt and route approved local/browser tool proposals.');
 }
