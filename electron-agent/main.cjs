@@ -11,6 +11,7 @@ let appOrigin = null;
 let workspaceRoot = null;
 let commandRoot = null;
 let defaultBrowserPrompted = false;
+let browserPermissions = {};
 let updateCheckTimer = null;
 const browserViews = new Map();
 let activeBrowserTabId = '';
@@ -56,6 +57,7 @@ async function loadSavedWorkspace() {
     candidate = typeof saved.workspaceRoot === 'string' ? saved.workspaceRoot : '';
     commandCandidate = typeof saved.commandRoot === 'string' ? saved.commandRoot : '';
     defaultBrowserPrompted = saved.defaultBrowserPrompted === true;
+    browserPermissions = saved.browserPermissions && typeof saved.browserPermissions === 'object' ? saved.browserPermissions : {};
   } catch { /* first launch or reset: use the private default workspace */ }
   if (candidate) {
     try {
@@ -82,7 +84,7 @@ async function loadSavedWorkspace() {
 }
 async function persistWorkspace() {
   await fs.mkdir(path.dirname(settingsFile), { recursive: true });
-  await fs.writeFile(settingsFile, JSON.stringify({ workspaceRoot, commandRoot, defaultBrowserPrompted }, null, 2), { encoding: 'utf8', mode: 0o600 });
+  await fs.writeFile(settingsFile, JSON.stringify({ workspaceRoot, commandRoot, defaultBrowserPrompted, browserPermissions }, null, 2), { encoding: 'utf8', mode: 0o600 });
 }
 const skippedDirs = new Set(['.git', 'node_modules', 'dist', 'build', 'release', '.next', '.cache', '.idea', '.vscode']);
 const textExtensions = new Set(['.txt', '.md', '.json', '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.css', '.html', '.htm', '.py', '.rs', '.go', '.java', '.cs', '.xml', '.yml', '.yaml', '.toml', '.ini', '.sh', '.bat', '.ps1', '.sql', '.svg', '.env.example']);
@@ -450,16 +452,30 @@ ipcMain.handle('browser:create', async (_event, payload) => {
   view.webContents.on('render-process-gone', (_event, details) => {
     sendBrowserEvent(tabId, 'error', { errorDescription: 'Chromium renderer stopped: ' + String(details?.reason || 'unknown reason') });
   });
+  view.webContents.session.setPermissionCheckHandler((_webContents, permission, requestingOrigin) => {
+    const key = String(requestingOrigin || '') + '|' + String(permission || '');
+    return browserPermissions[key] === true;
+  });
   view.webContents.session.setPermissionRequestHandler((requestingContents, permission, callback, details) => {
     let origin = 'this website';
     try { origin = new URL(details?.requestingUrl || requestingContents.getURL()).origin; } catch {}
+    const key = origin + '|' + String(permission || '');
+    if (browserPermissions[key] === true) { callback(true); return; }
     dialog.showMessageBox(mainWindow, {
       type: 'question',
       title: 'Website permission request',
       message: 'Allow this website to access ' + permission + '?',
-      detail: origin + '\n\nOnly approve permissions you expect the website to need.',
-      buttons: ['Block', 'Allow once'], defaultId: 0, cancelId: 0, noLink: true
-    }).then(result => callback(result.response === 1)).catch(() => callback(false));
+      detail: origin + '\n\nChoose “Always allow” to remember this permission for this website in IsaiahSearch.',
+      buttons: ['Block', 'Allow once', 'Always allow'], defaultId: 1, cancelId: 0, noLink: true
+    }).then(async result => {
+      if (result.response === 2) {
+        browserPermissions[key] = true;
+        await persistWorkspace().catch(() => {});
+        callback(true);
+      } else {
+        callback(result.response === 1);
+      }
+    }).catch(() => callback(false));
   });
   applyBrowserViewState();
   return { created: true };
