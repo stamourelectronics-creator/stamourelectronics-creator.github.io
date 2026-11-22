@@ -398,6 +398,71 @@ body.night-theme .search-form input{color:#f6efff!important}
   .home-widgets{grid-template-columns:1fr!important}.agent-widget{grid-column:auto}.newtab-hero h1{font-size:41px!important}
 }
 
+
+/* Desktop 1.6.13 — cohesive browser chrome refinement */
+:root{
+ --bg:#0b0f16;--line:#303a49;--muted:#9aa8ba;--text:#edf2f8;
+ --cyan:#8bc5ff;--violet:#b9adff;--shadow:0 14px 42px #0005;
+}
+html,body{background:#0b0f16;color:#edf2f8}
+header{height:58px;padding:0 18px;background:#101722;border-bottom:1px solid #ffffff12;backdrop-filter:blur(18px)}
+.brand{letter-spacing:-.035em}.brand-icon{width:34px;height:34px}
+.mark{border-radius:10px;box-shadow:0 3px 14px #76baff25}
+.header-actions{gap:8px}
+.status{font-size:10px;padding:6px 9px;background:#ffffff04;border-color:#ffffff12}
+nav{padding:7px 14px;background:#101722;border-bottom:1px solid #ffffff12;gap:5px}
+nav button{border:1px solid transparent;border-radius:10px;padding:8px 13px;color:#aab7c7}
+nav button.active{background:#26364b;border-color:#425873;color:#f2f7ff;box-shadow:inset 0 1px #ffffff0d}
+main{height:calc(100% - 108px)}
+.browser{background:#0b111a}
+.browser-tabs{height:43px;padding:5px 10px 0;background:#101722;border-bottom:1px solid #273344;gap:4px}
+.browser-tab{min-width:132px;max-width:230px;height:38px;padding:7px 11px;border-radius:10px 10px 0 0;background:#182231;border-color:#ffffff0a;color:#aeb9c8}
+.browser-tab.active{background:#263447;border-color:#ffffff14;color:#f4f7fb;box-shadow:inset 0 1px #ffffff12}
+.browser-tab-close{width:19px;height:19px;border-radius:6px}
+.browser-tab-close:hover{background:#ffffff17;color:#fff}
+.new-browser-tab{width:28px;height:28px;margin:2px 0;border-radius:8px;background:#ffffff08}
+.toolbar{padding:9px 13px;background:#151e2b;border-bottom:1px solid #ffffff12;gap:7px}
+.toolbar button{min-width:34px;height:35px;padding:7px 10px;border-radius:9px;background:#202c3b;border-color:#ffffff0c;color:#d2dbe7}
+.toolbar button:hover{background:#2a394b;border-color:#6e9ac655}
+.toolbar input{height:37px;padding:8px 14px;border-radius:999px;background:#0d1520;border-color:#344357;color:#edf4fc}
+.toolbar input:focus{border-color:#80bfff;box-shadow:0 0 0 3px #80bfff20}
+.toolbar .go,.search-form button,.send,.connect{background:linear-gradient(120deg,#9bd5ff,#b9b0ff);color:#101927;border:0;font-weight:800}
+.browser-views{background:#fff}
+.browser-note{background:#35281a;color:#ffe0b5}
+.chat{background:#0b111a}
+.agent-tools{padding-top:10px}
+.agent-tools details{border-radius:14px;background:#121c29;border-color:#ffffff12}
+.agent-tools summary{padding:9px 2px;color:#bdc8d7}
+.transcript{padding-top:26px}
+.welcome h1{letter-spacing:-.055em}
+.welcome p{color:#aab7c7}
+.prompt-grid button{background:#151f2d;border-color:#2b394b;border-radius:14px;min-height:88px}
+.prompt-grid button:hover{background:#1c2a3b;border-color:#6caee477;transform:translateY(-1px)}
+.message.user{background:#26384e;border-color:#3d5774;border-radius:18px 18px 5px 18px}
+.message.assistant .label{color:#d6e1ef}
+.answer-text{color:#e5ebf3}
+.markdown-body a{color:#9ed1ff}
+.markdown-body pre{background:#080e17;border-color:#2d3a4b}
+.composer{background:#0b111a;border-top-color:#ffffff12}
+.composer form{background:#151f2d;border-color:#3a4b61;border-radius:18px;box-shadow:0 12px 34px #0003}
+.composer form:focus-within{border-color:#8bc5ff99;box-shadow:0 0 0 3px #8bc5ff18,0 14px 38px #0004}
+.composer textarea{color:#f2f6fb}
+.send{border-radius:12px;min-width:78px}
+input,textarea,select{color:#edf2f8}
+button{border-radius:10px}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid #9bd5ff;outline-offset:2px}
+@media(max-width:800px){
+ header{height:54px;padding:0 10px}
+ .browser-tabs{height:40px;padding-left:6px}
+ .browser-tab{min-width:108px;max-width:170px}
+ .toolbar{gap:5px;padding:7px}
+ .toolbar button{min-width:31px;padding:6px 8px}
+ .transcript{padding-top:17px}
+}
+@media(prefers-reduced-motion:reduce){
+ .message,.thinking,button,.result{animation:none!important;transition:none!important}
+}
+
 </style></head><body>
 
 <main>
