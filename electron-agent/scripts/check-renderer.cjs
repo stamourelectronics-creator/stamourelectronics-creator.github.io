@@ -107,6 +107,9 @@ if (
     !html.includes('const maxActions=500;') ||
     !html.includes("window.isaiahDesktop.runWorkspaceCommand({shell:commandProposal.shell,commands:commandProposal.commands})") ||
     !html.includes('up to one hundred separate commands') ||
+    !html.includes('function extractWindowsInstallProposal') ||
+    !html.includes("window.isaiahDesktop.installWindowsApp({path:windowsInstallProposal.path})") ||
+    html.includes('if(actionCount>=20)') ||
     !html.includes('Choose command folder') ||
     (html.split('const browserProposal=extractBrowserProposal(answer);').length - 1) !== 1) {
   throw new Error('Local command proposals must be sent through the native approval-gated desktop bridge.');
@@ -173,6 +176,9 @@ if (!main.includes("ipcMain.handle('system:run-diagnostic'") ||
     !main.includes('function validateWorkspaceCommandBatch') ||
     !main.includes('function runApprovedWorkspaceCommandBatch') ||
     !main.includes('commands.length > 100') ||
+    !main.includes("ipcMain.handle('windows:install-approved'") ||
+    !main.includes("Start-Process -FilePath $installer -Verb RunAs -Wait -PassThru") ||
+    !main.includes("Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\\\\msiexec.exe')") ||
     !main.includes('Approve command batch?') ||
     !main.includes('confirmAction(') ||
     !main.includes('between one and one hundred separate commands') ||
