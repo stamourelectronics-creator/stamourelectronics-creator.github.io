@@ -1331,7 +1331,7 @@ async function sendChat(prompt){
     const progress=appendAgentProgress('Step '+actionCount+' · approved command batch',batchSize+' commands will run in sequence from '+(commandFolderPath||workspacePath)+'.',executionId);
     setAgentProgress(progress,'Executing all '+batchSize+' validated commands automatically…');setThinking('Running '+batchSize+' commands automatically…');
     let commandResult=null,commandError='';
-    try{commandResult=await window.isaiahDesktop.runWorkspaceCommand({shell:commandProposal.shell,commands:commandProposal.commands,unattended:true});}
+    try{commandResult=await window.isaiahDesktop.runWorkspaceCommand({shell:commandProposal.shell,commands:commandProposal.commands});}
     catch(error){commandError=safeError(error);}
     let resultText='';
     if(commandError){
