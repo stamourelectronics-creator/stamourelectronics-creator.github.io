@@ -1128,6 +1128,55 @@ function runApprovedWorkspaceCommand(command, workingDirectory) {
   });
 }
 
+
+async function runWindowsInstaller(installerPath) {
+  if (process.platform !== 'win32') throw new Error('Windows installer elevation is available on Windows only.');
+  const requested = String(installerPath || '').trim();
+  if (!path.isAbsolute(requested) || requested.length > 2048) throw new Error('Choose a valid absolute installer path.');
+  const installer = await fs.realpath(requested);
+  const stat = await fs.stat(installer);
+  const extension = path.extname(installer).toLowerCase();
+  if (!stat.isFile() || !['.exe', '.msi'].includes(extension)) {
+    throw new Error('Only an existing .exe or .msi installer can be launched through this approval flow.');
+  }
+  const name = path.basename(installer);
+  const approved = await confirmAction(
+    'Approve Windows installation?',
+    'Allow IsaiahAI to start ' + name + ' with Windows administrator approval?',
+    'Installer: ' + installer + '\n\nThis will open the Windows User Account Control (UAC) prompt. Windows may ask for an administrator account or approval. IsaiahAI cannot bypass that prompt. Review the publisher and installer details in Windows before approving. Cancel here or in UAC to stop.',
+    'Continue to Windows approval'
+  );
+  if (!approved) return { approved: false, canceled: true, installer };
+  const escaped = installer.replace(/'/g, "''");
+  const script = extension === '.msi'
+    ? "$installer='" + escaped + "'; $p=Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\\msiexec.exe') -ArgumentList @('/i',$installer) -Verb RunAs -Wait -PassThru; exit $p.ExitCode"
+    : "$installer='" + escaped + "'; $p=Start-Process -FilePath $installer -Verb RunAs -Wait -PassThru; exit $p.ExitCode";
+  const encoded = Buffer.from(script, 'utf16le').toString('base64');
+  const executable = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+  return await new Promise((resolve, reject) => {
+    const child = spawn(executable, ['-NoLogo','-NoProfile','-NonInteractive','-EncodedCommand',encoded], {
+      cwd: path.dirname(installer), windowsHide: true, shell: false, env: createWorkspaceCommandEnv(),
+      stdio: ['ignore','pipe','pipe']
+    });
+    let stdout = '', stderr = '', settled = false;
+    const timeout = setTimeout(() => { try { child.kill(); } catch {} }, 30 * 60 * 1000);
+    child.stdout.on('data', chunk => { stdout = (stdout + String(chunk)).slice(-12000); });
+    child.stderr.on('data', chunk => { stderr = (stderr + String(chunk)).slice(-12000); });
+    child.once('error', error => {
+      if (settled) return; settled = true; clearTimeout(timeout);
+      reject(new Error('Windows could not start the installer approval flow: ' + String(error && error.message || error)));
+    });
+    child.once('close', code => {
+      if (settled) return; settled = true; clearTimeout(timeout);
+      const output = [stdout.trim(), stderr.trim()].filter(Boolean).join('\n');
+      resolve({ approved: true, installer, exitCode: Number.isInteger(code) ? code : 1, output: output || (code === 0 ? 'The installer process completed successfully.' : 'The installer did not complete. UAC may have been canceled; check the Windows installer prompt and try again if needed.') });
+    });
+  });
+}
+ipcMain.handle('windows:install-approved', async (_event, payload) => {
+  return await runWindowsInstaller(payload && payload.path);
+});
+
 let workspaceCommandInProgress = false;
 ipcMain.handle('workspace:run-command', async (_event, payload) => {
   if (workspaceCommandInProgress) throw new Error('A local command batch is already running. Wait for it to finish first.');
