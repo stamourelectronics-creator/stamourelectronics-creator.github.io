@@ -1,6 +1,6 @@
 # IsaiahSearch Desktop
 
-## Desktop 1.6.12
+## Desktop 1.6.13
 
 - Rebuilt the new-tab home to match the IsaiahSearch light purple-to-cyan visual identity, including the updated orbital-search logo, clock/date, appearance toggle, Top Sites, Add Site, bookmarks, recent pages, and IsaiahSearch Agent card.
 - Made IsaiahAI Chat a full-window reasoning-first coding agent on Windows and Ubuntu, with an always-visible **Exit chat** control and working Chat, Project Files, Limits, and Puter navigation.
