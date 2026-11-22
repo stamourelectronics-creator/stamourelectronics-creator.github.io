@@ -417,7 +417,7 @@ body.night-theme .search-form input{color:#f6efff!important}
 <button id="chooseWorkspaceBtn" type="button">Choose project folder</button><button id="chooseCommandFolderBtn" type="button">Choose command folder</button><input id="fileFilter" placeholder="Filter project files…" aria-label="Filter project files">
 <select id="agentFileSelect" multiple size="4" aria-label="Choose multiple project files"><option value="">Choose a supported file…</option></select>
 <button id="attachFileContext">Attach selected files</button><button id="clearFileContext">Clear attachments</button><button id="saveAiCode" disabled>Review & save AI code</button><input id="newFilePath" placeholder="New file path or full path…" aria-label="Path for new AI-generated file"><button id="createAiCodeFile">Create file · approve</button>
-<div id="agentToolStatus" class="tool-state" aria-live="polite">Agent tools are enabled for every model. Local commands run in the selected command folder, can access other user-accessible locations, and always require your approval. They do not run as Administrator.</div>
+<div id="agentToolStatus" class="tool-state" aria-live="polite">Agent tools are enabled for every model. Local commands run in the selected command folder, can access other user-accessible locations, and run automatically in Agent mode. They do not run as Administrator.</div>
 </div></details></div>
 <div id="transcript" class="transcript"><div class="welcome"><img class="hero-icon" src="/assets/isaiahai-icon.svg" alt="IsaiahSearch"><div class="eyebrow">ISAIAHAI CHAT · CODE · RESEARCH</div><h1>Build something great.</h1><p>Work through code, investigate a bug, research a topic, or ask IsaiahAI to help. Attach project files for review, save generated code with approval, and use the built-in browser for research.</p><div class="prompt-grid"><button data-prompt="Research this topic using current web sources. Compare source quality and dates, then summarize the evidence."><strong>↗ Research a topic</strong><span>Search live sources and compare evidence</span></button><button data-prompt="Help me debug a project. I will attach the relevant files. Inspect them, find the root cause, and propose a safe, complete fix."><strong>⌘ Debug my project</strong><span>Read selected files and suggest code edits</span></button><button data-prompt="Explain a difficult topic step by step, with examples and a concise takeaway."><strong>✧ Learn something</strong><span>Clear answers with useful examples</span></button></div></div></div>
 <div id="thinkingBar" class="thinking" hidden role="status" aria-live="polite"><span class="spinner"></span><span id="thinkingText">Preparing your request…</span><span class="pips"><i></i><i></i><i></i></span></div>
@@ -953,7 +953,7 @@ function extractLocalCommandProposals(content,platform){
   commands.push(command);
  }
  if(!commands.length)return null;
- if(commands.length>5)return {tooMany:true,count:commands.length,shell:windows?'powershell':'bash',commands:[]};
+ if(commands.length>100)return {tooMany:true,count:commands.length,shell:windows?'powershell':'bash',commands:[]};
  return {shell:windows?'powershell':'bash',commands:commands,start:0,end:source.length};
 }
 
@@ -1166,7 +1166,7 @@ async function sendChat(prompt){
   requestMessage=agentInstructions+'\\n\\n'+(contextParts.length?prompt+'\\n\\n'+contextParts.join('\\n\\n'):prompt);
   let historyForRequest=messages.slice(0,-1).slice(-16);
   const streamCallbacks={onStatus:function(status){setThinking(status);},onDelta:function(delta){if(!liveDraft)liveDraft=createStreamingDraft(selectedLabel);liveDraft.content+=delta;liveDraft.body.textContent=liveDraft.content;$('transcript').scrollTop=$('transcript').scrollHeight;},onRetry:function(){removeStreamingDraft(liveDraft);liveDraft=null;}};
-  const maxActions=20;
+  const maxActions=500;
   while(true){
    setThinking(actionCount?('Reviewing step '+actionCount+' and deciding the next action…'):'Connecting to '+selectedLabel+'…');
    const data=await requestChatTurn(requestMessage,historyForRequest,selectedModel,images,files,actionCount===0&&showThinking,actionCount===0,streamCallbacks);
@@ -1175,7 +1175,7 @@ async function sendChat(prompt){
    setApiStatus('Online',true);
    const desktopAppProposal=extractDesktopAppProposal(answer,desktopPlatform);
    if(desktopAppProposal){
-    if(actionCount>=maxActions){answer='The agent reached its 20-action safety limit. No additional desktop app was launched.';break;}
+    if(actionCount>=maxActions){answer='The agent reached its 500-action safety limit. No additional desktop app was launched.';break;}
     actionCount++;removeStreamingDraft(liveDraft);liveDraft=null;
     const appName=desktopAppLabel(desktopAppProposal.app);
     const executionId='desktop-app-'+Date.now()+'-'+(++agentRunSequence);
@@ -1202,7 +1202,7 @@ async function sendChat(prompt){
    }
    const systemDiagnosticProposal=extractSystemDiagnosticProposal(answer,desktopPlatform);
    if(systemDiagnosticProposal){
-    if(actionCount>=maxActions){answer='The agent reached its 20-action limit. No further system diagnostic was run.';break;}
+    if(actionCount>=maxActions){answer='The agent reached its 500-action limit. No further system diagnostic was run.';break;}
     actionCount++;removeStreamingDraft(liveDraft);liveDraft=null;
     const executionId='system-diagnostic-'+Date.now()+'-'+(++agentRunSequence);
     const progress=appendAgentProgress('Step '+actionCount+' · '+systemDiagnosticProposal.label,'Running a fixed, read-only Windows diagnostic. No command text from the model is executed.',executionId);
@@ -1227,16 +1227,16 @@ async function sendChat(prompt){
    }
    const commandProposal=extractLocalCommandProposals(answer,desktopPlatform);
    if(commandProposal&&commandProposal.tooMany){
-    answer='I found '+commandProposal.count+' command blocks. I can run up to five separate commands per approved batch. No command from this oversized batch was run; split the plan into batches of five or fewer.';
+    answer='I found '+commandProposal.count+' command blocks. I can run up to one hundred separate commands per batch. No command from this oversized batch was run; split the plan into batches of one hundred or fewer.';
     break;
    }
    if(commandProposal){
     const batchSize=commandProposal.commands.length;
-    if(actionCount+batchSize>maxActions){answer='The agent reached its 20-command action limit. No additional command batch was run.';break;}
+    if(actionCount+batchSize>maxActions){answer='The agent reached its 500-command action limit. No additional command batch was run.';break;}
     actionCount+=batchSize;removeStreamingDraft(liveDraft);liveDraft=null;
     const executionId='command-batch-'+Date.now()+'-'+(++agentRunSequence);
     const progress=appendAgentProgress('Step '+actionCount+' · approved command batch',batchSize+' commands will run in sequence from '+(commandFolderPath||workspacePath)+'.',executionId);
-    setAgentProgress(progress,'Review all '+batchSize+' commands in the native approval prompt…');setThinking('Waiting for approval of '+batchSize+' commands…');
+    setAgentProgress(progress,'Executing all '+batchSize+' validated commands automatically…');setThinking('Running '+batchSize+' commands automatically…');
     let commandResult=null,commandError='';
     try{commandResult=await window.isaiahDesktop.runWorkspaceCommand({shell:commandProposal.shell,commands:commandProposal.commands,unattended:true});}
     catch(error){commandError=safeError(error);}
@@ -1260,13 +1260,13 @@ async function sendChat(prompt){
     }
     messages.push({role:'assistant',content:answer},{role:'user',content:resultText});
     historyForRequest=messages.slice(-16);
-    requestMessage='Continue the original task using the actual command-by-command results in the latest tool message. Commands run sequentially and a failed/timed-out command stops the remaining batch. Do not claim anything beyond returned results, do not repeat successful commands, and do not retry a declined batch. Diagnose failures and propose a new batch of up to five separate one-line commands if needed.';
+    requestMessage='Continue the original task using the actual command-by-command results in the latest tool message. Commands run sequentially and a failed/timed-out command stops the remaining batch. Do not claim anything beyond returned results, do not repeat successful commands, and do not retry a declined batch. Diagnose failures and propose a new batch of up to one hundred separate one-line commands if needed.';
     continue;
    }
    const browserProposal=extractBrowserProposal(answer);
     if(browserProposal){
      removeStreamingDraft(liveDraft);liveDraft=null;
-     if(actionCount>=20){answer='The browser agent reached its 20-action safety limit. The next website was not opened.';break;}
+     if(actionCount>=20){answer='The browser agent reached its 500-action safety limit. The next website was not opened.';break;}
      actionCount++;
      const executionId='browser-'+Date.now()+'-'+(++agentRunSequence);
      const progress=appendAgentProgress('Step '+actionCount+' · opening browser tab','Opening '+browserProposal.url+' in a new native Chromium tab.',executionId);
