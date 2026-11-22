@@ -372,6 +372,8 @@ export function BrowserView({
   });
   const [isLoadingMoreLinks, setIsLoadingMoreLinks] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  const cloudBrowserHydratedRef = useRef(false);
+  const [chromeMigration, setChromeMigration] = useState<{tabs: any[]; history: any[]; bookmarks: any[]; extensions: any[]} | null>(null);
 
   // --- NEW FEATURE AND BROWSER STATE EXTENSIONS ---
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -804,6 +806,69 @@ export function BrowserView({
       if (authUnsub) authUnsub();
     };
   }, [db, auth]);
+
+  // Cross-device browser sync. The signed-in Firebase/Google account is the shared browser profile.
+  useEffect(() => {
+    if (!auth) return;
+    let unsub: (() => void) | null = null;
+    const stop = onAuthStateChanged(auth, async (firebaseUser) => {
+      cloudBrowserHydratedRef.current = false;
+      if (!firebaseUser || firebaseUser.isAnonymous || !db) return;
+      const uid = firebaseUser.uid;
+      try {
+        unsub = onSnapshot(doc(db, 'user_browser_state', uid), (snap) => {
+          const data = snap.data() as any;
+          if (!data) { cloudBrowserHydratedRef.current = true; return; }
+          if (Array.isArray(data.tabs) && data.tabs.length) setTabs(data.tabs);
+          if (typeof data.activeTabId === 'string') setActiveTabId(data.activeTabId);
+          if (Array.isArray(data.history)) setHistoryList(data.history);
+          if (Array.isArray(data.bookmarks)) setBookmarksList(data.bookmarks);
+          if (Array.isArray(data.recentSearches)) setRecentSearches(data.recentSearches);
+          cloudBrowserHydratedRef.current = true;
+        }, () => { cloudBrowserHydratedRef.current = true; });
+      } catch { cloudBrowserHydratedRef.current = true; }
+    });
+    return () => { stop(); if (unsub) unsub(); };
+  }, []);
+
+  useEffect(() => {
+    if (!cloudBrowserHydratedRef.current || !db || !auth?.currentUser || auth.currentUser.isAnonymous) return;
+    const timer = window.setTimeout(() => {
+      setDoc(doc(db, 'user_browser_state', auth.currentUser.uid), {
+        tabs, activeTabId, history: historyList, bookmarks: bookmarksList, recentSearches,
+        updatedAt: new Date().toISOString()
+      }, { merge: true }).catch((error) => console.warn('[Firebase] Browser state sync failed:', error));
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [tabs, activeTabId, historyList, bookmarksList, recentSearches]);
+
+  const importChromeMigration = (payload: any) => {
+    const tabsFromChrome = Array.isArray(payload?.tabs) ? payload.tabs.filter((x: any) => x && /^https?:\\/\\//i.test(String(x.url || ''))) : [];
+    const historyFromChrome = Array.isArray(payload?.history) ? payload.history : [];
+    const bookmarksFromChrome = Array.isArray(payload?.bookmarks) ? payload.bookmarks : [];
+    if (tabsFromChrome.length) {
+      const importedTabs = tabsFromChrome.slice(0, 40).map((x: any, index: number) => ({ id: 'chrome-import-' + Date.now() + '-' + index, title: String(x.title || x.url || 'Chrome tab').slice(0, 100), url: String(x.url), searchQuery: '', activeSearch: '' }));
+      setTabs(importedTabs); setActiveTabId(importedTabs[0].id);
+    }
+    if (historyFromChrome.length) setHistoryList(prev => [...historyFromChrome.slice(0, 200).map((x: any) => ({ query: String(x.url || x.title || ''), title: String(x.title || x.url || ''), timestamp: x.lastVisitTime ? new Date(x.lastVisitTime).toISOString() : new Date().toISOString(), incognito: false, type: 'website' })), ...prev].slice(0, 500));
+    if (bookmarksFromChrome.length) {
+      const importedBookmarks = bookmarksFromChrome.slice(0, 60).map((x: any) => ({ title: String(x.title || x.url || 'Chrome bookmark'), query: String(x.url || '') })).filter((x: any) => /^https?:\\/\\//i.test(x.query));
+      setBookmarksList(prev => [...importedBookmarks, ...prev.filter(p => !importedBookmarks.some(i => i.query === p.query))].slice(0, 100));
+    }
+    setChromeMigration(payload);
+    showToast(`Chrome migration imported ${tabsFromChrome.length} tabs, ${historyFromChrome.length} history items, and ${bookmarksFromChrome.length} bookmarks.`);
+  };
+
+  const requestChromeMigration = () => {
+    let handled = false;
+    const listener = (event: MessageEvent) => {
+      if (event.source !== window || event.data?.source !== 'isaiahsearch-chrome-extension' || event.data?.type !== 'chrome-state-response') return;
+      handled = true; window.removeEventListener('message', listener); importChromeMigration(event.data.payload || {});
+    };
+    window.addEventListener('message', listener);
+    window.postMessage({ source: 'isaiahsearch', type: 'request-chrome-state' }, '*');
+    window.setTimeout(() => { window.removeEventListener('message', listener); if (!handled) showToast('Chrome extension was not detected. Install the IsaiahSearch Chrome migration extension first.'); }, 5000);
+  };
 
   // Save changes locally
   useEffect(() => {
@@ -4762,6 +4827,7 @@ export function BrowserView({
               <div className={`rounded-[1.5rem] overflow-hidden ${isLight ? 'bg-white' : 'bg-zinc-800/50'}`}>
                 {[
                   { icon: Bookmark, label: 'Bookmarks', action: () => { setShowBottomMenu(false); setActivePanel('bookmarks'); setMenuOpen(true); } },
+                  { icon: Download, label: 'Import from Chrome', action: () => { setShowBottomMenu(false); requestChromeMigration(); } },
                   { icon: Key, label: 'Passwords', action: () => { setShowBottomMenu(false); setActivePanel('passwords'); setMenuOpen(true); } },
                   { 
                     icon: Download, 
