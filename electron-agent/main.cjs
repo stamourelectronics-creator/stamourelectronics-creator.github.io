@@ -1148,12 +1148,6 @@ ipcMain.handle('workspace:run-command', async (_event, payload) => {
   ].join('\\n');
   workspaceCommandInProgress = true;
   try {
-    // Desktop Agent mode can execute validated user-level commands unattended.
-    // Safety validation remains mandatory: no elevation, credential/secret access,
-    // remote shells, disk formatting, registry/security changes, or shutdown/restart.
-    if (payload && payload.unattended === true) {
-      return await runApprovedWorkspaceCommandBatch(validated.commands, root);
-    }
     const approved = await confirmAction(
       'Approve command batch?',
       'Allow IsaiahAI to run all ' + validated.commands.length + ' commands in sequence?',
