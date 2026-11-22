@@ -103,7 +103,7 @@ if (html.includes("agentModeToggle').addEventListener") ||
 if (/runShellCommand|runApprovedPreset|onAgentCommandOutput|unrestrictedModeToggle|terminalOutput/.test(html)) {
   throw new Error('The renderer must not expose a generic or unrestricted local command interface.');
 }
-if (!html.includes('native approval dialog') ||
+if (
     !html.includes('const maxActions=500;') ||
     !html.includes("window.isaiahDesktop.runWorkspaceCommand({shell:commandProposal.shell,commands:commandProposal.commands})") ||
     !html.includes('up to one hundred separate commands') ||
@@ -173,6 +173,8 @@ if (!main.includes("ipcMain.handle('system:run-diagnostic'") ||
     !main.includes('function validateWorkspaceCommandBatch') ||
     !main.includes('function runApprovedWorkspaceCommandBatch') ||
     !main.includes('commands.length > 100') ||
+    !main.includes('Approve command batch?') ||
+    !main.includes('confirmAction(') ||
     !main.includes('between one and one hundred separate commands') ||
     !main.includes('Administrator/root elevation, credential and secret-file access') ||
     main.includes('payload && payload.unattended === true') ||
