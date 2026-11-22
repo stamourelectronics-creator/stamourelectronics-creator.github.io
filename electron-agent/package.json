@@ -1,8 +1,8 @@
 {
   "name": "isaiahsearch-browser",
   "productName": "IsaiahSearch",
-  "version": "1.6.9",
-  "description": "IsaiahSearch desktop browser and IsaiahAI agent for Windows and Ubuntu, with approved project automation and expanded fixed read-only whole-machine Windows diagnostics.",
+  "version": "1.6.10",
+  "description": "IsaiahSearch desktop browser and IsaiahAI agent for Windows and Ubuntu, with multi-command project task batches and read-only whole-machine Windows diagnostics.",
   "main": "main.cjs",
   "license": "UNLICENSED",
   "scripts": {

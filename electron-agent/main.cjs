@@ -981,6 +981,39 @@ function validateWorkspaceCommand(payload) {
 }
 
 
+function validateWorkspaceCommandBatch(payload) {
+  const commands = Array.isArray(payload && payload.commands)
+    ? payload.commands
+    : (typeof (payload && payload.command) === 'string' ? [payload.command] : []);
+  if (!commands.length || commands.length > 5) {
+    throw new Error('A command batch must contain between one and five separate commands.');
+  }
+  const shell = String(payload && payload.shell || '').trim().toLowerCase();
+  const validated = commands.map(command => validateWorkspaceCommand({ shell, command }));
+  return { shell: validated[0].shell, commands: validated.map(item => item.command) };
+}
+
+async function runApprovedWorkspaceCommandBatch(commands) {
+  const cwd = path.resolve(requireWorkspace());
+  const results = [];
+  let stoppedOnFailure = false;
+  for (const command of commands) {
+    try {
+      const result = await runApprovedWorkspaceCommand(command);
+      results.push({ command, exitCode: result.exitCode, timedOut: result.timedOut, output: result.output });
+      if (result.exitCode !== 0 || result.timedOut) {
+        stoppedOnFailure = true;
+        break;
+      }
+    } catch (error) {
+      results.push({ command, exitCode: 1, timedOut: false, error: String(error && error.message || error) });
+      stoppedOnFailure = true;
+      break;
+    }
+  }
+  return { approved: true, cwd, results, stoppedOnFailure };
+}
+
 function createWorkspaceCommandEnv() {
   const windows = process.platform === 'win32';
   const names = windows
@@ -1056,23 +1089,32 @@ function runApprovedWorkspaceCommand(command) {
 
 let workspaceCommandInProgress = false;
 ipcMain.handle('workspace:run-command', async (_event, payload) => {
-  if (workspaceCommandInProgress) throw new Error('A local command is already running. Wait for it to finish first.');
+  if (workspaceCommandInProgress) throw new Error('A local command batch is already running. Wait for it to finish first.');
   const root = await fs.realpath(requireWorkspace());
-  const validated = validateWorkspaceCommand(payload);
+  const validated = validateWorkspaceCommandBatch(payload);
   const detail = [
     'Working folder: ' + root,
     '',
-    'Command:',
-    validated.command,
+    'The following ' + validated.commands.length + ' commands will run sequentially:',
+    ...validated.commands.map((command, index) => (index + 1) + '. ' + command),
     '',
-    'This runs locally in the selected project folder, without Administrator privileges.',
-    'A project script may create or change project files or install dependencies. Only approve commands and project scripts you trust.',
-    'System commands, network transfer tools, credential access, and absolute/out-of-folder paths are blocked.'
+    'All commands run locally in the selected project folder, without Administrator privileges.',
+    'The batch stops at the first non-zero exit code or timeout. Each command is independently checked before this dialog appears.',
+    'Project scripts may create/change project files or install dependencies. Only approve commands and scripts you trust.',
+    'System paths, network transfer tools, credential access, shell chaining, and parent-directory paths remain blocked.'
   ].join('\n');
-  const approved = await confirmAction('Approve local command?', 'Allow IsaiahAI to run this command on this computer?', detail, 'Run command');
-  if (!approved) return { approved: false, canceled: true, cwd: root };
   workspaceCommandInProgress = true;
-  try { return await runApprovedWorkspaceCommand(validated.command); }
-  finally { workspaceCommandInProgress = false; }
+  try {
+    const approved = await confirmAction(
+      'Approve command batch?',
+      'Allow IsaiahAI to run all ' + validated.commands.length + ' commands in sequence?',
+      detail,
+      'Run all commands'
+    );
+    if (!approved) return { approved: false, canceled: true, cwd: root, results: [] };
+    return await runApprovedWorkspaceCommandBatch(validated.commands);
+  } finally {
+    workspaceCommandInProgress = false;
+  }
 });
 

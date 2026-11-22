@@ -68,7 +68,7 @@ const requiredHtml = [
   'SEARCH_API',
   'requestChatTurn',
   'readGatewayEventStream',
-  'extractLocalCommandProposal',
+  'extractLocalCommandProposals',
   'extractSystemDiagnosticProposal',
   'system-diagnostic',
   'runSystemDiagnostic',
@@ -92,7 +92,7 @@ for (const item of requiredHtml) {
 }
 if (html.includes("agentModeToggle').addEventListener") ||
     html.includes('Agent mode is off') ||
-    !html.includes('const commandProposal=extractLocalCommandProposal(answer,desktopPlatform);') ||
+    !html.includes('const commandProposal=extractLocalCommandProposals(answer,desktopPlatform);') ||
     !html.includes('const browserProposal=extractBrowserProposal(answer);') ||
     !html.includes("const agentInstructions=browserAgentIntro+' '+desktopProtocol;") ||
     (html.match(/desktopAgent:true/g) || []).length < 3) {
@@ -103,7 +103,8 @@ if (/runShellCommand|runApprovedPreset|onAgentCommandOutput|unrestrictedModeTogg
   throw new Error('The renderer must not expose a generic or unrestricted local command interface.');
 }
 if (!html.includes('native approval dialog') ||
-    !html.includes("window.isaiahDesktop.runWorkspaceCommand({shell:commandProposal.shell,command:commandProposal.command})")) {
+    !html.includes('const maxActions=20;') ||
+    !html.includes("window.isaiahDesktop.runWorkspaceCommand({shell:commandProposal.shell,commands:commandProposal.commands})")) {
   throw new Error('Local command proposals must be sent through the native approval-gated desktop bridge.');
 }
 if (!html.includes('writeWorkspaceFile') || !html.includes('inspectBrowserView')) {
