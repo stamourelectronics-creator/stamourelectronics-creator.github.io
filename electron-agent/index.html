@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#080d18"><title>IsaiahSearch · IsaiahAI Chat</title><link rel="icon" type="image/svg+xml" href="/assets/isaiahsearch-icon.svg">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore-compat.js"></script><meta name="theme-color" content="#080d18"><title>IsaiahSearch · IsaiahAI Chat</title><link rel="icon" type="image/svg+xml" href="/assets/isaiahsearch-icon.svg">
 <style>
 :root{color-scheme:dark;--bg:#080d18;--line:#29394f;--muted:#96a8c1;--text:#f2f6ff;--cyan:#65dcf8;--violet:#b2a1ff;--shadow:0 18px 60px #0005}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:radial-gradient(1000px 600px at 20% -20%,#183a5c77,transparent 62%),radial-gradient(800px 500px at 100% 8%,#392b7170,transparent 60%),var(--bg);font:14px/1.55 Inter,"Segoe UI",system-ui,sans-serif;color:var(--text)}
@@ -411,7 +411,7 @@ body.night-theme .search-form input{color:#f6efff!important}
  <button type="button" id="railPuterBtn" title="Puter model access" aria-label="Puter model access">P</button>
 </aside>
 <div class="chat">
-<div class="chat-drawer-head"><div class="chat-drawer-brand"><span class="chat-drawer-mark">✦</span><div><strong>IsaiahAI Chat</strong><small>Reasoning · coding · browser research</small><div class="chat-api-status"><span class="dot"></span><span id="apiStatus">Checking AI connection…</span></div></div></div><div class="chat-drawer-actions"><span id="agentModeToggle" class="sign-in agent-mode-status" role="status" aria-label="Agent tools enabled for every model">Agent tools enabled for every model</span><button id="showThinkingToggle" class="sign-in" type="button" aria-pressed="false">Reasoning</button><button id="closeChatBtn" class="chat-close" type="button" aria-label="Exit IsaiahAI chat and return to the browser">← <span>Exit chat</span></button></div></div>
+<div class="chat-drawer-head"><div class="chat-drawer-brand"><span class="chat-drawer-mark">✦</span><div><strong>IsaiahAI Chat</strong><small>Reasoning · coding · browser research</small><div class="chat-api-status"><span class="dot"></span><span id="apiStatus">Checking AI connection…</span></div></div></div><div class="chat-drawer-actions"><button id="googleSignInBtn" class="sign-in" type="button" aria-pressed="false">Sign in with Google</button><span id="agentModeToggle" class="sign-in agent-mode-status" role="status" aria-label="Agent tools enabled for every model">Agent tools enabled for every model</span><button id="showThinkingToggle" class="sign-in" type="button" aria-pressed="false">Reasoning</button><button id="closeChatBtn" class="chat-close" type="button" aria-label="Exit IsaiahAI chat and return to the browser">← <span>Exit chat</span></button></div></div>
 <div class="agent-tools"><div class="tool-top"><span class="workspace-indicator" id="workspaceStatus">Preparing your project workspace…</span></div>
 <details id="projectFilesPanel"><summary>Project files · attach and save code</summary><div class="tool-content">
 <button id="chooseWorkspaceBtn" type="button">Choose project folder</button><button id="chooseCommandFolderBtn" type="button">Choose command folder</button><input id="fileFilter" placeholder="Filter project files…" aria-label="Filter project files">
@@ -485,6 +485,58 @@ body.night-theme .search-form input{color:#f6efff!important}
 let API='https://codepro-gateway-production.up.railway.app/api',CODEPRO_API='https://codepro-gateway-production.up.railway.app',SEARCH_API='https://isaiahsearch.netlify.app/api';
 const $=function(id){return document.getElementById(id);};
 let messages=[],lastAssistantContent='',workspacePath='',commandFolderPath='',selectedWorkspaceFile='',pinnedFileContexts=[],workspaceFiles=[],thinkingTimer=null,showThinking=false,apiReady=null,apiHealth=null,codeProHealth=null,workspaceReady=Promise.resolve(),currentPanel='browser',pendingAttachments=[],progressNodes=new Map(),agentRunSequence=0,puterSdkPromise=null,puterSignedIn=false,puterUser=null,puterModelId='',puterMonthlyUsage=null,desktopPlatform='win32';
+const FIREBASE_DESKTOP_CONFIG = {
+ projectId: 'continual-processor-sk4jk',
+ appId: '1:358994696353:web:2cf7ae5059fa8a2a19b8e0',
+ apiKey: 'AIzaSyC8jnk5z1m4T6twFTu0f-OpeCM8GvEPRvc',
+ authDomain: 'continual-processor-sk4jk.firebaseapp.com',
+ storageBucket: 'continual-processor-sk4jk.firebasestorage.app',
+ messagingSenderId: '358994696353'
+};
+let cloudUser=null,cloudReady=false;
+try {
+  if (window.firebase) {
+    const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(FIREBASE_DESKTOP_CONFIG);
+    const cloudAuth = firebase.auth(app);
+    const cloudDb = firebase.firestore(app);
+    window.isaiahCloud = {
+      signIn: async () => {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        ['https://www.googleapis.com/auth/gmail.readonly','https://www.googleapis.com/auth/gmail.send','https://www.googleapis.com/auth/gmail.modify','https://www.googleapis.com/auth/calendar','https://www.googleapis.com/auth/calendar.events','https://www.googleapis.com/auth/drive.file','https://www.googleapis.com/auth/drive.readonly','https://www.googleapis.com/auth/documents','https://www.googleapis.com/auth/presentations','https://www.googleapis.com/auth/spreadsheets','https://www.googleapis.com/auth/tasks','https://www.googleapis.com/auth/contacts.readonly','https://www.googleapis.com/auth/contacts'].forEach(scope => provider.addScope(scope));
+        provider.setCustomParameters({ prompt: 'select_account' });
+        const result = await cloudAuth.signInWithPopup(provider);
+        const credential = firebase.auth.GoogleAuthProvider.credentialFromResult(result);
+        return { user: result.user, accessToken: credential?.accessToken || null };
+      },
+      signOut: () => cloudAuth.signOut(),
+      getUser: () => cloudUser,
+      onAuthStateChanged: callback => cloudAuth.onAuthStateChanged(callback),
+      loadBrowserState: async () => {
+        if (!cloudUser) return null;
+        const snap = await cloudDb.collection('user_browser_state').doc(cloudUser.uid).get();
+        return snap.exists ? snap.data() : null;
+      },
+      saveBrowserState: async state => {
+        if (!cloudUser) return;
+        await cloudDb.collection('user_browser_state').doc(cloudUser.uid).set({ ...state, updatedAt: new Date().toISOString() }, { merge: true });
+      },
+      loadChats: async () => {
+        if (!cloudUser) return [];
+        const snap = await cloudDb.collection('user_chats').where('userId','==',cloudUser.uid).limit(30).get();
+        return snap.docs.map(doc => doc.data()).sort((a,b) => String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')));
+      },
+      saveChat: async session => {
+        if (!cloudUser || !session) return;
+        await cloudDb.collection('user_chats').doc(session.id).set({
+          userId: cloudUser.uid, id: session.id, title: session.title || 'IsaiahAI Chat',
+          messages: session.messages || [], updatedAt: session.updatedAt || new Date().toISOString(), category: 'Other'
+        }, { merge: true });
+      }
+    };
+    cloudAuth.onAuthStateChanged(user => { cloudUser = user || null; cloudReady = Boolean(user); window.dispatchEvent(new CustomEvent('isaiah-cloud-auth', { detail: { user: user ? { uid:user.uid, email:user.email, displayName:user.displayName, photoURL:user.photoURL } : null } })); });
+  }
+} catch (error) { console.warn('[IsaiahSearch] Firebase desktop auth unavailable:', error); }
+
 const fence=String.fromCharCode(96).repeat(3);
 function isHttpUrl(value){try{const u=new URL(value);return u.protocol==='http:'||u.protocol==='https:';}catch{return false;}}
 function setToolStatus(message){$('agentToolStatus').textContent=message;}
