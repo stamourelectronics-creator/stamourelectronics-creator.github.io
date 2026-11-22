@@ -39,19 +39,19 @@ function base64UrlEncode(value: string) {
   const bytes = new TextEncoder().encode(value);
   let binary = '';
   bytes.forEach(byte => { binary += String.fromCharCode(byte); });
-  return btoa(binary).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/g, '');
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
 
 export async function sendGmail(accessToken: string, to: string, subject: string, body: string) {
   if (!to.trim()) throw new Error('A recipient is required.');
   const raw = [
     'To: ' + to.trim(),
-    'Subject: ' + subject.replace(/[\\r\\n]+/g, ' ').trim(),
+    'Subject: ' + subject.replace(/[\r\n]+/g, ' ').trim(),
     'Content-Type: text/plain; charset="UTF-8"',
     'MIME-Version: 1.0',
     '',
     body,
-  ].join('\\r\\n');
+  ].join('\r\n');
   return googleFetch('/gmail/v1/users/me/messages/send', accessToken, {
     method: 'POST',
     body: JSON.stringify({ raw: base64UrlEncode(raw) }),
