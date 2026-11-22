@@ -161,6 +161,7 @@ if (!main.includes("DEFAULT_API_BASE_URL = 'https://codepro-gateway-production.u
 }
 if (!main.includes("ipcMain.handle('system:run-diagnostic'") ||
     !main.includes('SYSTEM_DIAGNOSTICS') ||
+    !['computer-overview','hardware-overview','storage-overview','running-processes','running-services','network-adapters','recent-updates','cpu-details','gpu-details','memory-modules','motherboard-bios','physical-disks','device-drivers','usb-devices','installed-apps','defender-status','battery-status','audio-devices'].every(id => main.includes("'" + id + "'") && html.includes("'" + id + "'")) ||
     !main.includes('function runSystemDiagnostic') ||
     !main.includes('25-second time limit') ||
     !main.includes("ipcMain.handle('workspace:run-command'") ||

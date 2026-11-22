@@ -756,6 +756,50 @@ const SYSTEM_DIAGNOSTICS = Object.freeze({
   'recent-updates': {
     label: 'Recently installed Windows updates',
     script: "Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 20 HotFixId, Description, InstalledOn | Format-Table -AutoSize"
+  },
+'cpu-details': {
+    label: 'CPU details',
+    script: "Get-CimInstance Win32_Processor | Select-Object Name, Manufacturer, NumberOfCores, NumberOfLogicalProcessors, MaxClockSpeed, CurrentClockSpeed | Format-List"
+  },
+  'gpu-details': {
+    label: 'Graphics adapters',
+    script: "Get-CimInstance Win32_VideoController | Select-Object Name, DriverVersion, VideoModeDescription, Status | Format-Table -AutoSize"
+  },
+  'memory-modules': {
+    label: 'Installed memory modules',
+    script: "Get-CimInstance Win32_PhysicalMemory | Select-Object Manufacturer, @{Name='Capacity_GB';Expression={[math]::Round($_.Capacity / 1GB, 1)}}, Speed, ConfiguredClockSpeed, SMBIOSMemoryType | Format-Table -AutoSize"
+  },
+  'motherboard-bios': {
+    label: 'Motherboard and firmware',
+    script: "Get-CimInstance Win32_BaseBoard | Select-Object Manufacturer, Product, Version | Format-List; Get-CimInstance Win32_BIOS | Select-Object Manufacturer, SMBIOSBIOSVersion, ReleaseDate | Format-List"
+  },
+  'physical-disks': {
+    label: 'Physical disk inventory',
+    script: "Get-CimInstance Win32_DiskDrive | Select-Object Model, MediaType, InterfaceType, @{Name='Size_GB';Expression={[math]::Round($_.Size / 1GB, 1)}}, Status | Format-Table -AutoSize"
+  },
+  'device-drivers': {
+    label: 'Signed device drivers',
+    script: "Get-CimInstance Win32_PnPSignedDriver | Select-Object -First 45 DeviceName, DriverVersion, DriverDate, DriverProviderName | Format-Table -AutoSize"
+  },
+  'usb-devices': {
+    label: 'Connected USB devices',
+    script: "Get-CimInstance Win32_PnPEntity | Where-Object {$_.PNPDeviceID -like 'USB*' -and $_.ConfigManagerErrorCode -eq 0} | Select-Object -First 35 Name, Manufacturer, Status | Format-Table -AutoSize"
+  },
+  'installed-apps': {
+    label: 'Installed application inventory',
+    script: "Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*','HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*','HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*' -ErrorAction SilentlyContinue | Where-Object {$_.DisplayName} | Sort-Object DisplayName | Select-Object -First 70 DisplayName, DisplayVersion, Publisher | Format-Table -AutoSize"
+  },
+  'defender-status': {
+    label: 'Microsoft Defender status',
+    script: "$available = Get-Command Get-MpComputerStatus -ErrorAction SilentlyContinue; if ($available) { Get-MpComputerStatus | Select-Object AMServiceEnabled, AntivirusEnabled, RealTimeProtectionEnabled, BehaviorMonitorEnabled, IoavProtectionEnabled, NISEnabled, AntivirusSignatureVersion, AntivirusSignatureLastUpdated | Format-List } else { 'Microsoft Defender status cmdlet is not available on this Windows installation.' }"
+  },
+  'battery-status': {
+    label: 'Battery status',
+    script: "$battery = Get-CimInstance Win32_Battery; if ($battery) { $battery | Select-Object Name, BatteryStatus, EstimatedChargeRemaining, DesignVoltage | Format-List } else { 'No battery was reported by Windows.' }"
+  },
+  'audio-devices': {
+    label: 'Audio devices',
+    script: "Get-CimInstance Win32_SoundDevice | Select-Object Name, Manufacturer, ProductName, Status | Format-Table -AutoSize"
   }
 });
 
