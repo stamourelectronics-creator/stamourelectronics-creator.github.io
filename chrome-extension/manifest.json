@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "IsaiahAI",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "IsaiahAI chat from the Chrome toolbar, with optional context from the active webpage or visible screen.",
-  "permissions": ["storage", "tabs", "scripting"],
+  "permissions": ["storage", "tabs", "scripting", "sessions", "bookmarks", "history", "management"],
   "host_permissions": ["http://*/*", "https://*/*"],
   "action": { "default_title": "Chat with IsaiahAI", "default_popup": "popup.html" },
   "background": { "service_worker": "service_worker.js" },
