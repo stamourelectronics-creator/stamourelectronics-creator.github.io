@@ -463,6 +463,27 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
  .message,.thinking,button,.result{animation:none!important;transition:none!important}
 }
 
+
+/* Preview-matched IsaiahSearch browser chrome */
+.app-chrome-header{height:43px;min-height:43px;display:flex;align-items:center;gap:18px;padding:0 15px;background:linear-gradient(180deg,#0c1728,#0a1321);border-bottom:1px solid #ffffff16}
+.app-chrome-brand{height:100%;display:flex;align-items:center;gap:9px;min-width:205px;color:#edf6ff;font-size:16px;font-weight:850;letter-spacing:-.55px}
+.app-chrome-logo{width:29px;height:29px;display:block;object-fit:contain;flex:none;filter:drop-shadow(0 2px 8px #55dfff55)}
+.app-chrome-sections{height:100%;display:flex;align-items:stretch;gap:5px}
+.app-section-tab{display:flex;align-items:center;gap:8px;padding:0 17px;border:1px solid transparent;border-radius:11px 11px 0 0;background:transparent;color:#a9bad0;font-size:12px;font-weight:750}
+.app-section-tab.active{background:linear-gradient(145deg,#172b43,#122138);border-color:#4ccce755;border-bottom-color:#122138;color:#effaff}
+.app-section-tab:hover{background:#ffffff0b}
+.app-chrome-spacer{flex:1}
+.app-chrome-status{display:flex;align-items:center;gap:7px;color:#9db4cc;font-size:10px;white-space:nowrap}
+.app-chrome-status i{width:7px;height:7px;border-radius:50%;background:#42d5a1;box-shadow:0 0 9px #42d5a177}
+.newtab-hero{max-width:830px;margin-bottom:34px}
+.newtab-feature-brand{display:flex;justify-content:center;align-items:center;gap:15px;margin:0 auto 6px}
+.newtab-feature-brand img{width:68px;height:68px;object-fit:contain;filter:drop-shadow(0 7px 18px #3fcdfb55)}
+.newtab-feature-brand h1{margin:0;font-size:clamp(38px,5vw,58px);line-height:1.04;letter-spacing:-2.8px;background:linear-gradient(100deg,#f6fbff 15%,#64d9ff 58%,#b49aff 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.newtab-eyebrow{margin-top:11px;color:#75dcf4}
+.newtab-hero h2{margin:8px 0 9px;color:#e8f2ff;font-size:clamp(20px,2.6vw,29px);letter-spacing:-.8px}
+.newtab-hero>p{font-size:13px;margin-bottom:20px}
+@media(max-width:800px){.app-chrome-header{gap:8px;padding:0 8px}.app-chrome-brand{min-width:0;font-size:13px}.app-chrome-logo{width:25px;height:25px}.app-section-tab{padding:0 9px;font-size:10px}.app-chrome-status{display:none}.newtab-feature-brand img{width:54px;height:54px}.newtab-feature-brand h1{font-size:38px}}
+
 </style></head><body>
 
 <main>
@@ -518,6 +539,13 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 </div></section>
 <section id="panel-browser" class="panel active browser-panel" aria-label="IsaiahSearch browser">
 <div class="browser">
+<div class="app-chrome-header">
+ <div class="app-chrome-brand"><img src="/assets/isaiahsearch-icon.svg" alt="IsaiahSearch" class="app-chrome-logo"><span>IsaiahSearch</span></div>
+ <div class="app-chrome-sections" role="tablist" aria-label="App sections">
+  <button type="button" id="appChatTab" class="app-section-tab" aria-label="Open AI Chat">◌ <span>AI Chat</span></button>
+  <button type="button" id="appBrowserTab" class="app-section-tab active" aria-label="Open Browser">◎ <span>Browser</span></button>
+ </div><div class="app-chrome-spacer"></div><span class="app-chrome-status"><i></i> Browser ready</span>
+</div>
 <div id="browserTabs" class="browser-tabs" role="tablist" aria-label="Browser tabs"><button id="newBrowserTab" class="new-browser-tab" type="button" aria-label="New tab">+</button></div>
 <form id="browserForm" class="toolbar" aria-label="Address and navigation">
 <div class="nav-controls"><button type="button" id="homeBtn" aria-label="New tab page" title="New tab">⌂</button><button type="button" id="backBtn" aria-label="Back" title="Back">←</button><button type="button" id="forwardBtn" aria-label="Forward" title="Forward">→</button><button type="button" id="reloadBtn" aria-label="Reload" title="Reload">↻</button></div>
@@ -528,7 +556,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 <div id="browserHome" class="browser-home">
 <div class="newtab-shell">
 <div class="newtab-top"><div class="newtab-brand"><img src="/assets/isaiahsearch-icon.svg" alt="IsaiahSearch" class="newtab-logo"><div><strong>IsaiahSearch</strong><span>Your browser. Your space.</span></div></div><div class="newtab-top-actions"><div class="clock-widget"><strong id="homeClock">--:--</strong><span id="homeDate">Loading local date…</span></div><button type="button" id="themeToggleBtn" class="theme-toggle" aria-label="Switch to dark theme" aria-pressed="false" title="Toggle appearance">☾</button></div></div>
-<div class="newtab-hero"><div class="newtab-eyebrow">A LITTLE SPACE TO EXPLORE</div><h1>Where to next?</h1><p>Open a website, find something new, or ask your built-in AI agent to help.</p>
+<div class="newtab-hero"><div class="newtab-feature-brand"><img src="/assets/isaiahsearch-icon.svg" alt="IsaiahSearch logo"><h1>IsaiahSearch</h1></div><div class="newtab-eyebrow">YOUR BROWSER. YOUR SPACE.</div><h2>Search Smarter. Do More.</h2><p>Search the web, ask IsaiahAI, or get things done.</p>
 <form id="browserSearchForm" class="search-form"><span class="search-lens" aria-hidden="true">⌕</span><input id="browserSearchInput" aria-label="Search the web" placeholder="Search the web or enter a question…" autocomplete="off"><button type="submit">Search ↗</button></form>
 <div id="browserSearchStatus" class="muted" style="margin-top:10px;font-size:11px" aria-live="polite"></div><div id="browserResults" class="browser-results"></div></div>
 <section class="home-section"><div class="home-section-heading"><h2>Top sites</h2><span>QUICK ACCESS</span></div><div id="shortcutGrid" class="shortcut-grid">
@@ -1722,6 +1750,8 @@ restoreCustomShortcuts();
 try{applyNewTabTheme(localStorage.getItem('isaiahsearch-newtab-theme')==='dark');}catch{applyNewTabTheme(false);}
 
 $('newBrowserTab').addEventListener('click',function(){createBrowserTab('',true);});
+$('appChatTab').addEventListener('click',openChat);
+$('appBrowserTab').addEventListener('click',closeChat);
 $('backBtn').addEventListener('click',function(){const tab=activeBrowserTab();if(tab?.nativeCreated)window.isaiahDesktop.browserBack(tab.id).catch(function(){});});
 $('forwardBtn').addEventListener('click',function(){const tab=activeBrowserTab();if(tab?.nativeCreated)window.isaiahDesktop.browserForward(tab.id).catch(function(){});});
 $('reloadBtn').addEventListener('click',function(){const tab=activeBrowserTab();if(tab?.nativeCreated){$('browserCanvas').hidden=false;$('browserNote').hidden=false;$('browserNote').textContent='Reloading '+(tab.title||'website')+'…';window.isaiahDesktop.browserReload(tab.id).catch(function(error){$('browserCanvas').hidden=true;$('browserNote').hidden=false;$('browserNote').textContent=safeError(error);});}else showBrowserHome();});
