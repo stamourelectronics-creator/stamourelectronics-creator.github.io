@@ -42,6 +42,28 @@ function base64UrlEncode(value: string) {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
 
+export async function getGmailMessage(accessToken: string, id: string) {
+  if (!id) throw new Error('A Gmail message ID is required.');
+  return googleFetch('/gmail/v1/users/me/messages/' + encodeURIComponent(id) + '?format=full', accessToken);
+}
+
+export async function modifyGmailMessage(accessToken: string, id: string, addLabelIds: string[] = [], removeLabelIds: string[] = []) {
+  if (!id) throw new Error('A Gmail message ID is required.');
+  return googleFetch('/gmail/v1/users/me/messages/' + encodeURIComponent(id) + '/modify', accessToken, {
+    method: 'POST', body: JSON.stringify({ addLabelIds, removeLabelIds })
+  });
+}
+
+export async function trashGmailMessage(accessToken: string, id: string) {
+  if (!id) throw new Error('A Gmail message ID is required.');
+  return googleFetch('/gmail/v1/users/me/messages/' + encodeURIComponent(id) + '/trash', accessToken, { method: 'POST' });
+}
+
+export async function deleteGmailMessage(accessToken: string, id: string) {
+  if (!id) throw new Error('A Gmail message ID is required.');
+  return googleFetch('/gmail/v1/users/me/messages/' + encodeURIComponent(id), accessToken, { method: 'DELETE' });
+}
+
 export async function sendGmail(accessToken: string, to: string, subject: string, body: string) {
   if (!to.trim()) throw new Error('A recipient is required.');
   const raw = [
@@ -71,6 +93,18 @@ export async function listCalendarEvents(accessToken: string, timeMin = new Date
     htmlLink: event.htmlLink || '',
     attendees: (event.attendees || []).map((a: any) => a.email).filter(Boolean),
   }));
+}
+
+export async function updateCalendarEvent(accessToken: string, eventId: string, event: any) {
+  if (!eventId) throw new Error('A Calendar event ID is required.');
+  return googleFetch('/calendar/v3/calendars/primary/events/' + encodeURIComponent(eventId), accessToken, {
+    method: 'PATCH', body: JSON.stringify(event)
+  });
+}
+
+export async function deleteCalendarEvent(accessToken: string, eventId: string) {
+  if (!eventId) throw new Error('A Calendar event ID is required.');
+  return googleFetch('/calendar/v3/calendars/primary/events/' + encodeURIComponent(eventId), accessToken, { method: 'DELETE' });
 }
 
 export async function createCalendarEvent(accessToken: string, event: {
@@ -112,9 +146,15 @@ export async function listContacts(accessToken: string, pageSize = 50) {
 export async function runGoogleAgentAction(accessToken: string, action: string, args: any = {}) {
   switch (action) {
     case 'gmail.list': return listGmailMessages(accessToken, args.query || 'in:anywhere', args.maxResults || 10);
+    case 'gmail.get': return getGmailMessage(accessToken, args.id || '');
     case 'gmail.send': return sendGmail(accessToken, args.to || '', args.subject || '', args.body || '');
+    case 'gmail.modify': return modifyGmailMessage(accessToken, args.id || '', args.addLabelIds || [], args.removeLabelIds || []);
+    case 'gmail.trash': return trashGmailMessage(accessToken, args.id || '');
+    case 'gmail.delete': return deleteGmailMessage(accessToken, args.id || '');
     case 'calendar.list': return listCalendarEvents(accessToken, args.timeMin, args.maxResults || 10);
     case 'calendar.create': return createCalendarEvent(accessToken, args);
+    case 'calendar.update': return updateCalendarEvent(accessToken, args.id || '', args.event || args);
+    case 'calendar.delete': return deleteCalendarEvent(accessToken, args.id || '');
     case 'drive.list': return listDriveFiles(accessToken, args.query || 'trashed = false', args.pageSize || 20);
     case 'tasks.list': return listTasks(accessToken, args.maxResults || 20);
     case 'contacts.list': return listContacts(accessToken, args.pageSize || 50);
