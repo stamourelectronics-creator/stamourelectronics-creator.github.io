@@ -81,7 +81,7 @@ const requiredHtml = [
   'runWorkspaceCommand',
   'id="chooseWorkspaceBtn"',
   'id="chooseCommandFolderBtn"',
-  'maxActions=20',
+  'maxActions=500',
   'function extractBrowserProposal',
   'createBrowserView',
   'onBrowserEvent',
