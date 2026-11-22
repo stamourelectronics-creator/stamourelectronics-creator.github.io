@@ -106,7 +106,7 @@ if (/runShellCommand|runApprovedPreset|onAgentCommandOutput|unrestrictedModeTogg
 if (!html.includes('native approval dialog') ||
     !html.includes('const maxActions=500;') ||
     !html.includes("window.isaiahDesktop.runWorkspaceCommand({shell:commandProposal.shell,commands:commandProposal.commands})") ||
-    !html.includes('up to five separate commands') ||
+    !html.includes('up to one hundred separate commands') ||
     !html.includes('Choose command folder') ||
     (html.split('const browserProposal=extractBrowserProposal(answer);').length - 1) !== 1) {
   throw new Error('Local command proposals must be sent through the native approval-gated desktop bridge.');
@@ -172,7 +172,10 @@ if (!main.includes("ipcMain.handle('system:run-diagnostic'") ||
     !main.includes("ipcMain.handle('workspace:run-command'") ||
     !main.includes('function validateWorkspaceCommandBatch') ||
     !main.includes('function runApprovedWorkspaceCommandBatch') ||
-    !main.includes('commands.length > 5') ||
+    !main.includes('commands.length > 100') ||
+    !main.includes('between one and one hundred separate commands') ||
+    !main.includes('Administrator/root elevation, credential and secret-file access') ||
+    main.includes('payload && payload.unattended === true') ||
     !main.includes('stoppedOnFailure = true') ||
     !main.includes('function validateWorkspaceCommand') ||
     !main.includes('function runApprovedWorkspaceCommand') ||
