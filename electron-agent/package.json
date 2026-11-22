@@ -1,8 +1,8 @@
 {
   "name": "isaiahsearch-browser",
   "productName": "IsaiahSearch",
-  "version": "1.6.16",
-  "description": "IsaiahSearch desktop browser and IsaiahAI agent for Windows and Ubuntu, with refined browser UI, persistent Google account state, safe in-place installer upgrades, cloud sync, and autonomous multi-command agent workflows.",
+  "version": "1.6.17",
+  "description": "IsaiahSearch desktop browser and IsaiahAI agent for Windows and Ubuntu, with persistent Google sign-in, faster progressive Chromium navigation, extended agent command and model timeouts, and safe in-place installer upgrades.",
   "main": "main.cjs",
   "license": "UNLICENSED",
   "scripts": {

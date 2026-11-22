@@ -200,6 +200,22 @@ const signInEnd = html.indexOf('signInWorkspace: async () => {', signInStart);
 if (signInStart < 0 || signInEnd <= signInStart || html.slice(signInStart, signInEnd).includes('provider.addScope')) {
   throw new Error('Basic Google sign-in must not request optional Workspace API scopes.');
 }
+const browserLoadingStart = html.indexOf("}else if(event.type==='loading'){");
+const browserLoadingEnd = html.indexOf("}else if(event.type==='error'){", browserLoadingStart);
+const browserLoadingSource = browserLoadingStart >= 0 && browserLoadingEnd > browserLoadingStart
+  ? html.slice(browserLoadingStart, browserLoadingEnd)
+  : '';
+if (!browserLoadingSource ||
+    !browserLoadingSource.includes("setBrowserViewActive(tab.id,true)") ||
+    browserLoadingSource.includes("setBrowserViewActive(tab.id,false)") ||
+    !browserLoadingSource.includes("updateBrowserBounds()")) {
+  throw new Error('Chromium must remain visible and render progressively while the active page loads.');
+}
+if ((html.match(/AbortSignal\\.timeout\\(360000\\)/g) || []).length !== 3 ||
+    !html.includes("setTimeout(function(){controller.abort();},120000)")) {
+  throw new Error('Hosted models must have extended request windows while IsaiahAI 26 Thinking keeps its existing request timeout.');
+}
+
 const main = fs.readFileSync(path.join(root, 'main.cjs'), 'utf8');
 new vm.Script(main, { filename: 'electron-agent-main.js' });
 if (!main.includes("DEFAULT_API_BASE_URL = 'https://codepro-gateway-production.up.railway.app/api'") || !main.includes("nativeTheme.themeSource = 'dark'") || main.includes('webContents.setBackgroundColor(')) {
@@ -209,7 +225,8 @@ if (!main.includes("ipcMain.handle('system:run-diagnostic'") ||
     !main.includes('SYSTEM_DIAGNOSTICS') ||
     !['computer-overview','hardware-overview','storage-overview','running-processes','running-services','network-adapters','recent-updates','cpu-details','gpu-details','memory-modules','motherboard-bios','physical-disks','device-drivers','usb-devices','installed-apps','defender-status','battery-status','audio-devices'].every(id => main.includes("'" + id + "'") && html.includes("'" + id + "'")) ||
     !main.includes('function runSystemDiagnostic') ||
-    !main.includes('25-second time limit') ||
+    !main.includes('2-minute time limit') ||
+    !main.includes('SYSTEM_DIAGNOSTIC_TIMEOUT_MS = 120000') ||
     !main.includes("ipcMain.handle('workspace:run-command'") ||
     !main.includes('function validateWorkspaceCommandBatch') ||
     !main.includes('function runApprovedWorkspaceCommandBatch') ||
@@ -237,7 +254,8 @@ if (!main.includes("ipcMain.handle('system:run-diagnostic'") ||
     !main.includes('env: createWorkspaceCommandEnv()')) {
   throw new Error('The local command runner must support a user-selected folder, explicit approval, normal user permissions, and downloads outside the project workspace.');
 }
-if (!main.includes('shell: false') || !main.includes('windowsHide: true') || !main.includes('300000')) {
+if (!main.includes('shell: false') || !main.includes('windowsHide: true') || !main.includes('WORKSPACE_COMMAND_TIMEOUT_MS = 600000') ||
+    !main.includes('10-minute time limit')) {
   throw new Error('Local commands must not spawn through an implicit shell and must have a time limit.');
 }
 if (!main.includes("ipcMain.handle('desktop:launch-app'") ||

@@ -1146,7 +1146,7 @@ async function requestBreakawayBackup(message,history,images,files,callbacks){
  const response=await fetch(CODEPRO_API+'/api/breakaway',{
   method:'POST',headers:{'Content-Type':'application/json','Accept':'text/event-stream'},
   body:JSON.stringify({message:message,history:history,stream:true,desktopAgent:true}),
-  signal:AbortSignal.timeout(120000),cache:'no-store'
+  signal:AbortSignal.timeout(360000),cache:'no-store'
  });
  return await readGatewayEventStream(response,callbacks,'Breakaway 1.0');
 }
@@ -1200,7 +1200,7 @@ async function requestChatTurn(message,history,selectedModel,images,files,showSu
    const response=await fetch(CODEPRO_API+'/api/agent',{
     method:'POST',headers:{'Content-Type':'application/json','Accept':'text/event-stream'},
     body:JSON.stringify({message:message,history:history,stream:true,desktopAgent:true,showThinking:showSummary,reasoningEffort:showSummary?'high':'medium'}),
-    signal:AbortSignal.timeout(150000),cache:'no-store'
+    signal:AbortSignal.timeout(360000),cache:'no-store'
    });
    const data=await readGatewayEventStream(response,callbacks,'IsaiahAI CodePro');
     return {...data,selectedProvider:'IsaiahAI CodePro',selectedModel:'isaiah_codepro',model:'IsaiahAI CodePro'};
@@ -1223,7 +1223,7 @@ async function requestChatTurn(message,history,selectedModel,images,files,showSu
     reasoningMode:showSummary?'thinking':'auto',reasoningEffort:showSummary?'high':'medium',
     images:images,files:files,stream:true
    }),
-   signal:AbortSignal.timeout(120000),cache:'no-store'
+   signal:AbortSignal.timeout(360000),cache:'no-store'
   });
   return await readGatewayEventStream(response,callbacks,modelLabel(selectedModel));
  },2,callbacks&&callbacks.onRetry);
@@ -1986,7 +1986,15 @@ if(typeof window.isaiahDesktop.onBrowserEvent==='function'){
    tab.loading=!!event.loading;
    if(activeBrowserTabId===tab.id){
     $('browserNote').hidden=!tab.loading;$('browserNote').textContent=tab.loading?'Loading '+(tab.title||'page')+'…':'';
-    if(tab.loading){window.isaiahDesktop.setBrowserViewActive(tab.id,false).catch(function(){});window.isaiahDesktop.setBrowserViewBounds({x:0,y:0,width:0,height:0});}
+    if(tab.loading){
+      // Keep Chromium visible while the document and remaining resources load.
+      // Hiding it until did-stop-loading made every link wait for the full page.
+      $('browserCanvas').hidden=false;
+      updateBrowserBounds();
+      window.isaiahDesktop.setBrowserViewActive(tab.id,true).then(function(){requestAnimationFrame(updateBrowserBounds);}).catch(function(error){
+       $('browserNote').hidden=false;$('browserNote').textContent='Chromium view could not be activated: '+safeError(error);
+      });
+     }
     else if(currentPanel==='browser')syncNativeBrowserView();
    }
   }else if(event.type==='error'){

@@ -49,6 +49,8 @@ app.on('second-instance', (_event, argv) => {
 const DEFAULT_LOCAL_UI_PORT = 41737;
 const DEFAULT_API_BASE_URL = 'https://codepro-gateway-production.up.railway.app/api';
 const DEFAULT_CODEPRO_API_BASE_URL = 'https://codepro-gateway-production.up.railway.app';
+const SYSTEM_DIAGNOSTIC_TIMEOUT_MS = 120000;
+const WORKSPACE_COMMAND_TIMEOUT_MS = 600000;
 async function loadSavedWorkspace() {
   let candidate = '';
   let commandCandidate = '';
@@ -863,7 +865,7 @@ function runSystemDiagnostic(diagnosticId) {
     const timeout = setTimeout(() => {
       timedOut = true;
       try { child.kill(); } catch {}
-    }, 25000);
+    }, SYSTEM_DIAGNOSTIC_TIMEOUT_MS);
     child.stdout.on('data', chunk => { stdout = append(stdout, chunk); });
     child.stderr.on('data', chunk => { stderr = append(stderr, chunk); });
     child.once('error', error => {
@@ -878,7 +880,7 @@ function runSystemDiagnostic(diagnosticId) {
       clearTimeout(timeout);
       let output = stdout.trim();
       if (stderr.trim()) output += (output ? '\n\n' : '') + '[stderr]\n' + stderr.trim();
-      if (timedOut) output += (output ? '\n\n' : '') + 'The diagnostic stopped after the 25-second time limit.';
+      if (timedOut) output += (output ? '\n\n' : '') + 'The diagnostic stopped after the 2-minute time limit.';
       if (!output) output = signal ? 'Process ended with signal ' + signal + '.' : '(no output)';
       const exitCode = Number.isInteger(code) ? code : (timedOut ? 124 : 1);
       resolve({ ok: exitCode === 0 && !timedOut, diagnosticId, label: definition.label, exitCode, timedOut, output });
@@ -1107,7 +1109,7 @@ function runApprovedWorkspaceCommand(command, workingDirectory) {
       try { child.kill('SIGTERM'); } catch {}
       const forceStop = setTimeout(() => { try { child.kill('SIGKILL'); } catch {} }, 2500);
       forceStop.unref?.();
-    }, 300000);
+    }, WORKSPACE_COMMAND_TIMEOUT_MS);
     child.stdout.on('data', chunk => { stdout = append(stdout, chunk); });
     child.stderr.on('data', chunk => { stderr = append(stderr, chunk); });
     child.once('error', error => {
@@ -1122,7 +1124,7 @@ function runApprovedWorkspaceCommand(command, workingDirectory) {
       clearTimeout(timeout);
       let output = stdout.trim();
       if (stderr.trim()) output += (output ? '\n\n' : '') + '[stderr]\n' + stderr.trim();
-      if (timedOut) output += (output ? '\n\n' : '') + 'Command stopped after the 300-second time limit.';
+      if (timedOut) output += (output ? '\n\n' : '') + 'Command stopped after the 10-minute time limit.';
       if (!output) output = signal ? 'Process ended with signal ' + signal + '.' : '(no output)';
       resolve({ approved: true, cwd: root, exitCode: Number.isInteger(code) ? code : (timedOut ? 124 : 1), timedOut, output });
     });
