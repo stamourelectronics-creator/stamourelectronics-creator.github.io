@@ -4827,6 +4827,7 @@ export function BrowserView({
               <div className={`rounded-[1.5rem] overflow-hidden ${isLight ? 'bg-white' : 'bg-zinc-800/50'}`}>
                 {[
                   { icon: Bookmark, label: 'Bookmarks', action: () => { setShowBottomMenu(false); setActivePanel('bookmarks'); setMenuOpen(true); } },
+                  { icon: LogIn, label: userProfile?.loggedIn ? 'Google Account Connected' : 'Sign in with Google', action: () => { setShowBottomMenu(false); onShowAuthModal(); } },
                   { icon: Download, label: 'Import from Chrome', action: () => { setShowBottomMenu(false); requestChromeMigration(); } },
                   { icon: Key, label: 'Passwords', action: () => { setShowBottomMenu(false); setActivePanel('passwords'); setMenuOpen(true); } },
                   { 
