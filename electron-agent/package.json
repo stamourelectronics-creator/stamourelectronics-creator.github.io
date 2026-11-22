@@ -1,8 +1,8 @@
 {
   "name": "isaiahsearch-browser",
   "productName": "IsaiahSearch",
-  "version": "1.6.11",
-  "description": "IsaiahSearch desktop browser and IsaiahAI agent for Windows and Ubuntu, with approval-gated multi-command batches and user-selected command folders for Windows and Ubuntu.",
+  "version": "1.6.12",
+  "description": "IsaiahSearch desktop browser and IsaiahAI agent for Windows and Ubuntu, with Google account login/cloud sync, persistent website permissions, Chrome migration, and approval-gated multi-command batches for Windows and Ubuntu.",
   "main": "main.cjs",
   "license": "UNLICENSED",
   "scripts": {
