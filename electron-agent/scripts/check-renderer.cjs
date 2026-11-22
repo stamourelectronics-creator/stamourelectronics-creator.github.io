@@ -104,7 +104,7 @@ if (/runShellCommand|runApprovedPreset|onAgentCommandOutput|unrestrictedModeTogg
   throw new Error('The renderer must not expose a generic or unrestricted local command interface.');
 }
 if (!html.includes('native approval dialog') ||
-    !html.includes('const maxActions=20;') ||
+    !html.includes('const maxActions=500;') ||
     !html.includes("window.isaiahDesktop.runWorkspaceCommand({shell:commandProposal.shell,commands:commandProposal.commands})") ||
     !html.includes('up to five separate commands') ||
     !html.includes('Choose command folder') ||
