@@ -80,7 +80,7 @@ const requiredHtml = [
   'stream:true',
   'runWorkspaceCommand',
   'id="chooseWorkspaceBtn"',
-  'maxActions=10',
+  'maxActions=20',
   'function extractBrowserProposal',
   'createBrowserView',
   'onBrowserEvent',
@@ -104,7 +104,8 @@ if (/runShellCommand|runApprovedPreset|onAgentCommandOutput|unrestrictedModeTogg
 }
 if (!html.includes('native approval dialog') ||
     !html.includes('const maxActions=20;') ||
-    !html.includes("window.isaiahDesktop.runWorkspaceCommand({shell:commandProposal.shell,commands:commandProposal.commands})")) {
+    !html.includes("window.isaiahDesktop.runWorkspaceCommand({shell:commandProposal.shell,commands:commandProposal.commands})") ||
+    !html.includes('up to five separate commands')) {
   throw new Error('Local command proposals must be sent through the native approval-gated desktop bridge.');
 }
 if (!html.includes('writeWorkspaceFile') || !html.includes('inspectBrowserView')) {
@@ -166,9 +167,13 @@ if (!main.includes("ipcMain.handle('system:run-diagnostic'") ||
     !main.includes('function runSystemDiagnostic') ||
     !main.includes('25-second time limit') ||
     !main.includes("ipcMain.handle('workspace:run-command'") ||
+    !main.includes('function validateWorkspaceCommandBatch') ||
+    !main.includes('function runApprovedWorkspaceCommandBatch') ||
+    !main.includes('commands.length > 5') ||
+    !main.includes('stoppedOnFailure = true') ||
     !main.includes('function validateWorkspaceCommand') ||
     !main.includes('function runApprovedWorkspaceCommand') ||
-    !main.includes("'Run command'") ||
+    !main.includes("'Run all commands'") ||
     !main.includes('cwd: root') ||
     !main.includes('LOCAL_COMMAND_ALLOWLIST') ||
     !main.includes('BLOCKED_SECRET_PATTERN') ||
