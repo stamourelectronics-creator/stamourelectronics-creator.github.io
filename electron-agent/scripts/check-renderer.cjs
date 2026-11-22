@@ -14,6 +14,12 @@ new vm.Script(scripts[0][1], { filename: 'isaiahai-chat-renderer.js' });
 const markupIds = new Set([...html.matchAll(/\bid=["']([^"']+)["']/g)].map(match => match[1]));
 const clickBindings = [...scripts[0][1].matchAll(/\$\(['"]([^'"]+)['"]\)\.addEventListener/g)];
 const missingClickTargets = [...new Set(clickBindings.map(match => match[1]).filter(id => !markupIds.has(id)))];
+const directElementRefs = [...scripts[0][1].matchAll(/\$\(['"]([^'"]+)['"]\)/g)].map(match => match[1]);
+const missingDirectElementRefs = [...new Set(directElementRefs.filter(id => !markupIds.has(id)))];
+const duplicateMarkupIds = [...new Set([...html.matchAll(/\bid=["']([^"']+)["']/g)].map(match => match[1]).filter((id, index, all) => all.indexOf(id) !== index))];
+if (missingDirectElementRefs.length || duplicateMarkupIds.length) {
+  throw new Error('Renderer DOM audit failed. Missing IDs: ' + missingDirectElementRefs.join(', ') + '; duplicate IDs: ' + duplicateMarkupIds.join(', '));
+}
 if (missingClickTargets.length) {
   throw new Error('Renderer click handlers reference missing elements: ' + missingClickTargets.join(', '));
 }
@@ -139,7 +145,7 @@ if (!html.includes("window.puter.auth.signIn()") ||
 }
 if (!html.includes("fetch(SEARCH_API+'/quick-search-links'") ||
     !html.includes("let API='https://codepro-gateway-production.up.railway.app/api'") ||
-    !html.includes("SEARCH_API='https://isaiahsearch.netlify.app/api'")) {
+    !html.includes("SEARCH_API=CODEPRO_API+'/api'") || html.includes('isaiahsearch.netlify.app')) {
   throw new Error('Chat and browser-search requests must use their intended independent endpoints.');
 }
 if (/codeProHealth\.provider(?!Ready)/.test(html) ||
@@ -162,9 +168,22 @@ if (!html.includes("const directDesktopApp=extractDirectDesktopAppIntent(prompt,
   throw new Error('Direct app-launch intent and model desktop-app proposals must both be routed.');
 }
 
+if (!html.includes('function queueGoogleBrowserStateSave()') ||
+    !html.includes("$('googleSignInBtn').addEventListener('click'") ||
+    !html.includes('signInWorkspace: async () =>') ||
+    !html.includes("cloudDb.collection('user_chats').doc(cloudUser.uid + '_' + session.id)") ||
+    !html.includes("savedTheme===null||savedTheme==='dark'") ||
+    html.includes('isaiahsearch.netlify.app')) {
+  throw new Error('Google sign-in, cloud browser sync, per-user chat storage, Railway search routing or dark browser defaults are missing.');
+}
+const signInStart = html.indexOf('signIn: async () => {');
+const signInEnd = html.indexOf('signInWorkspace: async () => {', signInStart);
+if (signInStart < 0 || signInEnd <= signInStart || html.slice(signInStart, signInEnd).includes('provider.addScope')) {
+  throw new Error('Basic Google sign-in must not request optional Workspace API scopes.');
+}
 const main = fs.readFileSync(path.join(root, 'main.cjs'), 'utf8');
 new vm.Script(main, { filename: 'electron-agent-main.js' });
-if (!main.includes("DEFAULT_API_BASE_URL = 'https://codepro-gateway-production.up.railway.app/api'")) {
+if (!main.includes("DEFAULT_API_BASE_URL = 'https://codepro-gateway-production.up.railway.app/api'") || !main.includes("nativeTheme.themeSource = 'dark'") || !main.includes("setBackgroundColor('#0b1020')")) {
   throw new Error('Desktop model requests must use the shared Railway /api route.');
 }
 if (!main.includes("ipcMain.handle('system:run-diagnostic'") ||
