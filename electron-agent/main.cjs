@@ -727,6 +727,102 @@ ipcMain.handle('desktop:launch-app', async (_event, payload) => {
   const launched = await launchWindowsExecutable(appId, definition);
   return { approved: true, ...launched };
 });
+
+const SYSTEM_DIAGNOSTICS = Object.freeze({
+  'computer-overview': {
+    label: 'Operating system overview',
+    script: "Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version, BuildNumber, OSArchitecture, LastBootUpTime | Format-List"
+  },
+  'hardware-overview': {
+    label: 'Hardware overview',
+    script: "Get-CimInstance Win32_ComputerSystem | Select-Object Manufacturer, Model, NumberOfProcessors, NumberOfLogicalProcessors, @{Name='RAM_GB';Expression={[math]::Round($_.TotalPhysicalMemory / 1GB, 1)}} | Format-List"
+  },
+  'storage-overview': {
+    label: 'Disk capacity',
+    script: "Get-CimInstance Win32_LogicalDisk -Filter \"DriveType=3\" | Select-Object DeviceID, VolumeName, @{Name='Size_GB';Expression={[math]::Round($_.Size / 1GB, 1)}}, @{Name='Free_GB';Expression={[math]::Round($_.FreeSpace / 1GB, 1)}} | Format-Table -AutoSize"
+  },
+  'running-processes': {
+    label: 'Running processes',
+    script: "Get-Process | Sort-Object CPU -Descending | Select-Object -First 25 ProcessName, Id, CPU, @{Name='Memory_MB';Expression={[math]::Round($_.WorkingSet64 / 1MB, 1)}} | Format-Table -AutoSize"
+  },
+  'running-services': {
+    label: 'Running services',
+    script: "Get-Service | Where-Object {$_.Status -eq 'Running'} | Select-Object -First 40 Name, DisplayName, Status | Format-Table -AutoSize"
+  },
+  'network-adapters': {
+    label: 'Network adapters',
+    script: "Get-CimInstance Win32_NetworkAdapter | Where-Object {$_.NetEnabled -eq $true} | Select-Object NetConnectionID, Name, Manufacturer, NetConnectionStatus | Format-Table -AutoSize"
+  },
+  'recent-updates': {
+    label: 'Recently installed Windows updates',
+    script: "Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 20 HotFixId, Description, InstalledOn | Format-Table -AutoSize"
+  }
+});
+
+function runSystemDiagnostic(diagnosticId) {
+  const definition = SYSTEM_DIAGNOSTICS[diagnosticId];
+  if (!definition) throw new Error('That system diagnostic is not on the fixed read-only list.');
+  const systemRoot = String(process.env.SystemRoot || process.env.WINDIR || 'C:\\Windows');
+  const executable = path.join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+  const args = ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', "$ErrorActionPreference='Stop'; " + definition.script];
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    let stdout = '';
+    let stderr = '';
+    let timedOut = false;
+    const maxOutput = 12000;
+    const append = (current, chunk) => {
+      const next = current + String(chunk || '');
+      return next.length > maxOutput ? next.slice(0, maxOutput) : next;
+    };
+    let child;
+    try {
+      child = spawn(executable, args, {
+        cwd: app.getPath('home'),
+        windowsHide: true,
+        shell: false,
+        env: createWorkspaceCommandEnv(),
+        stdio: ['ignore', 'pipe', 'pipe']
+      });
+    } catch (error) {
+      reject(new Error('The Windows diagnostic could not start: ' + String(error && error.message || error)));
+      return;
+    }
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      try { child.kill(); } catch {}
+    }, 25000);
+    child.stdout.on('data', chunk => { stdout = append(stdout, chunk); });
+    child.stderr.on('data', chunk => { stderr = append(stderr, chunk); });
+    child.once('error', error => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      reject(new Error('The Windows diagnostic process failed: ' + String(error && error.message || error)));
+    });
+    child.once('close', (code, signal) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      let output = stdout.trim();
+      if (stderr.trim()) output += (output ? '\n\n' : '') + '[stderr]\n' + stderr.trim();
+      if (timedOut) output += (output ? '\n\n' : '') + 'The diagnostic stopped after the 25-second time limit.';
+      if (!output) output = signal ? 'Process ended with signal ' + signal + '.' : '(no output)';
+      const exitCode = Number.isInteger(code) ? code : (timedOut ? 124 : 1);
+      resolve({ ok: exitCode === 0 && !timedOut, diagnosticId, label: definition.label, exitCode, timedOut, output });
+    });
+  });
+}
+
+ipcMain.handle('system:run-diagnostic', async (_event, payload) => {
+  if (process.platform !== 'win32') throw new Error('Whole-machine read-only diagnostics are currently available on Windows only.');
+  const diagnosticId = String(payload && payload.diagnostic || '').trim().toLowerCase();
+  if (!Object.prototype.hasOwnProperty.call(SYSTEM_DIAGNOSTICS, diagnosticId)) {
+    throw new Error('Choose one of the predefined read-only Windows diagnostics.');
+  }
+  return await runSystemDiagnostic(diagnosticId);
+});
+
 ipcMain.handle('workspace:choose', async () => {
   const picked = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
   if (picked.canceled || !picked.filePaths[0]) return { canceled: true };

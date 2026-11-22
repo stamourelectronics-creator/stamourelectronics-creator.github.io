@@ -69,6 +69,9 @@ const requiredHtml = [
   'requestChatTurn',
   'readGatewayEventStream',
   'extractLocalCommandProposal',
+  'extractSystemDiagnosticProposal',
+  'system-diagnostic',
+  'runSystemDiagnostic',
   'extractDesktopAppProposal',
   'extractDirectDesktopAppIntent',
   'desktop-app',
@@ -156,7 +159,11 @@ new vm.Script(main, { filename: 'electron-agent-main.js' });
 if (!main.includes("DEFAULT_API_BASE_URL = 'https://codepro-gateway-production.up.railway.app/api'")) {
   throw new Error('Desktop model requests must use the shared Railway /api route.');
 }
-if (!main.includes("ipcMain.handle('workspace:run-command'") ||
+if (!main.includes("ipcMain.handle('system:run-diagnostic'") ||
+    !main.includes('SYSTEM_DIAGNOSTICS') ||
+    !main.includes('function runSystemDiagnostic') ||
+    !main.includes('25-second time limit') ||
+    !main.includes("ipcMain.handle('workspace:run-command'") ||
     !main.includes('function validateWorkspaceCommand') ||
     !main.includes('function runApprovedWorkspaceCommand') ||
     !main.includes("'Run command'") ||
@@ -196,6 +203,9 @@ const preload = fs.readFileSync(path.join(root, 'preload.cjs'), 'utf8');
 new vm.Script(preload, { filename: 'electron-agent-preload.js' });
 if (/runShellCommand|runApprovedPreset|onAgentCommandOutput|getUnrestrictedMode|setUnrestrictedMode|getSystemInfo/.test(preload)) {
   throw new Error('The preload must not expose unrestricted computer-agent controls.');
+}
+if (!preload.includes("runSystemDiagnostic: payload => ipcRenderer.invoke('system:run-diagnostic', payload)")) {
+  throw new Error('The preload must expose only the fixed read-only system diagnostic request.');
 }
 if (!preload.includes("launchDesktopApp: payload => ipcRenderer.invoke('desktop:launch-app', payload)")) {
   throw new Error('The preload must expose only the allowlisted, approval-gated desktop app launch request.');

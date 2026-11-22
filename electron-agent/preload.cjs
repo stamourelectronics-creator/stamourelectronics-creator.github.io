@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('isaiahDesktop', {
   readWorkspaceFile: path => ipcRenderer.invoke('workspace:read', path),
   writeWorkspaceFile: payload => ipcRenderer.invoke('workspace:write', payload),
   runWorkspaceCommand: payload => ipcRenderer.invoke('workspace:run-command', payload),
+  runSystemDiagnostic: payload => ipcRenderer.invoke('system:run-diagnostic', payload),
   launchDesktopApp: payload => ipcRenderer.invoke('desktop:launch-app', payload),
   createBrowserView: payload => ipcRenderer.invoke('browser:create', payload),
   navigateBrowserView: (tabId, url) => ipcRenderer.invoke('browser:navigate', { tabId, url }),
