@@ -1056,8 +1056,8 @@ function extractWindowsInstallProposal(content,platform){
  const pattern=new RegExp(fence+'windows-install[ \\t]*\\r?\\n([^\\r\\n]+)[ \\t]*\\r?\\n?'+fence,'i');
  const match=String(content||'').match(pattern);if(!match)return null;
  const installer=String(match[1]||'').trim();
- if(!/^[a-z]:\\\\[^\\r\\n]+$/i.test(installer))return null;
- if(!/\\.(?:exe|msi)$/i.test(installer))return null;
+ if(!/^[a-z]:\\/i.test(installer) || /[\r\n]/.test(installer))return null;
+ if(!['.exe','.msi'].includes(installer.slice(installer.lastIndexOf('.')).toLowerCase()))return null;
  return {path:installer,start:match.index||0,end:(match.index||0)+match[0].length};
 }
 
