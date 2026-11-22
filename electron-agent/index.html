@@ -1115,7 +1115,7 @@ async function sendChat(prompt){
  const attachmentLabels=attachments.length?'\n\nAttachments: '+attachments.map(function(item){return item.name+' ('+item.kind+')';}).join(', '):'';
  appendMessage('user',prompt+(attachments.length?'\n\n📎 '+attachments.map(function(item){return item.name;}).join(', '):''));
  $('chatInput').value='';$('chatInput').style.height='auto';$('sendBtn').disabled=true;
- messages.push({role:'user',content:prompt+attachmentLabels});
+ messages.push({role:'user',content:prompt+attachmentLabels}); if(window.isaiahCloud&&cloudUser) window.isaiahCloud.saveChat({id:'desktop-chat',title:'IsaiahAI Desktop Chat',messages,updatedAt:new Date().toISOString()}).catch(()=>{});
  startThinking();
  const directDesktopApp=extractDirectDesktopAppIntent(prompt,desktopPlatform);
  if(directDesktopApp){
@@ -1295,7 +1295,7 @@ async function sendChat(prompt){
   provider='Unavailable';updateModelStatus();
  }finally{removeStreamingDraft(liveDraft);stopThinking();}
  setToolStatus(provider==='Unavailable'?'Request failed for '+selectedLabel+'.':('Response generated with '+selectedLabel+'.'+(actionCount?' Completed '+actionCount+' browser action(s).':'')));
- lastAssistantContent=answer;messages.push({role:'assistant',content:answer});
+ lastAssistantContent=answer;messages.push({role:'assistant',content:answer}); if(window.isaiahCloud&&cloudUser) window.isaiahCloud.saveChat({id:'desktop-chat',title:'IsaiahAI Desktop Chat',messages,updatedAt:new Date().toISOString()}).catch(()=>{});
  appendMessage('assistant',answer,sources,thinkingSummary,provider,selectedLabel);
  $('saveAiCode').disabled=!hasCodeBlock(answer)||!selectedWorkspaceFile;$('sendBtn').disabled=false;$('chatInput').focus();
 }
@@ -1396,7 +1396,7 @@ try{const saved=JSON.parse(localStorage.getItem(BOOKMARK_KEY)||'[]');browserBook
 try{const saved=JSON.parse(localStorage.getItem(RECENT_KEY)||'[]');recentSites=Array.isArray(saved)?saved.filter(item=>item&&isHttpUrl(item.url)).slice(0,12):[]}catch{}
 let browserTabs=[],activeBrowserTabId='',browserTabSequence=0;
 function activeBrowserTab(){return browserTabs.find(function(tab){return tab.id===activeBrowserTabId;})||null;}
-function saveBrowserCollections(){try{localStorage.setItem(BOOKMARK_KEY,JSON.stringify(browserBookmarks));localStorage.setItem(RECENT_KEY,JSON.stringify(recentSites));}catch{}}
+function saveBrowserCollections(){try{localStorage.setItem(BOOKMARK_KEY,JSON.stringify(browserBookmarks));localStorage.setItem(RECENT_KEY,JSON.stringify(recentSites));}catch{} queueGoogleBrowserStateSave();}
 function addRecentSite(url,title){
  if(!isHttpUrl(url))return;try{const parsed=new URL(url);if(['localhost','127.0.0.1'].includes(parsed.hostname))return;}catch{return;}
  recentSites=[{url:url,title:String(title||'').slice(0,80)||new URL(url).hostname,visitedAt:Date.now()},...recentSites.filter(item=>item.url!==url)].slice(0,12);saveBrowserCollections();renderHomeWidgets();
@@ -1479,6 +1479,7 @@ function toggleBrowserBookmark(){
 }
 function updateHomeClock(){const now=new Date();$('homeClock').textContent=now.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});$('homeDate').textContent=now.toLocaleDateString([], {weekday:'long',month:'long',day:'numeric',year:'numeric'});}
 function renderBrowserTabs(){
+  queueGoogleBrowserStateSave();
  const root=$('browserTabs'),newButton=$('newBrowserTab');root.replaceChildren();
  browserTabs.forEach(function(tab){
   const item=document.createElement('div');item.className='browser-tab'+(tab.id===activeBrowserTabId?' active':'');item.setAttribute('role','presentation');
