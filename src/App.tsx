@@ -2315,6 +2315,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
 2. Avoid shallow one-liner bullet lists or lazy short answers. Provide deep technical and conceptual explanations with speed, clarity, and authority.
 3. Identify exclusively as Isaiah Max 6.0. NEVER mention "Gemini" or "Google".\n\nADDITIONAL INSTRUCTIONS:\n1. If the user asks "find me a job" or asks for local jobs, you MUST first ask for their exact location. Once they provide it, output a simulated search result of nearby jobs.\n2. If the user searches for or requests the "St.Amour database", check their email (${currentUser?.email || "unauthenticated"}). If their email is exactly precise26@gmail.com, azndibroblox2@gmail.com, azndibroblox@gmail.com, precise26@hotmail.com, or stamourisaiah@gmail.com, grant them access with ZERO LIMITS.`,
               ) + '\\n\\n' + GOOGLE_AGENT_SYSTEM_INSTRUCTION,
+              }),
             });
             if (!response.ok) {
               const errData = await response.json().catch(() => ({}));
