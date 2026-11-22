@@ -208,8 +208,8 @@ service cloud.firestore {
         request.resource.data.tabs.size() <= 100 &&
         request.resource.data.bookmarks is list &&
         request.resource.data.bookmarks.size() <= 100 &&
-        request.resource.data.recentSites is list &&
-        request.resource.data.recentSites.size() <= 200
+        request.resource.data.recentSearches is list &&
+        request.resource.data.recentSearches.size() <= 200
       );
       allow delete: if isSignedIn() && request.auth.uid == userId;
     }
