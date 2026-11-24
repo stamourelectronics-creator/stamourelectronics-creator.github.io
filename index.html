@@ -32,7 +32,7 @@
       window.addEventListener("error",function(e){ if(e.error) window.__isaiahBootFailed(e.error); });
       window.addEventListener("unhandledrejection",function(e){ window.__isaiahBootFailed(e.reason || "Unhandled startup rejection"); });
     </script>
-    <script src="https://js.puter.com/v2/" async></script>
+    <script src="https://js.puter.com/v2/" defer onload="window.dispatchEvent(new Event('puter-ready'))" onerror="window.dispatchEvent(new Event('puter-error'));console.warn('[IsaiahAI] Puter SDK could not be loaded.')"></script>
   </head>
   <body>
     <div id="root">
