@@ -28,6 +28,8 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Type-check the full frontend
+        run: npm run lint
       - name: Build GitHub Pages site
         run: npm run build:pages
       - name: Verify Google sign-in separation
@@ -37,14 +39,26 @@ jobs:
           import assert from 'node:assert/strict';
           const app = fs.readFileSync('src/App.tsx', 'utf8');
           const firebase = fs.readFileSync('src/firebase.ts', 'utf8');
+          const firebaseConfig = JSON.parse(fs.readFileSync('src/firebase-applet-config.json', 'utf8'));
           const docs = fs.readFileSync('src/components/SchoolDocSyncModal.tsx', 'utf8');
+          const puter = fs.readFileSync('src/lib/puterClient.ts', 'utf8');
+          const index = fs.readFileSync('index.html', 'utf8');
+          const logo = fs.readFileSync('src/components/BrandLogo.tsx', 'utf8');
           assert.match(app, /user\.isAnonymous\s*\?\s*null\s*:\s*user/, 'anonymous sessions must not masquerade as Google logins');
           assert.match(app, /linkWithPopup\(activeUser,\s*provider\)/, 'anonymous users must be linkable to Google');
           assert.match(app, /getRedirectResult\(auth\)/, 'redirect sign-in results must be handled');
+          assert.match(app, /Firebase rejected Google sign-in for this origin/, 'Google auth errors must expose the active project/origin diagnostics');
           assert.match(firebase, /const googleProvider = new GoogleAuthProvider\(\);/, 'basic Google account provider is missing');
           assert.match(firebase, /const googleWorkspaceProvider = new GoogleAuthProvider\(\);/, 'on-demand Workspace provider is missing');
+          assert.match(firebase, /from '\.\/firebase-applet-config\.json'/, 'the active Firebase config import is missing');
+          assert.ok(firebaseConfig.projectId && firebaseConfig.authDomain, 'the active Firebase project config must contain projectId and authDomain');
           assert.match(docs, /onGoogleSignIn: \(\) => Promise<string \| null>/, 'Docs must use the shared Workspace sign-in flow');
-          console.log('Google sign-in checks passed.');
+          assert.match(puter, /authenticateWithPuter/, 'Puter UI sign-in dialog fallback is missing');
+          assert.match(puter, /auth\.signIn\(\{ request_auth: true \}\)/, 'Puter popup fallback is missing');
+          assert.match(index, /js\.puter\.com\/v2\/" defer/, 'Puter SDK should load before users can open Image Studio');
+          assert.match(logo, /src="\/isaiahai-logo\.svg"/, 'all app logos must use the deployed public logo asset');
+          assert.match(app, /requestPhase !== 'complete'/, 'completed model streams must hide the writing indicator');
+          console.log('Google, Puter, shared-logo, and response-status checks passed. Active Firebase project: ' + firebaseConfig.projectId);
           NODE
 
   live-super:
@@ -134,6 +148,89 @@ jobs:
               passed: true,
               model: completed.brand,
               providerRoute: completed.model || 'gateway fallback',
+              firstByteMs,
+              totalMs: Date.now() - startedAt,
+              characters: answer.length
+            }, null, 2));
+          } finally {
+            clearTimeout(hardTimeout);
+          }
+          NODE
+
+  live-breakaway:
+    name: Live streamed Breakaway 1.0 route test
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 3
+    steps:
+      - name: Test Breakaway through the same /api/chat route used by the website
+        run: |
+          node --input-type=module <<'NODE'
+          const endpoint = 'https://codepro-gateway-production.up.railway.app/api/chat';
+          const controller = new AbortController();
+          const hardTimeout = setTimeout(() => controller.abort(), 110000);
+          const startedAt = Date.now();
+          let firstByteMs = null;
+          let accumulated = '';
+          let completed = null;
+          let buffer = '';
+
+          const processFrame = (frame) => {
+            const lines = frame.split(/\r?\n/);
+            const eventName = lines.find((line) => line.startsWith('event:'))?.slice(6).trim();
+            const dataText = lines.filter((line) => line.startsWith('data:')).map((line) => line.slice(5).trim()).join('\n');
+            if (!dataText) return;
+            const data = JSON.parse(dataText);
+            if (eventName === 'delta') accumulated += String(data.text || '');
+            else if (eventName === 'done') completed = data;
+            else if (eventName === 'error') throw new Error(data.message || 'Breakaway returned a stream error.');
+          };
+
+          try {
+            const response = await fetch(endpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+              signal: controller.signal,
+              body: JSON.stringify({
+                model: 'breakaway_1_0',
+                selectedModel: 'breakaway_1_0',
+                message: 'Reply with a short greeting and identify yourself as Breakaway 1.0.',
+                history: [],
+                stream: true,
+                reasoningMode: 'auto',
+                reasoningEffort: 'low',
+                showThinking: false
+              })
+            });
+            if (!response.ok) throw new Error('Gateway HTTP ' + response.status + ': ' + await response.text());
+            if (!response.headers.get('content-type')?.includes('text/event-stream')) throw new Error('Breakaway did not return an event stream.');
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            while (true) {
+              const { value, done } = await reader.read();
+              if (done) break;
+              if (firstByteMs === null) firstByteMs = Date.now() - startedAt;
+              buffer = (buffer + decoder.decode(value, { stream: true })).replace(/\r\n/g, '\n');
+              let splitAt;
+              while ((splitAt = buffer.indexOf('\n\n')) !== -1) {
+                const frame = buffer.slice(0, splitAt);
+                buffer = buffer.slice(splitAt + 2);
+                processFrame(frame);
+              }
+            }
+            buffer += decoder.decode();
+            if (buffer.trim()) processFrame(buffer);
+
+            const answer = String(completed?.content || accumulated).trim();
+            if (!completed) throw new Error('Breakaway stream closed without a done event.');
+            if (completed.brand !== 'Breakaway 1.0') throw new Error('Wrong model handler: ' + String(completed.brand || completed.selectedModel || 'no model identity'));
+            if (completed.selectedModel !== 'breakaway_1_0') throw new Error('Wrong selected model: ' + String(completed.selectedModel));
+            if (!answer) throw new Error('Breakaway returned an empty answer.');
+            console.log(JSON.stringify({
+              passed: true,
+              model: completed.brand,
+              provider: completed.selectedProvider || completed.provider || 'not specified',
               firstByteMs,
               totalMs: Date.now() - startedAt,
               characters: answer.length
