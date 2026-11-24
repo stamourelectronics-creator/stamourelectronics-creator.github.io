@@ -1,6 +1,7 @@
 'use strict';
 
 const DEFAULT_API_BASES = [
+  'https://codepro-gateway-production.up.railway.app',
   'https://isaiah-ai-acel.netlify.app',
   'https://isaiahsearch.netlify.app',
   'https://isaiahai.netlify.app'
@@ -9,18 +10,18 @@ const DEFAULT_API_BASES = [
 
 async function exportChromeState() {
   const tabs = await chrome.tabs.query({});
-  const safeTabs = tabs.filter(tab => /^https?:\\/\\//i.test(String(tab.url || ''))).map(tab => ({
+  const safeTabs = tabs.filter(tab => /^https?:\/\//i.test(String(tab.url || ''))).map(tab => ({
     id: tab.id, title: String(tab.title || '').slice(0, 200), url: String(tab.url || ''), pinned: Boolean(tab.pinned),
     windowId: tab.windowId, active: Boolean(tab.active), lastAccessed: tab.lastAccessed || 0
   }));
   const history = await chrome.history.search({ text: '', startTime: 0, maxResults: 500 });
-  const safeHistory = (history || []).filter(item => /^https?:\\/\\//i.test(String(item.url || ''))).map(item => ({
+  const safeHistory = (history || []).filter(item => /^https?:\/\//i.test(String(item.url || ''))).map(item => ({
     id: item.id, title: String(item.title || '').slice(0, 200), url: String(item.url || ''), lastVisitTime: item.lastVisitTime || 0, visitCount: item.visitCount || 0
   }));
   const tree = await chrome.bookmarks.getTree();
   const bookmarks = [];
   const walk = nodes => (nodes || []).forEach(node => {
-    if (node.url && /^https?:\\/\\//i.test(node.url)) bookmarks.push({ id: node.id, title: String(node.title || '').slice(0, 200), url: node.url });
+    if (node.url && /^https?:\/\//i.test(node.url)) bookmarks.push({ id: node.id, title: String(node.title || '').slice(0, 200), url: node.url });
     walk(node.children);
   });
   walk(tree);
@@ -34,11 +35,12 @@ async function exportChromeState() {
       deviceName: device.deviceName || 'Chrome device',
       lastModified: session.lastModified || 0,
       tab: session.tab ? { title: session.tab.title || '', url: session.tab.url || '' } : null
-    }))).filter(item => item.tab && /^https?:\\/\\//i.test(String(item.tab.url || ''))).slice(0, 100);
+    }))).filter(item => item.tab && /^https?:\/\//i.test(String(item.tab.url || ''))).slice(0, 100);
   } catch (_) {}
   return { tabs: safeTabs, history: safeHistory, bookmarks: bookmarks.slice(0, 500), extensions, syncedSessions };
 }
-\nasync function getApiBases() {
+
+async function getApiBases() {
   const stored = await chrome.storage.local.get(['isaiahAiApiBase']);
   const custom = String(stored.isaiahAiApiBase || '').trim().replace(/\/+$/, '');
   const bases = custom ? [custom, ...DEFAULT_API_BASES] : DEFAULT_API_BASES;
@@ -157,7 +159,7 @@ async function testConnection() {
     try {
       const response = await fetch(base + '/api/health', { method: 'GET', signal: AbortSignal.timeout(8000), cache: 'no-store' });
       const data = await response.json().catch(() => null);
-      if (response.ok && data && data.aiConfigured === true) return { connected: true, message: 'IsaiahAI is connected and ready.' };
+      if (response.ok && data && (data.aiConfigured === true || data.providerReady === true)) return { connected: true, message: 'IsaiahAI is connected and ready.' };
       errors.push(base + ': health endpoint HTTP ' + response.status + (data && data.aiConfigured === false ? ' (no server-side AI key)' : ''));
     } catch (error) { errors.push(base + ': health check — ' + asError(error)); }
     try {
@@ -183,7 +185,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     .catch(error => sendResponse({ ok: false, error: asError(error) }));
   return true;
 });
-\nchrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || message.type !== 'ISAIAH_CHROME_STATE') return;
   exportChromeState().then(data => sendResponse(data)).catch(error => sendResponse({ tabs: [], history: [], bookmarks: [], extensions: [], error: asError(error) }));
   return true;
