@@ -54,6 +54,18 @@ jobs:
             }
           }
           NODE
+      - name: Type-check frontend and validate packaged scripts
+        run: |
+          npm run lint
+          node --check chrome-extension/service_worker.js
+          node --check chrome-extension/content.js
+          node --check chrome-extension/popup.js
+          node --check chrome-extension/options.js
+          node --check public/mobile/sw.js
+          node --check electron-agent/main.cjs
+          node --check electron-agent/preload.cjs
+          node --check electron-agent/scripts/check-renderer.cjs
+          node --check electron-agent/scripts/write-update-manifest.cjs
       - name: Build the GitHub Pages website
         run: npm run build:pages
         env:
