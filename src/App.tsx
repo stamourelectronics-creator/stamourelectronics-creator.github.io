@@ -145,7 +145,7 @@ function VersionsSandbox() {
 
 async function readIsaiahEventStream(
   response: Response,
-  onPhase: (phase: 'thinking' | 'writing') => void,
+  onPhase: (phase: 'thinking' | 'writing' | 'complete') => void,
   onDelta?: (text: string) => void
 ): Promise<any> {
   const reader = response.body?.getReader();
@@ -171,6 +171,7 @@ async function readIsaiahEventStream(
       onDelta?.(accumulated);
     } else if (eventName === 'done') {
       completed = { ...completed, ...payload };
+      onPhase('complete');
     } else if (eventName === 'error') {
       throw new Error(String(payload.message || 'The model stream failed.'));
     }
@@ -332,11 +333,8 @@ export default function App() {
         // Microsoft school sign-in only needs Firebase identity; no Graph token is requested here.
         setGoogleAuthError(null);
       }).catch((error: any) => {
-        const code = String(error?.code || '');
-        const message = code === 'auth/unauthorized-domain'
-          ? "Google sign-in is blocked because this site is not authorized. Add stamourelectronics-creator.github.io in Firebase Console → Authentication → Settings → Authorized domains."
-          : (error?.message || "Google sign-in could not be completed.");
-        setGoogleAuthError(message);
+        setGoogleAuthError(describeGoogleAuthError(error));
+        console.warn('[Firebase] Google redirect completion failed:', error?.code || error?.message);
       });
 
       let profileUnsubscribe: () => void = () => {};
@@ -527,14 +525,16 @@ export default function App() {
   const describeGoogleAuthError = (err: any): string => {
     const code = String(err?.code || '');
     if (code === 'auth/unauthorized-domain') {
-      return "Google sign-in is blocked because this site is not authorized. Add stamourelectronics-creator.github.io in Firebase Console → Authentication → Settings → Authorized domains.";
+      const firebaseOptions = auth?.app?.options || {};
+      const projectId = String(firebaseOptions.projectId || 'unknown Firebase project');
+      const authDomain = String(firebaseOptions.authDomain || 'unknown auth domain');
+      return `Firebase rejected Google sign-in for this origin. This build uses Firebase project "${projectId}" with authDomain "${authDomain}". Confirm the deployed hostname "${window.location.hostname}" and the auth domain are authorized in that exact Firebase project under Authentication → Settings → Authorized domains. If they are already listed, check that the Firebase Web API key and Google OAuth client belong to the same project.`;
     }
-    if (code === 'auth/operation-not-allowed') {
-      return "Google sign-in is disabled for this Firebase project. Enable Google under Firebase Authentication → Sign-in method.";
-    }
+    if (code === 'auth/operation-not-allowed') return "Google sign-in is disabled for the active Firebase project. Enable Google under Firebase Authentication → Sign-in method.";
     if (code === 'auth/popup-closed-by-user') return "Google sign-in was cancelled before it finished.";
     if (code === 'auth/account-exists-with-different-credential') return "This email already uses another sign-in method. Sign in with that method first, then connect Google.";
-    return err?.message || "Google sign-in could not be completed. Please try again.";
+    if (code === 'auth/network-request-failed') return "Firebase could not reach Google sign-in. Check your connection and retry.";
+    return err?.message || (code ? `Google sign-in failed (${code}). Please try again.` : "Google sign-in could not be completed. Please try again.");
   };
 
   const describeCredentialAuthError = (err: any): string => {
@@ -723,7 +723,7 @@ export default function App() {
 
   const [inputText, setInputText] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
-  const [requestPhase, setRequestPhase] = useState<'thinking' | 'searching' | 'writing'>('thinking');
+  const [requestPhase, setRequestPhase] = useState<'thinking' | 'searching' | 'writing' | 'complete'>('thinking');
   const [streamingAnswer, setStreamingAnswer] = useState<string>('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [currentSearchPrompt, setCurrentSearchPrompt] = useState<string | null>(null);
@@ -943,16 +943,28 @@ export default function App() {
 
   useEffect(() => {
     const syncPuterState = () => setPuterSignedIn(isPuterSignedIn());
+    const markPuterUnavailable = () => setPuterSignedIn(false);
     syncPuterState();
     window.addEventListener('focus', syncPuterState);
-    return () => window.removeEventListener('focus', syncPuterState);
+    window.addEventListener('puter-ready', syncPuterState);
+    window.addEventListener('puter-error', markPuterUnavailable);
+    return () => {
+      window.removeEventListener('focus', syncPuterState);
+      window.removeEventListener('puter-ready', syncPuterState);
+      window.removeEventListener('puter-error', markPuterUnavailable);
+    };
   }, []);
 
   const openImageStudio = async () => {
     try {
-      if (!isPuterSignedIn()) await signInPuter();
-      setPuterSignedIn(isPuterSignedIn());
-      if (!isPuterSignedIn()) throw new Error('Puter sign-in was not completed.');
+      if (!isPuterSignedIn()) {
+        const user = await signInPuter();
+        const signedIn = isPuterSignedIn() || Boolean(user);
+        setPuterSignedIn(signedIn);
+        if (!signedIn) throw new Error('Puter sign-in was not completed. Close/reopen the sign-in dialog and retry.');
+      } else {
+        setPuterSignedIn(true);
+      }
       setChatMode('image');
       setActiveView('chat');
       setChatModeDropdownOpen(false);
@@ -2332,6 +2344,10 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
           throw apiErr;
         }
 
+        // The model has finished. Keep submit protection active while optional
+        // post-processing (such as a Google action) completes, but hide the spinner.
+        setRequestPhase('complete');
+
         // Google account agent actions requested by the model.
         if (data?.content) {
           const googleAction = extractGoogleAgentAction(data.content);
@@ -3697,7 +3713,7 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
               )}
 
               {/* Truthful task status: search only during the search request, then model phases. */}
-              {isGenerating && (
+              {isGenerating && requestPhase !== 'complete' && (
                 requestPhase === 'searching' ? (
                   <div className={`max-w-2xl sm:max-w-3xl mx-auto w-full py-3 text-left animate-fade-in flex flex-col gap-1.5 ${isLight ? 'text-zinc-700' : 'text-zinc-400'}`}>
                     <div className={`flex items-center gap-1.5 font-medium text-xs ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>
@@ -4078,8 +4094,8 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
 
                           {chatModeDropdownOpen && (
                             <>
-                              <div className="fixed inset-0 z-40" onClick={() => setChatModeDropdownOpen(false)} />
-                              <div className={`absolute bottom-full right-0 mb-3 w-72 glass-pane border rounded-2xl p-2.5 shadow-2xl z-50 animate-fade-in text-left backdrop-blur-xl ${
+                              <div className="fixed inset-0 z-[999]" onClick={() => setChatModeDropdownOpen(false)} />
+                              <div className={`fixed bottom-[5.5rem] right-3 sm:right-6 w-72 max-w-[calc(100vw-1.5rem)] max-h-[min(72vh,38rem)] overflow-y-auto overscroll-contain glass-pane border rounded-2xl p-2.5 shadow-2xl z-[1000] animate-fade-in text-left backdrop-blur-xl ${
                                 isLight ? 'bg-white/95 border-zinc-250 text-zinc-900' : 'bg-zinc-950/98 border-zinc-800 text-zinc-100'
                               }`}>
                                 <p className="text-[9px] font-mono font-bold text-amber-500 px-2.5 py-1 uppercase tracking-wider border-b border-zinc-800/60 mb-1.5 flex items-center justify-between">
@@ -4456,8 +4472,8 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                       
                       {chatModeDropdownOpen && (
                         <>
-                          <div className="fixed inset-0 z-40" onClick={() => setChatModeDropdownOpen(false)} />
-                          <div className="absolute bottom-full left-0 mb-2 w-72 glass-pane border border-zinc-800 rounded-2xl p-2 shadow-2xl z-50 bg-zinc-950/98 animate-fade-in text-left backdrop-blur-xl">
+                          <div className="fixed inset-0 z-[999]" onClick={() => setChatModeDropdownOpen(false)} />
+                          <div className="fixed bottom-[5.5rem] left-3 right-3 w-auto max-h-[min(72vh,38rem)] overflow-y-auto overscroll-contain glass-pane border border-zinc-800 rounded-2xl p-2 shadow-2xl z-[1000] bg-zinc-950/98 animate-fade-in text-left backdrop-blur-xl">
                             <p className="text-[9px] font-mono font-bold text-amber-500 px-2.5 py-1 uppercase tracking-wider border-b border-zinc-900 mb-1 flex items-center justify-between">
                               <span>Isaiah AI Core Engine</span>
                               <span className="text-zinc-500">v8.0</span>
