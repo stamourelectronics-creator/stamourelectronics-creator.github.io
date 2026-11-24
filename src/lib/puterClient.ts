@@ -30,7 +30,9 @@ const IMAGERY_26_SYSTEM_PROMPT = `You are IsaiahAI Imagery 26, a professional vi
 Transform the user's idea into a precise, visually rich image-generation prompt. Preserve the requested subject and intent. Specify composition, camera position, lighting, materials, color harmony, depth, atmosphere, texture, and visual style where useful. Make the result coherent and production-ready. Avoid contradictory instructions and unnecessary filler. Do not add text, logos, signatures, watermarks, captions, or UI elements unless the user explicitly requests them. Respect the user's requested aspect ratio. Return only the final image prompt, with no preamble or explanation.`;
 
 export function isPuterLoaded(): boolean {
-  return typeof window !== 'undefined' && typeof window.puter !== 'undefined';
+  return typeof window !== 'undefined'
+    && typeof window.puter !== 'undefined'
+    && typeof window.puter.auth !== 'undefined';
 }
 
 export function isPuterSignedIn(): boolean {
@@ -43,13 +45,33 @@ export function isPuterSignedIn(): boolean {
 }
 
 export async function signInPuter(): Promise<PuterUser | null> {
-  if (!isPuterLoaded()) throw new Error('Puter is still loading. Refresh the page and try again.');
+  if (!isPuterLoaded()) {
+    throw new Error('Puter has not finished loading yet. Wait a moment and press Image Studio again.');
+  }
+
   try {
-    if (!isPuterSignedIn()) await window.puter.auth.signIn();
-    return await getPuterUser();
+    if (!isPuterSignedIn()) {
+      // Prefer Puter's first-party sign-in dialog when supported by this SDK.
+      // The fallback opens Puter's popup and is invoked directly from the click.
+      const authenticate = window.puter.ui?.authenticateWithPuter;
+      if (typeof authenticate === 'function') {
+        await authenticate.call(window.puter.ui);
+      } else if (typeof window.puter.auth?.signIn === 'function') {
+        await window.puter.auth.signIn({ request_auth: true });
+      } else {
+        throw new Error('The Puter sign-in interface is unavailable. Reload IsaiahAI and try again.');
+      }
+    }
+
+    const user = await getPuterUser();
+    if (!user && !isPuterSignedIn()) {
+      throw new Error('Puter sign-in did not finish. Keep the sign-in dialog open until it completes, then retry.');
+    }
+    return user;
   } catch (error: any) {
+    const message = String(error?.msg || error?.message || 'Puter sign-in was not completed.');
     console.error('[IsaiahAI Imagery 26] Puter sign-in failed:', error);
-    throw new Error(error?.message || 'Puter sign-in was not completed.');
+    throw new Error(message);
   }
 }
 
