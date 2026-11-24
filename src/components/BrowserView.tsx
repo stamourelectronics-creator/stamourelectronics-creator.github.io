@@ -843,7 +843,7 @@ export function BrowserView({
   }, [tabs, activeTabId, historyList, bookmarksList, recentSearches]);
 
   const importChromeMigration = (payload: any) => {
-    const tabsFromChrome = Array.isArray(payload?.tabs) ? payload.tabs.filter((x: any) => x && /^https?:\\/\\//i.test(String(x.url || ''))) : [];
+    const tabsFromChrome = Array.isArray(payload?.tabs) ? payload.tabs.filter((x: any) => x && /^https?:\/\/i.test(String(x.url || ''))) : [];
     const historyFromChrome = Array.isArray(payload?.history) ? payload.history : [];
     const bookmarksFromChrome = Array.isArray(payload?.bookmarks) ? payload.bookmarks : [];
     if (tabsFromChrome.length) {
@@ -852,7 +852,7 @@ export function BrowserView({
     }
     if (historyFromChrome.length) setHistoryList(prev => [...historyFromChrome.slice(0, 200).map((x: any) => ({ query: String(x.url || x.title || ''), title: String(x.title || x.url || ''), timestamp: x.lastVisitTime ? new Date(x.lastVisitTime).toISOString() : new Date().toISOString(), incognito: false, type: 'website' })), ...prev].slice(0, 500));
     if (bookmarksFromChrome.length) {
-      const importedBookmarks = bookmarksFromChrome.slice(0, 60).map((x: any) => ({ title: String(x.title || x.url || 'Chrome bookmark'), query: String(x.url || '') })).filter((x: any) => /^https?:\\/\\//i.test(x.query));
+      const importedBookmarks = bookmarksFromChrome.slice(0, 60).map((x: any) => ({ title: String(x.title || x.url || 'Chrome bookmark'), query: String(x.url || '') })).filter((x: any) => /^https?:\/\/i.test(x.query));
       setBookmarksList(prev => [...importedBookmarks, ...prev.filter(p => !importedBookmarks.some(i => i.query === p.query))].slice(0, 100));
     }
     setChromeMigration(payload);
