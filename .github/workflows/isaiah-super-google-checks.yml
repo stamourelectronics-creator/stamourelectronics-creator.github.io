@@ -5,6 +5,10 @@ on:
     branches: [main]
     paths:
       - "src/**"
+      - "chrome-extension/**"
+      - "electron-agent/**"
+      - "public/mobile/**"
+      - "tsconfig.json"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/isaiah-super-google-checks.yml"
@@ -30,6 +34,17 @@ jobs:
         run: npm ci
       - name: Type-check the full frontend
         run: npm run lint
+      - name: Syntax-check extension, mobile, and desktop JavaScript
+        run: |
+          node --check chrome-extension/service_worker.js
+          node --check chrome-extension/content.js
+          node --check chrome-extension/popup.js
+          node --check chrome-extension/options.js
+          node --check public/mobile/sw.js
+          node --check electron-agent/main.cjs
+          node --check electron-agent/preload.cjs
+          node --check electron-agent/scripts/check-renderer.cjs
+          node --check electron-agent/scripts/write-update-manifest.cjs
       - name: Build GitHub Pages site
         run: npm run build:pages
       - name: Verify Google sign-in separation
