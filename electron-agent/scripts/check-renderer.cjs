@@ -149,10 +149,12 @@ if (!html.includes("if(!puterSignedIn||!puterModelId||!window.puter)") ||
     !html.includes("window.puter.ai.chat(messagesForPuter,{model:puterModelId,reasoning_effort:'none',stream:true,signal:controller.signal})")) {
   throw new Error('The optional Puter model must remain gated behind an authenticated Puter session.');
 }
-if (!html.includes("fetch(SEARCH_API+'/quick-search-links'") ||
-    !html.includes("let API='https://codepro-gateway-production.up.railway.app/api'") ||
-    !html.includes("SEARCH_API=CODEPRO_API+'/api'") || html.includes('isaiahsearch.netlify.app')) {
-  throw new Error('Chat and browser-search requests must use their intended independent endpoints.');
+if (!html.includes("let API='https://codepro-gateway-production.up.railway.app/api'") ||
+    !html.includes("SEARCH_API=CODEPRO_API+'/api'") ||
+    !html.includes('function searchBrowser(query)') ||
+    !html.includes('new URL(SEARCH_ENGINE_HOME)') ||
+    !html.includes("target.searchParams.set('q',query)") || html.includes('isaiahsearch.netlify.app')) {
+  throw new Error('Chat must use the Railway gateway and browser search must use the configured IsaiahSearch home endpoint.');
 }
 if (/codeProHealth\.provider(?!Ready)/.test(html) ||
     !html.includes("selectedProvider:'IsaiahAI CodePro'")) {
