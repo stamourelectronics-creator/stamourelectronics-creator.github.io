@@ -702,43 +702,42 @@ const BUILTIN_DESKTOP_APPS = {
 };
 function desktopAppLabel(app){
  const id=String(app||'').trim().toLowerCase();
- return BUILTIN_DESKTOP_APPS[id]||id.replace(/[-_]+/g,' ').replace(/\\b\\w/g,function(letter){return letter.toUpperCase();})||'desktop app';
+ return BUILTIN_DESKTOP_APPS[id]||id.replace(/[-_]+/g,' ').replace(/\b\w/g,function(letter){return letter.toUpperCase();})||'desktop app';
 }
 function extractCodeBlocks(answer){
- return Array.from(String(answer||'').matchAll(/```([^\\r\\n]*)\\r?\\n([\\s\\S]*?)```/g)).map(function(match){
+ return Array.from(String(answer||'').matchAll(/```([^\r\n]*)\r?\n([\s\S]*?)```/g)).map(function(match){
   return {language:String(match[1]||'').trim().toLowerCase(),content:String(match[2]||'').trim()};
  });
 }
 function extractBrowserProposal(answer){
  for(const block of extractCodeBlocks(answer)){
   if(block.language!=='browser')continue;
-  const value=block.content.split(/\\r?\\n/)[0].trim();
+  const value=block.content.split(/\r?\n/)[0].trim();
   try{const url=new URL(value);if(url.protocol==='http:'||url.protocol==='https:')return {url:url.href};}catch{}
  }
  return null;
 }
 function extractDesktopAppProposal(answer,platform){
- if(platform==='linux'&&/win32/i.test(String(platform)))return null;
  for(const block of extractCodeBlocks(answer)){
   if(block.language!=='desktop-app')continue;
-  const app=block.content.split(/\\r?\\n/)[0].trim().toLowerCase();
+  const app=block.content.split(/\r?\n/)[0].trim().toLowerCase();
   if(/^[a-z0-9][a-z0-9-]{0,59}$/.test(app))return {app:app};
  }
  return null;
 }
 function extractDirectDesktopAppIntent(prompt,platform){
  const text=String(prompt||'');
- const match=text.match(/\\b(?:open|launch|start)\\s+(?:the\\s+)?(notepad|calculator|calc|paint|file explorer|task manager)\\b/i);
+ const match=text.match(/\b(?:open|launch|start)\s+(?:the\s+)?(notepad|calculator|calc|paint|file explorer|task manager)\b/i);
  if(!match)return null;
- const key=match[1].toLowerCase().replace(/\\s+/g,'-');
+ const key=match[1].toLowerCase().replace(/\s+/g,'-');
  return key==='calc'?'calculator':key;
 }
 function extractWindowsInstallProposal(answer,platform){
  if(platform!=='win32')return null;
  for(const block of extractCodeBlocks(answer)){
   if(block.language!=='windows-install')continue;
-  const value=block.content.split(/\\r?\\n/)[0].trim().replace(/^["']|["']$/g,'');
-  if(/^[A-Za-z]:\\\\[^\\r\\n]*\\.(?:exe|msi)$/i.test(value))return {path:value};
+  const value=block.content.split(/\r?\n/)[0].trim().replace(/^["']|["']$/g,'');
+  if(/^[A-Za-z]:\\[^\r\n]*\.(?:exe|msi)$/i.test(value))return {path:value};
  }
  return null;
 }
@@ -746,8 +745,8 @@ function extractSystemDiagnosticProposal(answer,platform){
  const allowed=new Set(['computer-overview','hardware-overview','storage-overview','running-processes','running-services','network-adapters','recent-updates','cpu-details','gpu-details','memory-modules','motherboard-bios','physical-disks','device-drivers','usb-devices','installed-apps','defender-status','battery-status','audio-devices']);
  for(const block of extractCodeBlocks(answer)){
   if(block.language!=='system-diagnostic')continue;
-  const diagnostic=block.content.split(/\\r?\\n/)[0].trim().toLowerCase();
-  if(allowed.has(diagnostic))return {diagnostic:diagnostic,label:diagnostic.replace(/-/g,' ').replace(/\\b\\w/g,function(letter){return letter.toUpperCase();})};
+  const diagnostic=block.content.split(/\r?\n/)[0].trim().toLowerCase();
+  if(allowed.has(diagnostic))return {diagnostic:diagnostic,label:diagnostic.replace(/-/g,' ').replace(/\b\w/g,function(letter){return letter.toUpperCase();})};
  }
  return null;
 }
@@ -758,7 +757,7 @@ function extractLocalCommandProposals(answer,platform){
  const commands=[];
  for(const block of extractCodeBlocks(answer)){
   if(block.language!==wanted)continue;
-  for(const command of block.content.split(/\\r?\\n/).map(function(line){return line.trim();}).filter(Boolean))commands.push(command);
+  for(const command of block.content.split(/\r?\n/).map(function(line){return line.trim();}).filter(Boolean))commands.push(command);
  }
  if(!commands.length)return null;
  if(commands.length>100)return {tooMany:true,count:commands.length};
