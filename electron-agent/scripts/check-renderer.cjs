@@ -231,7 +231,7 @@ if (!browserLoadingSource ||
     !browserLoadingSource.includes("updateBrowserBounds()")) {
   throw new Error('Chromium must remain visible and render progressively while the active page loads.');
 }
-if ((html.match(/AbortSignal\.timeout\(360000\)/g) || []).length !== 3 ||
+if ((html.match(/AbortSignal\.timeout\(360000\)/g) || []).length < 4 ||
     !html.includes("setTimeout(function(){controller.abort();},120000)")) {
   throw new Error('Hosted models must have extended request windows while IsaiahAI 26 Thinking keeps its existing request timeout.');
 }
