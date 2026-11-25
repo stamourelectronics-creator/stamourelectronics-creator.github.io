@@ -762,7 +762,7 @@ async function sendChat(prompt){
  $('chatInput').value='';$('chatInput').style.height='auto';$('sendBtn').disabled=true;
  messages.push({role:'user',content:prompt+attachmentLabels,images:images}); if(window.isaiahCloud&&cloudUser) window.isaiahCloud.saveChat({id:'desktop-chat',title:'IsaiahAI Desktop Chat',messages:messages.map(function(item){return {role:item.role,content:item.content};}),updatedAt:new Date().toISOString()}).catch(()=>{});
  startThinking();
- const directDesktopApp=extractDirectDesktopAppIntent(prompt,desktopPlatform);
+ const directDesktopApp=(images.length||files.length)?null:extractDirectDesktopAppIntent(prompt,desktopPlatform);
  if(directDesktopApp){
   const appName=desktopAppLabel(directDesktopApp);
   try{
