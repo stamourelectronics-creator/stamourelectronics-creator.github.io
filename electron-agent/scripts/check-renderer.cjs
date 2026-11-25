@@ -62,7 +62,7 @@ const requiredHtml = [
   'IsaiahAI 26 Thinking',
   'reasoning_effort:',
   'reasoning_effort:\'none\'',
-  'openai/gpt-6-luna',
+  'PUTER_26_SYSTEM_PROMPT',
   'Puter account allowance',
   '1,050,000 tokens',
   '128,000 tokens',

@@ -110,7 +110,7 @@ jobs:
         run: |
           $base = 'https://codepro-gateway-production.up.railway.app'
           $health = Invoke-RestMethod -Uri "$base/health" -TimeoutSec 20
-          $imageData = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAIAAABt+uBvAAABYUlEQVR42u3cWwrDMAxEUVt0/1tuV9AWbD1GytV3wMPp2JDQZK/1Xsz3MQgAAggggAACCCCAGIAAAggggAAC6FHzKk/wXvv3Bbv0kd4ueaL4F0UHKxXo2KVQKgnIkSaZKRwoiCaNybrrRK9i3XWi1wrZYpk00dvNJulErG6TdCIy2DAd9yQ2T8c3DzerKUBq9XFMZVN1vLLZYB2XhJxBkUD69bnPSYPCgLrU5zItDQKoBKjX/rrJTIMAAkgOqOMBdJycBgEEEEAAAQQQQAAxAGUB7bYvSh8kp0EAAaQI1PEYOstMgwCqAuq1y47T0qBIoC4luslJg4KB9Et0mdDKEyjruG0xTSOXVJxBWUBqJfLKY4KZpJKYbDKRDCaer3z1wHdWk/8EEvTDWLvEyWtZ09xpq/DevAaQO9O0Ly94SQ3/dscZ1hO//vLEezGAAGIAAAggggAACCCCAGIAAAgggjfkAgSNWq6aLdYEAAAAASUVORK5CYII='
+          $imageData = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAIAAABt+uBvAAABSUlEQVR42u3b0U3DUAwFUGp1BObgg0lg0m7CB98MwwRFon22n5Pj30rx7dFN1CrJ5fXj58Xcn0AACBAgQIAAAQJkAAECBAgQIECADCBAgAABAnSEue4Q4vvr895Hb++33myXrhuHf6BshdUA9ABNI1Mp0JM0LUwxUWf50ZoblPplsqsUo3UKjh+j0xdsiek62bviADqpG/3V6ACqr0/e3jiMTtJ2p1gtUG99MjJoUCHQDvVZnkSDAAGaAbTPBWhtHg0CBAgQIECAAAF6ctqfMkjKo0GAAI0B2ucytDCJBtUC7VCitRk0qByot0TLt8eIlI17nWJNQPUlStoY4xIX74qhucu2xOj0Bceve5B8+Y2zmnrG0MtE2QXOuxr7AT3MdJa3ff6Fdd73xc7+SxoQIAMIECBAgAABAgTIAAIECBAgQIAAGUCA1s4vpJFkOQE0/xcAAAAASUVORK5CYII='
           $models = @(
             @{ id = 'isaiah_5_3'; label = 'IsaiahAI 5.3 Flash' },
             @{ id = 'isaiah_max_6_0'; label = 'Isaiah Max 6.0' },
