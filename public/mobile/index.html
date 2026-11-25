@@ -326,7 +326,7 @@ async function send(){
     while((splitAt=buffer.indexOf("\n\n"))!==-1){
      const frame=buffer.slice(0,splitAt);buffer=buffer.slice(splitAt+2);
      const eventLine=frame.split("\n").find(line=>line.startsWith("event:"));
-     const dataLine=frame.split("\\n").find(line=>line.startsWith("data:"));
+     const dataLine=frame.split("\n").find(line=>line.startsWith("data:"));
      if(!dataLine)continue;let packet;try{packet=JSON.parse(dataLine.slice(5).trim())}catch{continue}
      const event=(eventLine||"").slice(6).trim();
      if(event==="delta"&&packet.text){fullText+=packet.text;reply.textContent=fullText;messages.scrollTop=messages.scrollHeight;setStatus("Writing response…",true)}
