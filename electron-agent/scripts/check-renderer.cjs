@@ -145,9 +145,9 @@ if (!html.includes('class="panel chat-drawer" hidden aria-hidden="true"') ||
     !html.includes('#panel-chat.chat-drawer.chat-open.chat-fullscreen')) {
   throw new Error('The AI chat must explicitly reveal its full-screen panel and hide the browser while open.');
 }
-if (!html.includes("window.puter.auth.signIn()") ||
+if (!html.includes("if(!puterSignedIn||!puterModelId||!window.puter)") ||
     !html.includes("window.puter.ai.chat(messagesForPuter,{model:puterModelId,reasoning_effort:'none',stream:true,signal:controller.signal})")) {
-  throw new Error('Puter sign-in and GPT-6 Luna chat calls are missing.');
+  throw new Error('The optional Puter model must remain gated behind an authenticated Puter session.');
 }
 if (!html.includes("fetch(SEARCH_API+'/quick-search-links'") ||
     !html.includes("let API='https://codepro-gateway-production.up.railway.app/api'") ||
