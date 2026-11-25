@@ -45,6 +45,8 @@ jobs:
           node --check electron-agent/preload.cjs
           node --check electron-agent/scripts/check-renderer.cjs
           node --check electron-agent/scripts/write-update-manifest.cjs
+      - name: Syntax-check the mobile chat module
+        run: node --check /tmp/isaiah-mobile-check.mjs
       - name: Build GitHub Pages site
         run: npm run build:pages
       - name: Verify Google sign-in separation
@@ -87,7 +89,7 @@ jobs:
           assert.match(mobileHtml, /\"projectId\"\s*:\s*\"isaiahsi\"/, 'mobile app must use IsaiahSI Firebase');
           assert.match(desktopHtml, /\"projectId\"\s*:\s*\"isaiahsi\"/, 'Windows desktop app must use IsaiahSI Firebase');
           for (const [name, html] of [['mobile', mobileHtml], ['desktop', desktopHtml]]) {
-            assert.match(html, /\"authDomain\"\s*:\s*\"isaiahsi\\.firebaseapp\\.com\"/, name + ' auth domain is outdated');
+            assert.match(html, /"authDomain"\s*:\s*"isaiahsi\.firebaseapp\.com"/, name + ' auth domain is outdated');
             assert.match(html, /\"apiKey\"\s*:\s*\"AIzaSyCF51HZqBXNnflJsbw8XDqYEH9f7276eLA\"/, name + ' API key is outdated');
             assert.match(html, /\"appId\"\s*:\s*\"1:791614054722:web:feabd277ccdd97516a28db\"/, name + ' app ID is outdated');
             assert.doesNotMatch(html, /continual-processor-sk4jk|gen-lang-client-0837934328|bionic-argon-qrtgb/, name + ' still references an old Firebase project');
@@ -100,11 +102,18 @@ jobs:
           assert.match(app, /requestPhase !== 'complete'/, 'completed model streams must hide the writing indicator');
           assert.match(app, /const hasImageAttachments =/, 'web chat must detect image attachments before routing prompts');
           assert.match(app, /images: currentUploaded\.filter\(img => img\.mimeType\.startsWith\('image\/'\)\)/, 'web chat must send only images to the multimodal gateway');
-          assert.match(app, /remainingHistoryImages = 4/, 'web chat must preserve image context for follow-up questions');
+          assert.match(app, /remainingHistoryImages = Math\.max\(0, 4 - currentUploaded/, 'web chat must preserve a bounded image context for follow-up questions');
           assert.match(desktopScript, /function renderAttachmentTray\(\)/, 'Windows app attachment tray must be wired');
           assert.match(desktopScript, /images:Array\.isArray\(images\)\?images:\[\]/, 'Windows CodePro/Breakaway routes must receive images');
           assert.match(mobileSource, /body\.images\s*=/, 'mobile chat must send images to the gateway');
           assert.match(mobileSource, /id="attachImage"/, 'mobile chat must expose an image attach control');
+          assert.match(mobileSource, /remainingHistoryImages=Math\.max\(0,4-images\.length\)/, 'mobile chat must bound image context across turns');
+          assert.match(desktopScript, /remainingHistoryImages=Math\.max\(0,4-images\.length\)/, 'Windows chat must bound image context across turns');
+          const mobileScriptStart = mobileHtml.indexOf('<script type="module">');
+          const mobileScriptContentStart = mobileHtml.indexOf('>', mobileScriptStart) + 1;
+          const mobileScriptEnd = mobileHtml.indexOf('</script>', mobileScriptContentStart);
+          assert.ok(mobileScriptStart >= 0 && mobileScriptEnd > mobileScriptContentStart, 'mobile inline chat script must exist');
+          fs.writeFileSync('/tmp/isaiah-mobile-check.mjs', mobileHtml.slice(mobileScriptContentStart, mobileScriptEnd));
           console.log('Google, Puter, shared-logo, response-status, and website/mobile/desktop Firebase config checks passed. Active Firebase project: ' + firebaseConfig.projectId);
           NODE
 

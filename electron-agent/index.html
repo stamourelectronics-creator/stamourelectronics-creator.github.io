@@ -813,6 +813,14 @@ async function sendChat(prompt){
   }
   requestMessage=agentInstructions+'\\n\\n'+(contextParts.length?prompt+'\\n\\n'+contextParts.join('\\n\\n'):prompt);
   let historyForRequest=messages.slice(0,-1).slice(-16);
+  let remainingHistoryImages=Math.max(0,4-images.length);
+  for(let index=historyForRequest.length-1;index>=0;index--){
+   const item=historyForRequest[index];
+   if(!Array.isArray(item.images))continue;
+   if(remainingHistoryImages<=0){delete item.images;continue;}
+   item.images=item.images.slice(0,remainingHistoryImages);
+   remainingHistoryImages-=item.images.length;
+  }
   const streamCallbacks={onStatus:function(status){setThinking(status);},onDelta:function(delta){if(!liveDraft)liveDraft=createStreamingDraft(selectedLabel);liveDraft.content+=delta;liveDraft.body.textContent=liveDraft.content;$('transcript').scrollTop=$('transcript').scrollHeight;},onRetry:function(){removeStreamingDraft(liveDraft);liveDraft=null;}};
   const maxActions=500;
   while(true){

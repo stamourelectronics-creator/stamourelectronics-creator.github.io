@@ -313,7 +313,15 @@ async function send(){
  const reply=addMessage("assistant","");let fullText="";
  try{
   const workspaceContext=state.model==="open_isaiah"&&state.token?{connected:true,service:state.service,account:state.user?.email||"",capabilities:["Gmail","Calendar","Docs","Slides","Tasks","Google Chat"],note:"The app can read and perform supported write actions after user confirmation."}:{connected:false};
-  const body={model:state.model,message:text,history:state.history.slice(0,-1),images:images,searchWebEnabled:true,showThinking:true,reasoningMode:state.model==="isaiahai_7_super"?"auto":"thinking",reasoningEffort:state.model==="isaiahai_7_super"?"low":"medium",workspaceContext,stream:true};
+  const history=state.history.slice(0,-1).map(item=>({...item}));
+  let remainingHistoryImages=Math.max(0,4-images.length);
+  for(let index=history.length-1;index>=0;index--){
+   if(!Array.isArray(history[index].images))continue;
+   if(remainingHistoryImages<=0){delete history[index].images;continue;}
+   history[index].images=history[index].images.slice(0,remainingHistoryImages);
+   remainingHistoryImages-=history[index].images.length;
+  }
+  const body={model:state.model,message:text,history:history,images:images,searchWebEnabled:true,showThinking:true,reasoningMode:state.model==="isaiahai_7_super"?"auto":"thinking",reasoningEffort:state.model==="isaiahai_7_super"?"low":"medium",workspaceContext,stream:true};
   if(state.model==="open_isaiah")body.systemInstruction=workspacePrompt();
   const res=await fetch(API+"/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
   if(!res.ok){const data=await res.json().catch(()=>({}));throw new Error(data.error||data.message||"IsaiahAI returned an error.");}

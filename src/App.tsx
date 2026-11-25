@@ -75,7 +75,7 @@ function makePersistableSession(session: ChatSession): ChatSession {
       }
       if (Array.isArray(message.images)) {
         const remoteImages = message.images.filter((image: any) =>
-          typeof image === 'string' && /^https?:\\/\\//i.test(image)
+          typeof image === 'string' && (image.startsWith('https://') || image.startsWith('http://'))
         );
         if (remoteImages.length) safeMessage.images = remoteImages;
         else delete safeMessage.images;
@@ -2245,7 +2245,7 @@ export default function App() {
           content: msg.content,
         }));
         // Retain the most recent image context for follow-up questions, capped at four images total.
-        let remainingHistoryImages = 4;
+        let remainingHistoryImages = Math.max(0, 4 - currentUploaded.filter(file => file.mimeType.startsWith('image/')).length);
         for (let index = chatHistoryMap.length - 1; index >= 0 && remainingHistoryImages > 0; index--) {
           const original = workingMessages[index];
           const priorImages = original?.role === 'user' && Array.isArray(original.attachments)
