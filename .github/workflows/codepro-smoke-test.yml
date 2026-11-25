@@ -137,19 +137,37 @@ jobs:
                   data = $imageData
                 })
                 searchWebEnabled = $false
-                stream = $false
+                stream = $true
                 systemInstruction = 'You are performing a visual perception check. Examine the attached image itself. Describe the centered shape and the background colors. Do not assume details from the text prompt.'
               } | ConvertTo-Json -Depth 12 -Compress
-              $result = Invoke-RestMethod -Method Post -Uri "$base/api/chat" -ContentType 'application/json' -Body $payload -TimeoutSec 180
-              $answer = [string]$result.content
+              $response = Invoke-WebRequest -Method Post -Uri "$base/api/chat" -ContentType 'application/json' -Body $payload -TimeoutSec 240
+              $answer = ''
+              $doneData = $null
+              foreach ($frame in [regex]::Split([string]$response.Content, "\r?\n\r?\n")) {
+                $frameLines = @($frame -split "\r?\n")
+                $eventLine = $frameLines | Where-Object { $_ -like 'event:*' } | Select-Object -First 1
+                $eventName = if ($eventLine) { $eventLine.Substring(6).Trim() } else { '' }
+                $dataText = (($frameLines | Where-Object { $_ -like 'data:*' } | ForEach-Object { $_.Substring(5).Trim() }) -join [Environment]::NewLine)
+                if (-not $dataText) { continue }
+                $frameData = $dataText | ConvertFrom-Json
+                if ($eventName -eq 'delta') {
+                  $answer += [string]$frameData.text
+                } elseif ($eventName -eq 'done') {
+                  $doneData = $frameData
+                  if ($frameData.content) { $answer = [string]$frameData.content }
+                } elseif ($eventName -eq 'error') {
+                  throw [string]$frameData.message
+                }
+              }
+              if (-not $doneData) { throw 'The image chat stream closed without its done event.' }
               $lower = $answer.ToLowerInvariant()
               if ([string]::IsNullOrWhiteSpace($answer) -or $lower -notmatch 'red' -or $lower -notmatch 'blue') {
-                throw "The model did not identify both visible colors. Response: $($answer.Substring(0, [Math]::Min(300, $answer.Length)))"
+                throw "The streamed model did not identify both visible colors. Response: $($answer.Substring(0, [Math]::Min(300, $answer.Length)))"
               }
-              if ($result.selectedModel -ne $model.id) {
-                throw "The gateway returned selectedModel=$($result.selectedModel), expected $($model.id)."
+              if ($doneData.selectedModel -ne $model.id) {
+                throw "The streamed gateway returned selectedModel=$($doneData.selectedModel), expected $($model.id)."
               }
-              Write-Host ("Passed image vision: " + $model.label + " | " + $answer.Substring(0, [Math]::Min(180, $answer.Length)))
+              Write-Host ("Passed streamed image vision: " + $model.label + " | " + $answer.Substring(0, [Math]::Min(180, $answer.Length)))
             } catch {
               $failures += ($model.label + ': ' + $_.Exception.Message)
               Write-Warning ($model.label + ' image vision failed: ' + $_.Exception.Message)
