@@ -37,7 +37,13 @@ final class ChatStore: ObservableObject {
     @Published var busy = false
     @Published var error: String?
     @Published var pendingImages: [ChatImageAttachment] = []
-    @Published var apiBase = UserDefaults.standard.string(forKey: "isaiahApiBase") ?? "https://codepro-gateway-production.up.railway.app/api"
+    @Published var apiBase: String = {
+        let saved = UserDefaults.standard.string(forKey: "isaiahApiBase") ?? ""
+        if saved.contains("netlify.app") || saved.isEmpty {
+            return "https://codepro-gateway-production.up.railway.app/api"
+        }
+        return saved
+    }()
 
     let models = [
         ModelChoice(id: "isaiahai_7_super", title: "IsaiahAI 7.0 SUPER", subtitle: "Inkling · OpenRouter"),
@@ -100,7 +106,7 @@ final class ChatStore: ObservableObject {
         var remainingImages = max(0, 4 - images.count)
         var remainingImageBytes = max(0, 8 * 1024 * 1024 - images.reduce(0) { $0 + $1.data.count })
         var history: [[String: Any]] = []
-        for item in messages.dropLast().suffix(20) {
+        for item in messages.dropLast().suffix(20).reversed() {
             var entry: [String: Any] = ["role": item.role, "content": item.content]
             if item.role == "user", let oldImages = item.images, !oldImages.isEmpty, remainingImages > 0 {
                 var kept: [Data] = []
@@ -119,6 +125,7 @@ final class ChatStore: ObservableObject {
             }
             history.append(entry)
         }
+        history.reverse()
         let imagePayload = images.map { image in
             ["name": image.name, "mimeType": "image/jpeg", "data": image.dataURI] as [String: Any]
         }
