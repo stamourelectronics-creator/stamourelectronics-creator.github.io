@@ -167,6 +167,9 @@ if (!html.includes("const directDesktopApp=(images.length||files.length)?null:ex
     !html.includes("const desktopAppProposal=extractDesktopAppProposal(answer,desktopPlatform);")) {
   throw new Error('Direct app-launch intent and model desktop-app proposals must both be routed without bypassing attached files.');
 }
+if (html.includes('return aliases[target]')) {
+  throw new Error('The desktop renderer must not contain the orphaned alias return that exits its startup function.');
+}
 if (!html.includes('id="attachmentInput"') ||
     !html.includes('id="attachButton"') ||
     !html.includes('function renderAttachmentTray()') ||

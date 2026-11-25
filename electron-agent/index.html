@@ -599,8 +599,6 @@ const FIREBASE_DESKTOP_CONFIG = {
    "messagingSenderId": "791614054722",
    "measurementId": "G-XC2C9C1NM3"
  };
- return aliases[target]||(target&&target.length<=60?target.replace(/[^a-z0-9 ]/g,'').trim().replace(/\s+/g,'-'):null)||null;
-}
 
 async function requestBreakawayBackup(message,history,images,files,callbacks){
  if(!codeProHealth||codeProHealth.ok!==true||!codeProHealth.breakawayConfigured)throw new Error('Breakaway 1.0 has no available vision or text provider right now.');
