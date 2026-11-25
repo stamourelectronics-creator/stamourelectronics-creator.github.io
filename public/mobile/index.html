@@ -21,7 +21,7 @@ header{height:64px;display:flex;align-items:center;gap:10px;padding:0 14px;borde
 .toolbar{display:flex;gap:7px;align-items:center;margin:0 0 12px}.toolbar select{flex:1;min-width:0;background:#151925;color:#fff;border:1px solid var(--line);padding:11px;border-radius:12px}.secondary{background:#191c27;color:#eee;border:1px solid var(--line);border-radius:11px;padding:10px 12px}
 .authbar,.workspace{background:linear-gradient(145deg,#131722,#0f121a);border:1px solid var(--line);border-radius:17px;padding:12px;margin:0 0 12px}.authbar{display:flex;align-items:center;gap:10px}.authcopy{flex:1;min-width:0}.authcopy strong{display:block;font-size:13px}.authcopy span{display:block;color:var(--muted);font-size:11px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.google{background:#fff;color:#111;border:0;border-radius:10px;padding:9px 12px;font-weight:750;white-space:nowrap}.wsgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.service{background:#151925;border:1px solid var(--line);border-radius:13px;padding:11px;color:#fff;text-align:left;min-height:75px}.service b{display:block;font-size:12px}.service span{display:block;color:#8f99ad;font-size:10px;margin-top:4px}.service.active{border-color:#6570a8;background:#1d2233}.workspace-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}.workspace-head strong{font-size:13px}.workspace-head span{font-size:10px;color:#8f99ad}.wscontent{display:grid;gap:8px}.row{background:#0e1118;border:1px solid #252b3b;border-radius:11px;padding:10px;font-size:12px}.row strong{display:block}.row small{color:#8e98ab;display:block;margin-top:3px}.actionrow{display:flex;gap:7px;flex-wrap:wrap}.actionrow button{background:#20263a;border:1px solid #38415f;color:#e9ecf7;border-radius:10px;padding:8px 10px;font-size:11px}.formgrid{display:grid;gap:8px}.formgrid input,.formgrid textarea{width:100%;background:#0d1017;border:1px solid #293044;border-radius:10px;color:#fff;padding:10px;outline:0}.formgrid textarea{min-height:90px;resize:vertical}.statusline{font-size:11px;color:#9ca7bb;min-height:18px}.ok{color:var(--ok)}.bad{color:var(--bad)}
 #messages{display:flex;flex-direction:column;gap:13px}.msg{max-width:94%;padding:13px 15px;border:1px solid #252b3a;border-radius:18px;line-height:1.62;white-space:pre-wrap;overflow-wrap:anywhere}.user{align-self:flex-end;background:linear-gradient(135deg,#252c46,#1d2234);border-color:#394568}.assistant{align-self:flex-start;background:linear-gradient(145deg,#171a24,#12151e)}.label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#aebaff;margin-bottom:6px;font-weight:700}.workspace-warning{padding:9px 11px;border-radius:10px;background:#251f10;border:1px solid #5d4c22;color:#e9d9a6;font-size:11px;line-height:1.45}
-.composer{position:fixed;bottom:0;left:0;right:0;padding:10px 13px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(transparent,#08090d 20%);z-index:10}.compose-inner{max-width:930px;margin:auto;display:flex;gap:8px;align-items:flex-end;background:#151925;border:1px solid #353c51;border-radius:20px;padding:8px;box-shadow:0 15px 55px #0009}#prompt{flex:1;resize:none;max-height:150px;min-height:44px;border:0;outline:0;background:transparent;color:#fff;padding:11px 8px;line-height:1.4}.send{width:45px;height:45px;border:0;border-radius:15px;background:linear-gradient(145deg,#f1cc78,#d99d3d);color:#17120a;font-size:21px;font-weight:800}.status{font-size:12px;color:#a9b3cb;text-align:center;min-height:21px;padding-top:7px;display:flex;align-items:center;justify-content:center;gap:8px}.status.busy:before{content:"";width:7px;height:7px;border-radius:50%;background:#8ea6ff;box-shadow:0 0 12px #8ea6ff;animation:pulse 1s infinite}@keyframes pulse{50%{opacity:.35;transform:scale(.7)}}
+.composer{position:fixed;bottom:0;left:0;right:0;padding:10px 13px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(transparent,#08090d 20%);z-index:10}.compose-inner{max-width:930px;margin:auto;display:flex;gap:8px;align-items:flex-end;background:#151925;border:1px solid #353c51;border-radius:20px;padding:8px;box-shadow:0 15px 55px #0009}#prompt{flex:1;resize:none;max-height:150px;min-height:44px;border:0;outline:0;background:transparent;color:#fff;padding:11px 8px;line-height:1.4}.send{width:45px;height:45px;border:0;border-radius:15px;background:linear-gradient(145deg,#f1cc78,#d99d3d);color:#17120a;font-size:21px;font-weight:800}.attach-image{width:42px;height:44px;flex:0 0 42px;border:1px solid #353c51;border-radius:14px;background:#20243a;color:#dbe4ff;font-size:22px}.image-previews{max-width:930px;margin:0 auto 7px;display:flex;gap:7px;overflow-x:auto;padding:2px}.image-previews[hidden]{display:none!important}.image-preview{position:relative;width:58px;height:58px;flex:0 0 58px;border:1px solid #47516b;border-radius:12px;overflow:hidden;background:#151925}.image-preview img{width:100%;height:100%;object-fit:cover}.image-preview button{position:absolute;right:2px;top:2px;width:19px;height:19px;border:0;border-radius:50%;background:#090a10dd;color:#fff;font-size:13px;line-height:18px;padding:0}.msg-images{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}.msg-images img{max-width:190px;max-height:190px;border-radius:12px;border:1px solid #39415f;object-fit:contain}.status{font-size:12px;color:#a9b3cb;text-align:center;min-height:21px;padding-top:7px;display:flex;align-items:center;justify-content:center;gap:8px}.status.busy:before{content:"";width:7px;height:7px;border-radius:50%;background:#8ea6ff;box-shadow:0 0 12px #8ea6ff;animation:pulse 1s infinite}@keyframes pulse{50%{opacity:.35;transform:scale(.7)}}
 @media(max-width:700px){.layout{display:block}aside{position:fixed;z-index:19;inset:64px auto 0 0;width:min(285px,85vw);transform:translateX(-105%);transition:transform .24s ease;box-shadow:20px 0 60px #0008}.layout.nav-open aside{transform:translateX(0)}main{padding:10px 11px 150px}.welcome{padding:22px 7px 16px}.pill{display:none}.wsgrid{grid-template-columns:repeat(2,1fr)}.toolbar{position:sticky;top:64px;z-index:8;background:#090a10ed;padding:7px 0}.authbar{align-items:flex-start}.google{padding:8px 9px}.msg{max-width:97%}}
 </style>
 </head>
@@ -74,7 +74,7 @@ header{height:64px;display:flex;align-items:center;gap:10px;padding:0 14px;borde
 <footer>IsaiahSearch Mobile · IsaiahAI + Google Workspace</footer>
 </main></div>
 
-<div class="composer"><div class="compose-inner"><textarea id="prompt" rows="1" placeholder="Ask IsaiahAI…"></textarea><button class="send" id="send" aria-label="Send message">↑</button></div><div class="status" id="status">Ready</div></div>
+<div class="composer"><div class="image-previews" id="imagePreviews" hidden></div><div class="compose-inner"><input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden><button class="attach-image" type="button" id="attachImage" aria-label="Attach images" title="Attach images">＋</button><textarea id="prompt" rows="1" placeholder="Ask IsaiahAI…"></textarea><button class="send" id="send" aria-label="Send message">↑</button></div><div class="status" id="status">Ready</div></div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -118,12 +118,51 @@ const messages=$("messages"),promptEl=$("prompt"),statusEl=$("status"),sendBtn=$
 
 function setStatus(text,busy=false){statusEl.textContent=text;statusEl.classList.toggle("busy",busy)}
 function escapeText(v){return String(v??"")}
-function addMessage(role,text){
+const pendingImages=[];
+function renderImagePreviews(){
+ const tray=$("imagePreviews");tray.replaceChildren();
+ pendingImages.forEach((item,index)=>{
+  const chip=document.createElement("div");chip.className="image-preview";
+  const img=document.createElement("img");img.src=item.data;img.alt=item.name;chip.append(img);
+  const remove=document.createElement("button");remove.type="button";remove.textContent="×";remove.setAttribute("aria-label","Remove "+item.name);
+  remove.addEventListener("click",()=>{pendingImages.splice(index,1);renderImagePreviews()});chip.append(remove);tray.append(chip);
+ });
+ tray.hidden=pendingImages.length===0;
+}
+function readImageData(blob){
+ return new Promise((resolve,reject)=>{
+  const reader=new FileReader();
+  reader.onload=()=>typeof reader.result==="string"?resolve(reader.result):reject(new Error("The image could not be read."));
+  reader.onerror=()=>reject(reader.error||new Error("The image could not be read."));
+  reader.readAsDataURL(blob);
+ });
+}
+async function prepareImage(file){
+ let blob=file,mimeType=file.type||"image/png";
+ if(typeof createImageBitmap==="function"){
+  let bitmap=null;
+  try{
+   bitmap=await createImageBitmap(file);
+   const scale=Math.min(1,2048/Math.max(bitmap.width,bitmap.height));
+   if(scale<1||file.size>1500000){
+    const canvas=document.createElement("canvas");canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+    const context=canvas.getContext("2d");
+    if(context){context.drawImage(bitmap,0,0,canvas.width,canvas.height);const compressed=await new Promise(resolve=>canvas.toBlob(resolve,"image/webp",0.86));if(compressed&&compressed.size>0&&compressed.size<file.size){blob=compressed;mimeType=compressed.type||"image/webp";}}
+   }
+  }catch(error){console.warn("Mobile image compression skipped:",error);}
+  finally{if(bitmap)bitmap.close();}
+ }
+ if(blob.size>4*1024*1024)throw new Error(file.name+" is larger than 4 MB after compression. Choose a smaller image.");
+ return {name:file.name,mimeType:blob.type||mimeType,data:await readImageData(blob)};
+}
+function addMessage(role,text,images=[]){
  const el=document.createElement("div");el.className="msg "+(role==="user"?"user":"assistant");
  const label=document.createElement("div");label.className="label";label.textContent=role==="user"?"You":state.model==="open_isaiah"?"Open-Isaiah":"IsaiahAI";
- const body=document.createElement("div");body.textContent=text;el.append(label,body);messages.append(el);window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"});return body;
+ const body=document.createElement("div");body.textContent=text;el.append(label,body);
+ if(Array.isArray(images)&&images.length){const gallery=document.createElement("div");gallery.className="msg-images";images.forEach(item=>{const img=document.createElement("img");img.src=item.data;img.alt=item.name||"Attached image";gallery.append(img)});el.append(gallery);}
+ messages.append(el);window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"});return body;
 }
-function resetChat(){state.history=[];messages.replaceChildren();$("welcome").classList.remove("hidden");layout.classList.remove("nav-open");setStatus("New chat ready")}
+function resetChat(){state.history=[];pendingImages.length=0;renderImagePreviews();messages.replaceChildren();$("welcome").classList.remove("hidden");layout.classList.remove("nav-open");setStatus("New chat ready")}
 function workspacePrompt(){
  return `You are Open-Isaiah Workspace Agent inside IsaiahSearch Mobile. You are the preferred model for Google Workspace tasks. You can help the user reason about Gmail, Calendar, Docs, Slides, Tasks, and Google Chat. The mobile app has direct Google OAuth access to those services. Treat the user's Google data as private. Never invent an email, event, document, slide, task, space, or message. Clearly separate a proposed action from a completed action. The app asks for user confirmation before a write operation. Be concise and action-oriented. When workspace context is provided, use it to answer accurately. If the requested action is not available in the current mobile workspace controls, explain exactly what is missing instead of pretending it happened.`;
 }
@@ -267,12 +306,14 @@ function syncModel(m){state.model=m;modelEl.value=m;document.querySelectorAll(".
 modelEl.addEventListener("change",()=>syncModel(modelEl.value));document.querySelectorAll(".modelList button").forEach(b=>b.addEventListener("click",()=>syncModel(b.dataset.model)));syncModel("open_isaiah");
 
 async function send(){
- const text=promptEl.value.trim();if(!text||sendBtn.disabled)return;
- promptEl.value="";promptEl.style.height="42px";$("welcome").classList.add("hidden");layout.classList.remove("nav-open");addMessage("user",text);state.history.push({role:"user",content:text});sendBtn.disabled=true;setStatus(state.model==="open_isaiah"?"Open-Isaiah is connecting…":"Thinking…",true);
+ const images=pendingImages.splice(0);
+ const text=promptEl.value.trim()||(images.length?"Please inspect the attached image(s) and describe what you can see.":"");
+ if(!text||sendBtn.disabled){pendingImages.unshift(...images);return;}
+ promptEl.value="";promptEl.style.height="42px";renderImagePreviews();$("welcome").classList.add("hidden");layout.classList.remove("nav-open");addMessage("user",text,images);state.history.push({role:"user",content:text,images:images});sendBtn.disabled=true;setStatus(state.model==="open_isaiah"?"Open-Isaiah is connecting…":"Thinking…",true);
  const reply=addMessage("assistant","");let fullText="";
  try{
   const workspaceContext=state.model==="open_isaiah"&&state.token?{connected:true,service:state.service,account:state.user?.email||"",capabilities:["Gmail","Calendar","Docs","Slides","Tasks","Google Chat"],note:"The app can read and perform supported write actions after user confirmation."}:{connected:false};
-  const body={model:state.model,message:text,history:state.history.slice(0,-1),searchWebEnabled:true,showThinking:true,reasoningMode:state.model==="isaiahai_7_super"?"auto":"thinking",reasoningEffort:state.model==="isaiahai_7_super"?"low":"medium",workspaceContext,stream:true};
+  const body={model:state.model,message:text,history:state.history.slice(0,-1),images:images,searchWebEnabled:true,showThinking:true,reasoningMode:state.model==="isaiahai_7_super"?"auto":"thinking",reasoningEffort:state.model==="isaiahai_7_super"?"low":"medium",workspaceContext,stream:true};
   if(state.model==="open_isaiah")body.systemInstruction=workspacePrompt();
   const res=await fetch(API+"/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
   if(!res.ok){const data=await res.json().catch(()=>({}));throw new Error(data.error||data.message||"IsaiahAI returned an error.");}
@@ -302,7 +343,19 @@ async function send(){
  }catch(e){reply.textContent=fullText?fullText+"\\n\\n[Connection interrupted: "+e.message+"]":"I could not reach IsaiahAI: "+e.message;setStatus("Connection issue")}
  finally{statusEl.classList.remove("busy");sendBtn.disabled=false;promptEl.focus()}
 }
-sendBtn.addEventListener("click",send);promptEl.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send()}});promptEl.addEventListener("input",()=>{promptEl.style.height="42px";promptEl.style.height=Math.min(promptEl.scrollHeight,140)+"px"});
+$("attachImage").addEventListener("click",()=>$("imageInput").click());
+ $("imageInput").addEventListener("change",async function(){
+  const chosen=Array.from(this.files||[]);let added=0;
+  for(const file of chosen){
+   try{
+    if(!file.type.startsWith("image/"))throw new Error("Choose a supported image file.");
+    if(pendingImages.length>=4)throw new Error("Attach up to four images per message.");
+    pendingImages.push(await prepareImage(file));added++;
+   }catch(error){setStatus(error.message||"The image could not be attached.");}
+  }
+  renderImagePreviews();if(added)setStatus("Attached "+added+" image"+(added===1?"":"s")+".");this.value="";
+ });
+ sendBtn.addEventListener("click",send);promptEl.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send()}});promptEl.addEventListener("input",()=>{promptEl.style.height="42px";promptEl.style.height=Math.min(promptEl.scrollHeight,140)+"px"});
 $("menuBtn").addEventListener("click",()=>layout.classList.toggle("nav-open"));$("sideNew").addEventListener("click",resetChat);$("newChat").addEventListener("click",resetChat);
 updateAuth();
 </script>
