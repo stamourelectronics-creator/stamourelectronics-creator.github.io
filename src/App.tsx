@@ -1393,19 +1393,48 @@ export default function App() {
     }
   };
 
-  // Convert uploaded image file to standard base64 data URI
-  const convertFileToBase64 = (file: File): Promise<{ data: string; name: string; mimeType: string }> => {
-    return new Promise((resolve, reject) => {
+  // Read images as data URIs and downscale oversized uploads before sending them to the model gateway.
+  const convertFileToBase64 = async (file: File): Promise<{ data: string; name: string; mimeType: string }> => {
+    let uploadBlob: Blob = file;
+    let mimeType = file.type || 'image/png';
+    if (mimeType.startsWith('image/') && typeof createImageBitmap === 'function') {
+      try {
+        const bitmap = await createImageBitmap(file);
+        const maxDimension = 2048;
+        const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
+        if (scale < 1 || file.size > 1_500_000) {
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+          canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+          const context = canvas.getContext('2d');
+          if (context) {
+            context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+            const compressed = await new Promise<Blob | null>((resolve) =>
+              canvas.toBlob(resolve, 'image/webp', 0.88)
+            );
+            if (compressed && compressed.size > 0 && compressed.size < file.size) {
+              uploadBlob = compressed;
+              mimeType = compressed.type || 'image/webp';
+            }
+          }
+        }
+        bitmap.close();
+      } catch (compressionError) {
+        console.warn('[IsaiahAI] Image compression was skipped; sending the original image.', compressionError);
+      }
+    }
+
+    return await new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.readAsDataURL(file);
       reader.onload = () => {
-        resolve({
-          data: reader.result as string,
-          name: file.name,
-          mimeType: file.type || 'image/png',
-        });
+        if (typeof reader.result !== 'string') {
+          reject(new Error('The selected image could not be read.'));
+          return;
+        }
+        resolve({ data: reader.result, name: file.name, mimeType: uploadBlob.type || mimeType });
       };
-      reader.onerror = (err) => reject(err);
+      reader.onerror = () => reject(reader.error || new Error('The selected image could not be read.'));
+      reader.readAsDataURL(uploadBlob);
     });
   };
 
@@ -1462,7 +1491,9 @@ export default function App() {
     const files = e.target.files;
     if (!files) return;
     const items: { data: string; name: string; mimeType: string }[] = [];
-    for (let i = 0; i < files.length; i++) {
+    const availableSlots = Math.max(0, 4 - uploadedImages.filter(file => file.mimeType.startsWith('image/')).length);
+    for (let i = 0; i < Math.min(files.length, availableSlots); i++) {
+      if (!files[i].type.startsWith('image/')) continue;
       try {
         const base64Obj = await convertFileToBase64(files[i]);
         items.push(base64Obj);
@@ -1470,7 +1501,8 @@ export default function App() {
         console.error(err);
       }
     }
-    setUploadedImages((prev) => [...prev, ...items]);
+    if (files.length > availableSlots) setShareNotice('You can attach up to four images to one message.');
+    if (items.length > 0) setUploadedImages((prev) => [...prev, ...items]);
     if (e.target) e.target.value = '';
   };
 
@@ -1781,7 +1813,8 @@ export default function App() {
                                 lowerPrompt.startsWith('paint an image ') ||
                                 lowerPrompt.startsWith('paint a ');
     
-    const isImagePrefix = rawPrompt.toLowerCase().startsWith('!m') || chatMode === 'image' || isNaturalImageQuery;
+    const hasImageAttachments = currentUploaded.some(file => file.mimeType.startsWith('image/'));
+    const isImagePrefix = !hasImageAttachments && (rawPrompt.toLowerCase().startsWith('!m') || chatMode === 'image' || isNaturalImageQuery);
 
     let imagePromptText = '';
     if (isImagePrefix) {
@@ -2188,6 +2221,20 @@ export default function App() {
           role: msg.role,
           content: msg.content,
         }));
+        // Retain the most recent image context for follow-up questions, capped at four images total.
+        let remainingHistoryImages = 4;
+        for (let index = chatHistoryMap.length - 1; index >= 0 && remainingHistoryImages > 0; index--) {
+          const original = workingMessages[index];
+          const priorImages = original?.role === 'user' && Array.isArray(original.attachments)
+            ? original.attachments.filter(file => String(file.mimeType || '').startsWith('image/')).slice(0, remainingHistoryImages)
+            : [];
+          if (priorImages.length) {
+            (chatHistoryMap[index] as any).images = priorImages.map(file => ({
+              name: file.name, mimeType: file.mimeType, data: file.data
+            }));
+            remainingHistoryImages -= priorImages.length;
+          }
+        }
 
         let data: any;
         let liveSearchResults: any[] = [];
@@ -2195,6 +2242,8 @@ export default function App() {
         const modelToSend = (chatMode === 'code' || chatMode === 'code_extended')
           ? 'isaiah_codepro'
           : selectedAiModel;
+        // Maw AI's local text engine has no vision input; use its Maw system prompt with the shared vision route for image turns.
+        const requestModelToSend = modelToSend === 'maw_ai' && hasImageAttachments ? 'isaiah_5_3' : modelToSend;
 
         // Perform a genuine search request before inference only when needed.
         if (shouldRunLiveSearch) {
@@ -2248,7 +2297,7 @@ export default function App() {
         }
 
         try {
-          if (modelToSend === 'maw_ai' && mawAIRef.current) {
+          if (modelToSend === 'maw_ai' && !hasImageAttachments && mawAIRef.current) {
             data = {
               content: await mawAIRef.current.generateResponse(
                 rawPrompt,
@@ -2267,16 +2316,17 @@ export default function App() {
                 history: chatHistoryMap,
                 searchWebEnabled: false,
                 stream: true,
-                showThinking: showReasoningSummary && modelToSend === 'isaiahai_7_super',
+                showThinking: showReasoningSummary && requestModelToSend === 'isaiahai_7_super',
                 reasoningMode,
                 reasoningEffort,
                 chatMode,
-                model: modelToSend,
-                selectedModel: modelToSend,
-              images: currentUploaded.map(img => ({
-                data: img.data,
-                mimeType: img.mimeType,
-              })),
+                model: requestModelToSend,
+                selectedModel: requestModelToSend,
+                images: currentUploaded.filter(img => img.mimeType.startsWith('image/')).map(img => ({
+                  name: img.name,
+                  data: img.data,
+                  mimeType: img.mimeType,
+                })),
               systemInstruction: (chatMode === 'school'
                 ? `You are IsaiahAI School Mode by St.Amour Electronics, an elite personal tutor and academic study coach across all subjects (Math, Science, Humanities, and Coding).
 CRITICAL PEDAGOGICAL DIRECTIVES:
