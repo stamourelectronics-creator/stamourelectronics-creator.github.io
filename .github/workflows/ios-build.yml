@@ -17,7 +17,7 @@ jobs:
           xcodebuild -project ios/IsaiahSearch.xcodeproj -scheme IsaiahSearch -sdk iphonesimulator -configuration Release -derivedDataPath build/ios CODE_SIGNING_ALLOWED=NO
       - name: Package simulator app
         run: |
-          cd build/ios/Build/Products/Release-iphonesimulator
+          cd build/ios/Build/Products/Debug-iphonesimulator
           /usr/bin/zip -r IsaiahSearch-iOS-Simulator.zip IsaiahSearch.app
       - uses: actions/upload-artifact@v4
         with:
