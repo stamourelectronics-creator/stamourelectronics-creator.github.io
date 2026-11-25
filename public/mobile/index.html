@@ -323,9 +323,9 @@ async function send(){
    while(true){
     const {value,done}=await reader.read();if(done)break;
     buffer+=decoder.decode(value,{stream:true});let splitAt;
-    while((splitAt=buffer.indexOf("\\n\\n"))!==-1){
+    while((splitAt=buffer.indexOf("\n\n"))!==-1){
      const frame=buffer.slice(0,splitAt);buffer=buffer.slice(splitAt+2);
-     const eventLine=frame.split("\\n").find(line=>line.startsWith("event:"));
+     const eventLine=frame.split("\n").find(line=>line.startsWith("event:"));
      const dataLine=frame.split("\\n").find(line=>line.startsWith("data:"));
      if(!dataLine)continue;let packet;try{packet=JSON.parse(dataLine.slice(5).trim())}catch{continue}
      const event=(eventLine||"").slice(6).trim();
@@ -340,7 +340,7 @@ async function send(){
    if(data.searchUnavailable)setStatus("Ready · live web verification unavailable for this free-tier request");
   }
   state.history.push({role:"assistant",content:fullText});setStatus("Ready");
- }catch(e){reply.textContent=fullText?fullText+"\\n\\n[Connection interrupted: "+e.message+"]":"I could not reach IsaiahAI: "+e.message;setStatus("Connection issue")}
+ }catch(e){reply.textContent=fullText?fullText+"\n\n[Connection interrupted: "+e.message+"]":"I could not reach IsaiahAI: "+e.message;setStatus("Connection issue")}
  finally{statusEl.classList.remove("busy");sendBtn.disabled=false;promptEl.focus()}
 }
 $("attachImage").addEventListener("click",()=>$("imageInput").click());

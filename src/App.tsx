@@ -62,6 +62,29 @@ const PREVIOUS_VERSIONS = [
   { id: 'v6', name: 'Version 6', url: 'https://isaiah-ai.netlify.app/', desc: 'The previous public IsaiahAI release.', releasedAt: 'Legacy' }
 ];
 
+function makePersistableSession(session: ChatSession): ChatSession {
+  return {
+    ...session,
+    messages: (session.messages || []).map((message: any) => {
+      const safeMessage: any = { ...message };
+      if (Array.isArray(message.attachments)) {
+        safeMessage.attachments = message.attachments.map((file: any) => ({
+          name: String(file?.name || 'Attachment'),
+          mimeType: String(file?.mimeType || 'application/octet-stream')
+        }));
+      }
+      if (Array.isArray(message.images)) {
+        const remoteImages = message.images.filter((image: any) =>
+          typeof image === 'string' && /^https?:\\/\\//i.test(image)
+        );
+        if (remoteImages.length) safeMessage.images = remoteImages;
+        else delete safeMessage.images;
+      }
+      return safeMessage;
+    })
+  };
+}
+
 function VersionsSandbox() {
   const [selectedVersion, setSelectedVersion] = useState(PREVIOUS_VERSIONS[PREVIOUS_VERSIONS.length - 1]); // Open the newest archived release by default
   const [loading, setLoading] = useState(true);
@@ -486,7 +509,7 @@ export default function App() {
         userId: currentUser.uid,
         id: session.id,
         title: session.title,
-        messages: session.messages,
+        messages: makePersistableSession(session).messages,
         category: session.category || 'Other',
         updatedAt: session.updatedAt || new Date().toISOString()
       });
@@ -1535,7 +1558,7 @@ export default function App() {
       const newSessions = typeof updated === 'function' ? updated(prev) : updated;
       // Always save to local device storage
       try {
-        localStorage.setItem('isaiah_sessions', JSON.stringify(newSessions));
+        localStorage.setItem('isaiah_sessions', JSON.stringify(newSessions.map(makePersistableSession)));
       } catch (err) {
         console.error("Failed to write sessions to localStorage:", err);
       }
@@ -1546,7 +1569,7 @@ export default function App() {
             setDoc(doc(db, 'shared_chats', session.id), {
               id: session.id,
               title: session.title,
-              messages: session.messages,
+              messages: makePersistableSession(session).messages,
               updatedAt: new Date().toISOString()
             }, { merge: true }).catch(e => console.warn("Live shared chat sync write error:", e));
           } else if (currentUser) {
@@ -1636,7 +1659,7 @@ export default function App() {
     if (currentUser && db) {
       deleteDoc(doc(db, 'user_chats', id)).catch(err => console.error("Cloud chat delete failed:", err));
     } else {
-      localStorage.setItem('isaiah_sessions', JSON.stringify(filtered));
+      localStorage.setItem('isaiah_sessions', JSON.stringify(filtered.map(makePersistableSession)));
     }
 
     if (activeSessionId === id) {
