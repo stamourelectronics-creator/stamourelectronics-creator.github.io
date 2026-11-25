@@ -103,7 +103,7 @@ jobs:
           assert.match(app, /remainingHistoryImages = Math\.max\(0, 4 - currentUploaded/, 'web chat must preserve a bounded image context for follow-up questions');
           assert.match(desktopScript, /function renderAttachmentTray\(\)/, 'Windows app attachment tray must be wired');
           assert.match(desktopScript, /images:Array\.isArray\(images\)\?images:\[\]/, 'Windows CodePro/Breakaway routes must receive images');
-          assert.match(mobileSource, /body\.images\s*=/, 'mobile chat must send images to the gateway');
+          assert.match(mobileSource, /images:images/, 'mobile chat must send images to the gateway');
           assert.match(mobileSource, /id="attachImage"/, 'mobile chat must expose an image attach control');
           assert.match(mobileSource, /remainingHistoryImages=Math\.max\(0,4-images\.length\)/, 'mobile chat must bound image context across turns');
           assert.match(desktopScript, /remainingHistoryImages=Math\.max\(0,4-images\.length\)/, 'Windows chat must bound image context across turns');
