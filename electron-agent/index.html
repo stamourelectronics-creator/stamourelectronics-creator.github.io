@@ -543,8 +543,8 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
  </div>
 </div><div id="attachmentTray" class="attachment-tray" hidden aria-live="polite"></div>
 <form id="chatForm">
- <input id="attachmentInput" type="file" multiple hidden accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,.txt,.md,.markdown,.csv,.tsv,.json,.jsonl,.html,.htm,.xml,.css,.js,.jsx,.ts,.tsx,.py,.ps1,.bat,.cmd,.sh,.yml,.yaml,.toml,.ini,.log,.sql,.rs,.go,.java,.c,.cpp,.h,.cs">
- <button id="attachButton" class="attach-button" type="button" title="Attach images, PDFs, or text/code files" aria-label="Attach files">＋</button>
+ <input id="attachmentInput" type="file" multiple hidden accept="image/png,image/jpeg,image/webp,image/gif,.txt,.md,.markdown,.csv,.tsv,.json,.jsonl,.html,.htm,.xml,.css,.js,.jsx,.ts,.tsx,.py,.ps1,.bat,.cmd,.sh,.yml,.yaml,.toml,.ini,.log,.sql,.rs,.go,.java,.c,.cpp,.h,.cs">
+ <button id="attachButton" class="attach-button" type="button" title="Attach images or text/code files" aria-label="Attach files">＋</button>
  <textarea id="chatInput" aria-label="Message IsaiahSearch Agent" placeholder="Message IsaiahSearch Agent…" rows="2"></textarea>
  <button id="sendBtn" class="send" type="submit">Send ↑</button>
 </form><p class="notice">Provider credentials stay off-device. Project-file changes and each local command require your approval. Commands run in the selected project folder without administrator access.</p></div>
@@ -603,13 +603,10 @@ const FIREBASE_DESKTOP_CONFIG = {
 }
 
 async function requestBreakawayBackup(message,history,images,files,callbacks){
- if((Array.isArray(images)&&images.length)||(Array.isArray(files)&&files.length)){
-  throw new Error('Breakaway 1.0 is using its text-only provider. Remove image/PDF attachments to continue.');
- }
- if(!codeProHealth||codeProHealth.ok!==true||!codeProHealth.breakawayConfigured)throw new Error('Breakaway 1.0 has no available Gemini or Groq provider right now.');
+ if(!codeProHealth||codeProHealth.ok!==true||!codeProHealth.breakawayConfigured)throw new Error('Breakaway 1.0 has no available vision or text provider right now.');
  const response=await fetch(CODEPRO_API+'/api/breakaway',{
   method:'POST',headers:{'Content-Type':'application/json','Accept':'text/event-stream'},
-  body:JSON.stringify({message:message,history:history,stream:true,desktopAgent:true}),
+  body:JSON.stringify({message:message,history:history,images:Array.isArray(images)?images:[],stream:true,desktopAgent:true}),
   signal:AbortSignal.timeout(360000),cache:'no-store'
  });
  return await readGatewayEventStream(response,callbacks,'Breakaway 1.0');
@@ -636,7 +633,16 @@ async function withAutomaticRetries(label,operation,maxAttempts,onRetry){
 const PUTER_26_SYSTEM_PROMPT='You are IsaiahAI 26 Thinking, a thoughtful, reliable AI assistant created by St.Amour Electronics. Your identity is IsaiahAI 26 Thinking. Never call yourself ChatGPT, GPT, OpenAI, Puter, or another provider/model brand. Follow IsaiahAI values: be accurate, helpful, calm, direct, and technically capable. Understand the request before answering; verify assumptions; explain important conclusions clearly; use examples when useful; distinguish facts from estimates; and never invent live information, tool results, files, or actions. For coding, work like a careful senior software engineer: preserve existing behavior, diagnose root causes, provide complete code, handle errors, and verify changes when tools are available. You can request one local computer action at a time using one fenced shell command labelled bash on Ubuntu or powershell on Windows. Never claim a command ran unless actual output is returned. Never request Administrator/root elevation, bypass permissions, disable security, reveal credentials, or perform destructive operations without specific confirmation. Do not reveal private chain-of-thought; provide concise conclusions and useful reasoning summaries.';
 async function requestPuterChatTurn(message,history,images,files,callbacks){
  if(!puterSignedIn||!puterModelId||!window.puter)throw new Error('Sign in with Puter in the separate Puter Models section to unlock IsaiahAI 26 Thinking.');
- if((Array.isArray(images)&&images.length)||(Array.isArray(files)&&files.length))throw new Error('IsaiahAI 26 Thinking currently accepts text prompts in this desktop integration. Remove image/PDF attachments or choose another model for this message.');
+ if(Array.isArray(images)&&images.length){
+  const response=await fetch(API+'/chat',{
+   method:'POST',headers:{'Content-Type':'application/json','Accept':'text/event-stream'},
+   body:JSON.stringify({message:message,history:history,model:'isaiah_5_3',selectedModel:'isaiah_5_3',systemInstruction:PUTER_26_SYSTEM_PROMPT+'\\n\\n'+DESKTOP_AGENT_SYSTEM_PROMPT,images:images,stream:true,desktopAgent:true}),
+   signal:AbortSignal.timeout(360000),cache:'no-store'
+  });
+  const visionResult=await readGatewayEventStream(response,callbacks,'IsaiahAI 26 Thinking');
+  return {...visionResult,selectedProvider:'IsaiahAI vision route',selectedModel:'puter_gpt6_luna',model:'IsaiahAI 26 Thinking'};
+ }
+ if(Array.isArray(files)&&files.length)throw new Error('IsaiahAI 26 Thinking can read image attachments through its vision route. Text-file attachments are not enabled for this Puter model.');
  const messagesForPuter=[{role:'system',content:PUTER_26_SYSTEM_PROMPT}].concat((Array.isArray(history)?history:[]).slice(-16).filter(function(item){return item&&['user','assistant'].includes(item.role)&&typeof item.content==='string';})).concat([{role:'user',content:String(message||'')}]);
  return await withAutomaticRetries('IsaiahAI 26 Thinking',async function(){
   let fullText='';const controller=new AbortController(),timeout=setTimeout(function(){controller.abort();},120000);
@@ -663,7 +669,7 @@ async function requestChatTurn(message,history,selectedModel,images,files,showSu
   return await withAutomaticRetries('IsaiahAI CodePro',async function(){
    const response=await fetch(CODEPRO_API+'/api/agent',{
     method:'POST',headers:{'Content-Type':'application/json','Accept':'text/event-stream'},
-    body:JSON.stringify({message:message,history:history,stream:true,desktopAgent:true,showThinking:showSummary,reasoningEffort:showSummary?'high':'medium'}),
+    body:JSON.stringify({message:message,history:history,images:Array.isArray(images)?images:[],stream:true,desktopAgent:true,showThinking:showSummary,reasoningEffort:showSummary?'high':'medium'}),
     signal:AbortSignal.timeout(360000),cache:'no-store'
    });
    const data=await readGatewayEventStream(response,callbacks,'IsaiahAI CodePro');
@@ -693,7 +699,59 @@ async function requestChatTurn(message,history,selectedModel,images,files,showSu
  },2,callbacks&&callbacks.onRetry);
 }
 
-async function sendChat(prompt){
+function fileToDataUrl(blob){
+ return new Promise(function(resolve,reject){const reader=new FileReader();reader.onload=function(){typeof reader.result==='string'?resolve(reader.result):reject(new Error('The attachment could not be read.'));};reader.onerror=function(){reject(reader.error||new Error('The attachment could not be read.'));};reader.readAsDataURL(blob);});
+}
+async function optimizeDesktopImage(file){
+ let upload=file,mimeType=file.type||'image/png';
+ if(typeof createImageBitmap==='function'){
+  try{
+   const bitmap=await createImageBitmap(file),maxDimension=2048,scale=Math.min(1,maxDimension/Math.max(bitmap.width,bitmap.height));
+   if(scale<1||file.size>1500000){
+    const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+    const context=canvas.getContext('2d');
+    if(context){context.drawImage(bitmap,0,0,canvas.width,canvas.height);const compressed=await new Promise(function(resolve){canvas.toBlob(resolve,'image/webp',0.88);});if(compressed&&compressed.size>0&&compressed.size<file.size){upload=compressed;mimeType=compressed.type||'image/webp';}}
+   }
+   bitmap.close();
+  }catch(error){console.warn('[IsaiahSearch] Image compression skipped:',safeError(error));}
+ }
+ if(upload.size>4*1024*1024)throw new Error(file.name+' is still over 4 MB after compression. Choose a smaller image.');
+ return {kind:'image',name:file.name,mimeType:upload.type||mimeType,data:await fileToDataUrl(upload),size:upload.size};
+}
+function renderAttachmentTray(){
+ const tray=$('attachmentTray');if(!tray)return;tray.replaceChildren();
+ pendingAttachments.forEach(function(item,index){
+  const chip=document.createElement('div');chip.className='attachment-chip';
+  if(item.kind==='image'){const preview=document.createElement('img');preview.src=item.data;preview.alt=item.name;chip.append(preview);}
+  const meta=document.createElement('div');meta.className='attachment-meta';
+  const name=document.createElement('span');name.className='attachment-name';name.textContent=item.name;
+  const size=document.createElement('span');size.className='attachment-size';size.textContent=item.kind==='image'?'Image · '+Math.max(1,Math.round((item.size||0)/1024))+' KB':'Text file';
+  meta.append(name,size);chip.append(meta);
+  const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.title='Remove attachment';remove.addEventListener('click',function(){pendingAttachments.splice(index,1);renderAttachmentTray();});chip.append(remove);
+  tray.append(chip);
+ });
+ tray.hidden=pendingAttachments.length===0;
+}
+$('attachButton').addEventListener('click',function(){$('attachmentInput').click();});
+$('attachmentInput').addEventListener('change',async function(){
+ const chosen=Array.from(this.files||[]);let added=0;
+ for(const file of chosen){
+  try{
+   if(file.type.startsWith('image/')){
+    const count=pendingAttachments.filter(function(item){return item.kind==='image';}).length;
+    if(count>=4)throw new Error('Attach up to four images per message.');
+    pendingAttachments.push(await optimizeDesktopImage(file));added++;
+   }else{
+    if(file.size>500000)throw new Error(file.name+' is over 500 KB. Attach a smaller text/code file.');
+    const content=await file.text();
+    pendingAttachments.push({kind:'file',name:file.name,mimeType:file.type||'text/plain',content:content.slice(0,100000),size:file.size});added++;
+   }
+  }catch(error){setToolStatus('Attachment skipped: '+safeError(error));}
+ }
+ renderAttachmentTray();if(added)setToolStatus('Attached '+added+' file(s). Images will be sent to the selected model through its vision route.');
+ this.value='';
+});
+\nasync function sendChat(prompt){
  prompt=String(prompt||'').trim();
  if(!prompt&&!pendingAttachments.length)return;
  if(!prompt&&pendingAttachments.length)prompt='Please inspect the attached files and explain what they contain. For code or projects, identify issues and useful next steps.';
@@ -704,7 +762,7 @@ async function sendChat(prompt){
  const attachmentLabels=attachments.length?'\n\nAttachments: '+attachments.map(function(item){return item.name+' ('+item.kind+')';}).join(', '):'';
  appendMessage('user',prompt+(attachments.length?'\n\n📎 '+attachments.map(function(item){return item.name;}).join(', '):''));
  $('chatInput').value='';$('chatInput').style.height='auto';$('sendBtn').disabled=true;
- messages.push({role:'user',content:prompt+attachmentLabels}); if(window.isaiahCloud&&cloudUser) window.isaiahCloud.saveChat({id:'desktop-chat',title:'IsaiahAI Desktop Chat',messages,updatedAt:new Date().toISOString()}).catch(()=>{});
+ messages.push({role:'user',content:prompt+attachmentLabels,images:images}); if(window.isaiahCloud&&cloudUser) window.isaiahCloud.saveChat({id:'desktop-chat',title:'IsaiahAI Desktop Chat',messages:messages.map(function(item){return {role:item.role,content:item.content};}),updatedAt:new Date().toISOString()}).catch(()=>{});
  startThinking();
  const directDesktopApp=extractDirectDesktopAppIntent(prompt,desktopPlatform);
  if(directDesktopApp){
@@ -914,7 +972,7 @@ async function sendChat(prompt){
   provider='Unavailable';updateModelStatus();
  }finally{removeStreamingDraft(liveDraft);stopThinking();}
  setToolStatus(provider==='Unavailable'?'Request failed for '+selectedLabel+'.':('Response generated with '+selectedLabel+'.'+(actionCount?' Completed '+actionCount+' browser action(s).':'')));
- lastAssistantContent=answer;messages.push({role:'assistant',content:answer}); if(window.isaiahCloud&&cloudUser) window.isaiahCloud.saveChat({id:'desktop-chat',title:'IsaiahAI Desktop Chat',messages,updatedAt:new Date().toISOString()}).catch(()=>{});
+ lastAssistantContent=answer;messages.push({role:'assistant',content:answer}); if(window.isaiahCloud&&cloudUser) window.isaiahCloud.saveChat({id:'desktop-chat',title:'IsaiahAI Desktop Chat',messages:messages.map(function(item){return {role:item.role,content:item.content};}),updatedAt:new Date().toISOString()}).catch(()=>{});
  appendMessage('assistant',answer,sources,thinkingSummary,provider,selectedLabel);
  $('saveAiCode').disabled=!hasCodeBlock(answer)||!selectedWorkspaceFile;$('sendBtn').disabled=false;$('chatInput').focus();
 }
