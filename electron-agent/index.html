@@ -641,7 +641,7 @@ try {
    },
    saveChat:async session=>{
     if(!cloudUser||!session)return;
-    await cloudDb.collection('user_chats').doc(cloudUser.uid+'_'+session.id).set({
+    await cloudDb.collection('user_chats').doc(cloudUser.uid + '_' + session.id).set({
      userId:cloudUser.uid,id:session.id,title:session.title||'IsaiahAI Chat',
      messages:session.messages||[],updatedAt:session.updatedAt||new Date().toISOString()
     },{merge:true});
