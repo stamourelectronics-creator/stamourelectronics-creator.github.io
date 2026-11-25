@@ -19,6 +19,84 @@ permissions:
   contents: read
 
 jobs:
+  test-vision-stream:
+    name: Stream image attachments through every vision model route
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Test image understanding across hosted model routes
+        shell: pwsh
+        run: |
+          $base = 'https://codepro-gateway-production.up.railway.app'
+          $health = Invoke-RestMethod -Uri "$base/health" -TimeoutSec 20
+          $imageData = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAIAAABt+uBvAAABSUlEQVR42u3b0U3DUAwFUGp1BObgg0lg0m7CB98MwwRFon22n5Pj30rx7dFN1CrJ5fXj58Xcn0AACBAgQIAAAQJkAAECBAgQIECADCBAgAABAnSEue4Q4vvr895Hb++33myXrhuHf6BshdUA9ABNI1Mp0JM0LUwxUWf50ZoblPplsqsUo3UKjh+j0xdsiek62bviADqpG/3V6ACqr0/e3jiMTtJ2p1gtUG99MjJoUCHQDvVZnkSDAAGaAbTPBWhtHg0CBAgQIECAAAF6ctqfMkjKo0GAAI0B2ucytDCJBtUC7VCitRk0qByot0TLt8eIlI17nWJNQPUlStoY4xIX74qhucu2xOj0Bceve5B8+Y2zmnrG0MtE2QXOuxr7AT3MdJa3ff6Fdd73xc7+SxoQIAMIECBAgAABAgTIAAIECBAgQIAAGUCA1s4vpJFkOQE0/xcAAAAASUVORK5CYII='
+          $models = @(
+            @{ id = 'isaiah_5_3'; label = 'IsaiahAI 5.3 Flash' },
+            @{ id = 'isaiah_max_6_0'; label = 'Isaiah Max 6.0' },
+            @{ id = 'isaiahai_7_super'; label = 'IsaiahAI 7.0 SUPER' },
+            @{ id = 'open_isaiah'; label = 'Open-Isaiah' },
+            @{ id = 'breakaway_1_0'; label = 'Breakaway 1.0' }
+          )
+          if ([int]$health.codeproGeminiCredentialCount -gt 0) {
+            $models += @{ id = 'isaiah_codepro'; label = 'IsaiahAI CodePro' }
+          } else {
+            Write-Warning 'Skipped CodePro image vision: this environment reports no Gemini vision credentials for CodePro; text-only Groq/Cloudflare credentials cannot read images.'
+          }
+          $failures = @()
+          foreach ($model in $models) {
+            try {
+              $payload = @{
+                message = 'Inspect the attached image. What color is the large centered shape, and what color is the background?'
+                model = $model.id
+                selectedModel = $model.id
+                history = @()
+                images = @(@{
+                  name = 'vision-smoke-test.png'
+                  mimeType = 'image/png'
+                  data = $imageData
+                })
+                searchWebEnabled = $false
+                stream = $true
+                systemInstruction = 'You are performing a visual perception check. Examine the attached image itself. Describe the centered shape and the background colors. Do not assume details from the text prompt.'
+              } | ConvertTo-Json -Depth 12 -Compress
+              $response = Invoke-WebRequest -Method Post -Uri "$base/api/chat" -ContentType 'application/json' -Body $payload -TimeoutSec 240
+              $answer = ''
+              $doneData = $null
+              foreach ($frame in [regex]::Split([string]$response.Content, "\r?\n\r?\n")) {
+                $frameLines = @($frame -split "\r?\n")
+                $eventLine = $frameLines | Where-Object { $_ -like 'event:*' } | Select-Object -First 1
+                $eventName = if ($eventLine) { $eventLine.Substring(6).Trim() } else { '' }
+                $dataText = (($frameLines | Where-Object { $_ -like 'data:*' } | ForEach-Object { $_.Substring(5).Trim() }) -join [Environment]::NewLine)
+                if (-not $dataText) { continue }
+                $frameData = $dataText | ConvertFrom-Json
+                if ($eventName -eq 'delta') {
+                  $answer += [string]$frameData.text
+                } elseif ($eventName -eq 'done') {
+                  $doneData = $frameData
+                  if ($frameData.content) { $answer = [string]$frameData.content }
+                } elseif ($eventName -eq 'error') {
+                  throw [string]$frameData.message
+                }
+              }
+              if (-not $doneData) { throw 'The image chat stream closed without its done event.' }
+              $lower = $answer.ToLowerInvariant()
+              if ([string]::IsNullOrWhiteSpace($answer) -or $lower -notmatch 'red' -or $lower -notmatch 'blue') {
+                throw "The streamed model did not identify both visible colors. Response: $($answer.Substring(0, [Math]::Min(300, $answer.Length)))"
+              }
+              if ($doneData.selectedModel -ne $model.id) {
+                throw "The streamed gateway returned selectedModel=$($doneData.selectedModel), expected $($model.id)."
+              }
+              Write-Host ("Passed streamed image vision: " + $model.label + " | " + $answer.Substring(0, [Math]::Min(180, $answer.Length)))
+            } catch {
+              $failures += ($model.label + ': ' + $_.Exception.Message)
+              Write-Warning ($model.label + ' image vision failed: ' + $_.Exception.Message)
+            }
+          }
+          if ($failures.Count -gt 0) {
+            throw ("Image vision checks failed: " + ($failures -join ' | '))
+          }
+
+
   test-models:
     runs-on: ubuntu-latest
     timeout-minutes: 8
@@ -104,78 +182,6 @@ jobs:
             throw 'The Gemini stream did not deliver a complete, parseable delta and done event.'
           }
           Write-Host 'Passed: Gemini streaming returned delta and done events with the expected text.'
-
-      - name: Test image understanding across hosted model routes
-        shell: pwsh
-        run: |
-          $base = 'https://codepro-gateway-production.up.railway.app'
-          $health = Invoke-RestMethod -Uri "$base/health" -TimeoutSec 20
-          $imageData = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAIAAABt+uBvAAABSUlEQVR42u3b0U3DUAwFUGp1BObgg0lg0m7CB98MwwRFon22n5Pj30rx7dFN1CrJ5fXj58Xcn0AACBAgQIAAAQJkAAECBAgQIECADCBAgAABAnSEue4Q4vvr895Hb++33myXrhuHf6BshdUA9ABNI1Mp0JM0LUwxUWf50ZoblPplsqsUo3UKjh+j0xdsiek62bviADqpG/3V6ACqr0/e3jiMTtJ2p1gtUG99MjJoUCHQDvVZnkSDAAGaAbTPBWhtHg0CBAgQIECAAAF6ctqfMkjKo0GAAI0B2ucytDCJBtUC7VCitRk0qByot0TLt8eIlI17nWJNQPUlStoY4xIX74qhucu2xOj0Bceve5B8+Y2zmnrG0MtE2QXOuxr7AT3MdJa3ff6Fdd73xc7+SxoQIAMIECBAgAABAgTIAAIECBAgQIAAGUCA1s4vpJFkOQE0/xcAAAAASUVORK5CYII='
-          $models = @(
-            @{ id = 'isaiah_5_3'; label = 'IsaiahAI 5.3 Flash' },
-            @{ id = 'isaiah_max_6_0'; label = 'Isaiah Max 6.0' },
-            @{ id = 'isaiahai_7_super'; label = 'IsaiahAI 7.0 SUPER' },
-            @{ id = 'open_isaiah'; label = 'Open-Isaiah' },
-            @{ id = 'breakaway_1_0'; label = 'Breakaway 1.0' }
-          )
-          if ([int]$health.codeproGeminiCredentialCount -gt 0) {
-            $models += @{ id = 'isaiah_codepro'; label = 'IsaiahAI CodePro' }
-          } else {
-            Write-Warning 'Skipped CodePro image vision: this environment reports no Gemini vision credentials for CodePro; text-only Groq/Cloudflare credentials cannot read images.'
-          }
-          $failures = @()
-          foreach ($model in $models) {
-            try {
-              $payload = @{
-                message = 'Inspect the attached image. What color is the large centered shape, and what color is the background?'
-                model = $model.id
-                selectedModel = $model.id
-                history = @()
-                images = @(@{
-                  name = 'vision-smoke-test.png'
-                  mimeType = 'image/png'
-                  data = $imageData
-                })
-                searchWebEnabled = $false
-                stream = $true
-                systemInstruction = 'You are performing a visual perception check. Examine the attached image itself. Describe the centered shape and the background colors. Do not assume details from the text prompt.'
-              } | ConvertTo-Json -Depth 12 -Compress
-              $response = Invoke-WebRequest -Method Post -Uri "$base/api/chat" -ContentType 'application/json' -Body $payload -TimeoutSec 240
-              $answer = ''
-              $doneData = $null
-              foreach ($frame in [regex]::Split([string]$response.Content, "\r?\n\r?\n")) {
-                $frameLines = @($frame -split "\r?\n")
-                $eventLine = $frameLines | Where-Object { $_ -like 'event:*' } | Select-Object -First 1
-                $eventName = if ($eventLine) { $eventLine.Substring(6).Trim() } else { '' }
-                $dataText = (($frameLines | Where-Object { $_ -like 'data:*' } | ForEach-Object { $_.Substring(5).Trim() }) -join [Environment]::NewLine)
-                if (-not $dataText) { continue }
-                $frameData = $dataText | ConvertFrom-Json
-                if ($eventName -eq 'delta') {
-                  $answer += [string]$frameData.text
-                } elseif ($eventName -eq 'done') {
-                  $doneData = $frameData
-                  if ($frameData.content) { $answer = [string]$frameData.content }
-                } elseif ($eventName -eq 'error') {
-                  throw [string]$frameData.message
-                }
-              }
-              if (-not $doneData) { throw 'The image chat stream closed without its done event.' }
-              $lower = $answer.ToLowerInvariant()
-              if ([string]::IsNullOrWhiteSpace($answer) -or $lower -notmatch 'red' -or $lower -notmatch 'blue') {
-                throw "The streamed model did not identify both visible colors. Response: $($answer.Substring(0, [Math]::Min(300, $answer.Length)))"
-              }
-              if ($doneData.selectedModel -ne $model.id) {
-                throw "The streamed gateway returned selectedModel=$($doneData.selectedModel), expected $($model.id)."
-              }
-              Write-Host ("Passed streamed image vision: " + $model.label + " | " + $answer.Substring(0, [Math]::Min(180, $answer.Length)))
-            } catch {
-              $failures += ($model.label + ': ' + $_.Exception.Message)
-              Write-Warning ($model.label + ' image vision failed: ' + $_.Exception.Message)
-            }
-          }
-          if ($failures.Count -gt 0) {
-            throw ("Image vision checks failed: " + ($failures -join ' | '))
-          }
 
       - name: Verify IsaiahSearch returns real result links and the next page
         shell: pwsh
