@@ -55,6 +55,9 @@ jobs:
           const app = fs.readFileSync('src/App.tsx', 'utf8');
           const firebase = fs.readFileSync('src/firebase.ts', 'utf8');
           const firebaseConfig = JSON.parse(fs.readFileSync('src/firebase-applet-config.json', 'utf8'));
+          const rootFirebaseConfig = JSON.parse(fs.readFileSync('firebase-applet-config.json', 'utf8'));
+          const mobileHtml = fs.readFileSync('public/mobile/index.html', 'utf8');
+          const desktopHtml = fs.readFileSync('electron-agent/index.html', 'utf8');
           const docs = fs.readFileSync('src/components/SchoolDocSyncModal.tsx', 'utf8');
           const puter = fs.readFileSync('src/lib/puterClient.ts', 'utf8');
           const index = fs.readFileSync('index.html', 'utf8');
@@ -66,14 +69,31 @@ jobs:
           assert.match(firebase, /const googleProvider = new GoogleAuthProvider\(\);/, 'basic Google account provider is missing');
           assert.match(firebase, /const googleWorkspaceProvider = new GoogleAuthProvider\(\);/, 'on-demand Workspace provider is missing');
           assert.match(firebase, /from '\.\/firebase-applet-config\.json'/, 'the active Firebase config import is missing');
-          assert.ok(firebaseConfig.projectId && firebaseConfig.authDomain, 'the active Firebase project config must contain projectId and authDomain');
+          assert.deepEqual(firebaseConfig, {
+            projectId: 'isaiahsi',
+            appId: '1:791614054722:web:feabd277ccdd97516a28db',
+            apiKey: 'AIzaSyCF51HZqBXNnflJsbw8XDqYEH9f7276eLA',
+            authDomain: 'isaiahsi.firebaseapp.com',
+            storageBucket: 'isaiahsi.firebasestorage.app',
+            messagingSenderId: '791614054722',
+            measurementId: 'G-XC2C9C1NM3'
+          }, 'website Firebase config must match the supplied IsaiahSI project');
+          assert.deepEqual(rootFirebaseConfig, firebaseConfig, 'root fallback config must stay aligned with the website config');
+          assert.match(mobileHtml, /projectId: "isaiahsi"/, 'mobile app must use IsaiahSI Firebase');
+          assert.match(desktopHtml, /projectId: "isaiahsi"/, 'Windows desktop app must use IsaiahSI Firebase');
+          for (const [name, html] of [['mobile', mobileHtml], ['desktop', desktopHtml]]) {
+            assert.match(html, /authDomain: "isaiahsi\.firebaseapp\.com"/, name + ' auth domain is outdated');
+            assert.match(html, /apiKey: "AIzaSyCF51HZqBXNnflJsbw8XDqYEH9f7276eLA"/, name + ' API key is outdated');
+            assert.match(html, /appId: "1:791614054722:web:feabd277ccdd97516a28db"/, name + ' app ID is outdated');
+            assert.doesNotMatch(html, /continual-processor-sk4jk|gen-lang-client-0837934328|bionic-argon-qrtgb/, name + ' still references an old Firebase project');
+          }
           assert.match(docs, /onGoogleSignIn: \(\) => Promise<string \| null>/, 'Docs must use the shared Workspace sign-in flow');
           assert.match(puter, /authenticateWithPuter/, 'Puter UI sign-in dialog fallback is missing');
           assert.match(puter, /auth\.signIn\(\{ request_auth: true \}\)/, 'Puter popup fallback is missing');
           assert.match(index, /js\.puter\.com\/v2\/" defer/, 'Puter SDK should load before users can open Image Studio');
           assert.match(logo, /src="\/isaiahai-logo\.svg"/, 'all app logos must use the deployed public logo asset');
           assert.match(app, /requestPhase !== 'complete'/, 'completed model streams must hide the writing indicator');
-          console.log('Google, Puter, shared-logo, and response-status checks passed. Active Firebase project: ' + firebaseConfig.projectId);
+          console.log('Google, Puter, shared-logo, response-status, and website/mobile/desktop Firebase config checks passed. Active Firebase project: ' + firebaseConfig.projectId);
           NODE
 
   live-super:
