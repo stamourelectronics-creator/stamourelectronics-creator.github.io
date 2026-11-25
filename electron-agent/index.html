@@ -600,6 +600,69 @@ const FIREBASE_DESKTOP_CONFIG = {
    "measurementId": "G-XC2C9C1NM3"
  };
 
+let cloudUser=null,cloudReady=false,cloudAuthInitialized=false,cloudAuthBusy=false,cloudAuthError=null;
+try {
+ if (window.firebase && typeof firebase.initializeApp==='function') {
+  const firebaseApp=firebase.apps.length?firebase.app():firebase.initializeApp(FIREBASE_DESKTOP_CONFIG);
+  const cloudAuth=firebase.auth(firebaseApp);
+  const cloudDb=firebase.firestore(firebaseApp);
+  window.isaiahCloud={
+   signIn: async () => {
+    const provider=new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({prompt:'select_account'});
+    const result=await cloudAuth.signInWithPopup(provider);
+    const credential=firebase.auth.GoogleAuthProvider.credentialFromResult(result);
+    return {user:result.user,accessToken:credential?.accessToken||null};
+   },
+   signInWorkspace: async () => {
+    const provider=new firebase.auth.GoogleAuthProvider();
+    ['https://www.googleapis.com/auth/gmail.readonly','https://www.googleapis.com/auth/gmail.send','https://www.googleapis.com/auth/gmail.modify','https://www.googleapis.com/auth/calendar','https://www.googleapis.com/auth/calendar.events','https://www.googleapis.com/auth/calendar.readonly','https://www.googleapis.com/auth/drive.file','https://www.googleapis.com/auth/drive.readonly','https://www.googleapis.com/auth/documents','https://www.googleapis.com/auth/presentations','https://www.googleapis.com/auth/spreadsheets','https://www.googleapis.com/auth/tasks','https://www.googleapis.com/auth/contacts.readonly'].forEach(scope=>provider.addScope(scope));
+    provider.setCustomParameters({prompt:'consent',include_granted_scopes:'true'});
+    const result=await cloudAuth.signInWithPopup(provider);
+    const credential=firebase.auth.GoogleAuthProvider.credentialFromResult(result);
+    return {user:result.user,accessToken:credential?.accessToken||null};
+   },
+   signOut:()=>cloudAuth.signOut(),
+   getUser:()=>cloudUser,
+   onAuthStateChanged:callback=>cloudAuth.onAuthStateChanged(callback),
+   loadBrowserState:async()=>{
+    if(!cloudUser)return null;
+    const snapshot=await cloudDb.collection('user_browser_state').doc(cloudUser.uid).get();
+    return snapshot.exists?snapshot.data():null;
+   },
+   saveBrowserState:async state=>{
+    if(!cloudUser)return;
+    await cloudDb.collection('user_browser_state').doc(cloudUser.uid).set({...state,updatedAt:new Date().toISOString()},{merge:true});
+   },
+   loadChats:async()=>{
+    if(!cloudUser)return [];
+    const snapshot=await cloudDb.collection('user_chats').where('userId','==',cloudUser.uid).limit(30).get();
+    return snapshot.docs.map(doc=>doc.data()).sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')));
+   },
+   saveChat:async session=>{
+    if(!cloudUser||!session)return;
+    await cloudDb.collection('user_chats').doc(cloudUser.uid+'_'+session.id).set({
+     userId:cloudUser.uid,id:session.id,title:session.title||'IsaiahAI Chat',
+     messages:session.messages||[],updatedAt:session.updatedAt||new Date().toISOString()
+    },{merge:true});
+   }
+  };
+  cloudAuth.onAuthStateChanged(user=>{
+   cloudUser=user||null;cloudReady=!!user;cloudAuthInitialized=true;cloudAuthError=null;
+   window.dispatchEvent(new CustomEvent('isaiah-cloud-auth',{detail:{user:user?{uid:user.uid,email:user.email,displayName:user.displayName,photoURL:user.photoURL}:null}}));
+  },error=>{
+   cloudUser=null;cloudReady=false;cloudAuthInitialized=true;cloudAuthError=error||new Error('Firebase could not determine the Google sign-in state.');
+   window.dispatchEvent(new CustomEvent('isaiah-cloud-auth',{detail:{user:null,error:{code:String(cloudAuthError.code||''),message:String(cloudAuthError.message||'Google account status unavailable')}}}));
+  });
+ } else {
+  cloudAuthInitialized=true;
+  cloudAuthError=new Error('The Firebase SDK did not load.');
+ }
+} catch(error) {
+ cloudAuthInitialized=true;cloudAuthError=error;
+ console.warn('[IsaiahSearch] Firebase desktop auth unavailable:',error);
+}
+
 async function requestBreakawayBackup(message,history,images,files,callbacks){
  if(!codeProHealth||codeProHealth.ok!==true||!codeProHealth.breakawayConfigured)throw new Error('Breakaway 1.0 has no available vision or text provider right now.');
  const response=await fetch(CODEPRO_API+'/api/breakaway',{
