@@ -98,11 +98,18 @@ final class ChatStore: ObservableObject {
         }
 
         var remainingImages = max(0, 4 - images.count)
+        var remainingImageBytes = max(0, 8 * 1024 * 1024 - images.reduce(0) { $0 + $1.data.count })
         var history: [[String: Any]] = []
         for item in messages.dropLast().suffix(20) {
             var entry: [String: Any] = ["role": item.role, "content": item.content]
             if item.role == "user", let oldImages = item.images, !oldImages.isEmpty, remainingImages > 0 {
-                let kept = oldImages.suffix(remainingImages)
+                var kept: [Data] = []
+                for imageData in oldImages.reversed() {
+                    if kept.count >= remainingImages || imageData.count > remainingImageBytes { continue }
+                    kept.append(imageData)
+                    remainingImageBytes -= imageData.count
+                }
+                kept.reverse()
                 if !kept.isEmpty {
                     entry["images"] = kept.enumerated().map { index, data in
                         ["name": "history-photo-\(index + 1).jpg", "mimeType": "image/jpeg", "data": "data:image/jpeg;base64," + data.base64EncodedString()]
@@ -191,7 +198,7 @@ struct ChatView: View {
                                 }
                                 if store.busy { HStack { ProgressView().tint(.cyan); Text("IsaiahAI is thinking…").font(.caption).foregroundStyle(.secondary) }.padding(.horizontal) }
                             }.padding()
-                        }.onChange(of: store.messages.count) { _, _ in
+                        }.onChange(of: store.messages.count) { _ in
                             if let last = store.messages.last { proxy.scrollTo(last.id, anchor: .bottom) }
                         }
                     }
@@ -221,7 +228,7 @@ struct ChatView: View {
                         Image(systemName: "photo").font(.title3).foregroundStyle(.cyan)
                             .frame(width: 44, height: 44).background(Color.white.opacity(0.07), in: Circle())
                     }
-                    .onChange(of: photoSelection) { _, selected in
+                    .onChange(of: photoSelection) { selected in
                         guard !selected.isEmpty else { return }
                         Task {
                             await store.addImages(selected)
