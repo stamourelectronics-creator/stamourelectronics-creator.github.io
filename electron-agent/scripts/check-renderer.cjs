@@ -163,9 +163,18 @@ if (!sendChatSource || liveDraftDeclaration < 0 || requestTry < 0 || liveDraftDe
     (sendChatSource.match(/\blet\b[^;]*\bliveDraft\s*=\s*null\s*;/g) || []).length !== 1) {
   throw new Error('liveDraft must be declared exactly once in sendChat scope before its request try/catch/finally handlers.');
 }
-if (!html.includes("const directDesktopApp=extractDirectDesktopAppIntent(prompt,desktopPlatform);") ||
+if (!html.includes("const directDesktopApp=(images.length||files.length)?null:extractDirectDesktopAppIntent(prompt,desktopPlatform);") ||
     !html.includes("const desktopAppProposal=extractDesktopAppProposal(answer,desktopPlatform);")) {
-  throw new Error('Direct app-launch intent and model desktop-app proposals must both be routed.');
+  throw new Error('Direct app-launch intent and model desktop-app proposals must both be routed without bypassing attached files.');
+}
+if (!html.includes('id="attachmentInput"') ||
+    !html.includes('id="attachButton"') ||
+    !html.includes('function renderAttachmentTray()') ||
+    !html.includes('images:Array.isArray(images)?images:[]') ||
+    !html.includes('remainingHistoryImages=Math.max(0,4-images.length)') ||
+    !html.includes("selectedModel==='puter_gpt6_luna'") ||
+    !html.includes("selectedModel:'isaiah_5_3'")) {
+  throw new Error('Desktop image attachments must be selectable, previewable, bounded across history, and routed to vision-capable model APIs.');
 }
 
 const googleUiStart = html.indexOf('function updateGoogleSignInButton(user)');

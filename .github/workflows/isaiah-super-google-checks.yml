@@ -45,8 +45,6 @@ jobs:
           node --check electron-agent/preload.cjs
           node --check electron-agent/scripts/check-renderer.cjs
           node --check electron-agent/scripts/write-update-manifest.cjs
-      - name: Syntax-check the mobile chat module
-        run: node --check /tmp/isaiah-mobile-check.mjs
       - name: Build GitHub Pages site
         run: npm run build:pages
       - name: Verify Google sign-in separation
@@ -116,6 +114,8 @@ jobs:
           fs.writeFileSync('/tmp/isaiah-mobile-check.mjs', mobileHtml.slice(mobileScriptContentStart, mobileScriptEnd));
           console.log('Google, Puter, shared-logo, response-status, and website/mobile/desktop Firebase config checks passed. Active Firebase project: ' + firebaseConfig.projectId);
           NODE
+      - name: Syntax-check the mobile chat module
+        run: node --check /tmp/isaiah-mobile-check.mjs
 
   live-super:
     name: Live streamed IsaiahAI 7.0 SUPER test
