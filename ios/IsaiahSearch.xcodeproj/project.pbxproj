@@ -19,8 +19,8 @@
     A10000000000000000000012 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000009, A10000000000000000000015,); runOnlyForDeploymentPostprocessing = 0; };
     A10000000000000000000013 = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
     A10000000000000000000014 = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-    A10000000000000000000016 = { isa = XCBuildConfiguration; buildSettings = { IPHONEOS_DEPLOYMENT_TARGET = 16.0; PRODUCT_BUNDLE_IDENTIFIER = com.stamourelectronics.isaiahsearch.ios; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Debug; };
-    A10000000000000000000017 = { isa = XCBuildConfiguration; buildSettings = { IPHONEOS_DEPLOYMENT_TARGET = 16.0; PRODUCT_BUNDLE_IDENTIFIER = com.stamourelectronics.isaiahsearch.ios; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Release; };
+    A10000000000000000000016 = { isa = XCBuildConfiguration; buildSettings = { GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_CFBundleDisplayName = IsaiahSearch; INFOPLIST_KEY_UIUserInterfaceStyle = Dark; IPHONEOS_DEPLOYMENT_TARGET = 16.0; PRODUCT_BUNDLE_IDENTIFIER = com.stamourelectronics.isaiahsearch.ios; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Debug; };
+    A10000000000000000000017 = { isa = XCBuildConfiguration; buildSettings = { GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_CFBundleDisplayName = IsaiahSearch; INFOPLIST_KEY_UIUserInterfaceStyle = Dark; IPHONEOS_DEPLOYMENT_TARGET = 16.0; PRODUCT_BUNDLE_IDENTIFIER = com.stamourelectronics.isaiahsearch.ios; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Release; };
   };
   rootObject = A10000000000000000000001;
 }
