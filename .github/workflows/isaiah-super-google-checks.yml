@@ -99,6 +99,10 @@ jobs:
           assert.match(logo, /src="\/isaiahai-logo\.svg"/, 'all app logos must use the deployed public logo asset');
           assert.match(app, /requestPhase !== 'complete'/, 'completed model streams must hide the writing indicator');
           assert.match(app, /const hasImageAttachments =/, 'web chat must detect image attachments before routing prompts');
+          assert.match(app, /Generated files/, 'generated code file card must have a clear title');
+          assert.match(app, /Download file/, 'generated code file card must have a labelled download action');
+          assert.match(app, /break-all text-sm font-semibold/, 'long generated filenames must wrap instead of overflowing');
+          assert.match(app, /You are IsaiahAI 7\.0 SUPER/, 'SUPER model identity prompt must stay explicit');
           assert.match(app, /images: currentUploaded\.filter\(img => img\.mimeType\.startsWith\('image\/'\)\)/, 'web chat must send only images to the multimodal gateway');
           assert.match(app, /remainingHistoryImages = Math\.max\(0, 4 - currentUploaded/, 'web chat must preserve a bounded image context for follow-up questions');
           assert.match(desktopScript, /function renderAttachmentTray\(\)/, 'Windows app attachment tray must be wired');
@@ -163,7 +167,7 @@ jobs:
               body: JSON.stringify({
                 model: 'isaiahai_7_super',
                 selectedModel: 'isaiahai_7_super',
-                message: 'Reply with exactly this text and nothing else: ISAIAHAI_7_SUPER_LIVE_OK',
+                message: 'Calculate 19 × 23. Start with the direct answer, then explain the calculation step by step and explain the distributive property. Give at least three useful paragraphs with no filler.',
                 history: [],
                 stream: true,
                 reasoningMode: 'auto',
@@ -199,6 +203,8 @@ jobs:
             if (!completed) throw new Error('Stream closed without a done event.');
             if (completed.brand !== 'IsaiahAI 7.0 SUPER') throw new Error('Wrong model identity: ' + completed.brand);
             if (!answer) throw new Error('The selected model returned an empty answer.');
+            if (!/\b437\b/.test(answer)) throw new Error('IsaiahAI 7.0 SUPER did not directly answer the arithmetic check (19 × 23 = 437).');
+            if (answer.length < 450) throw new Error('IsaiahAI 7.0 SUPER returned an unusually short answer (' + answer.length + ' characters); minimum useful-response check is 450 characters.');
             if (!sawThinking || !sawWriting) throw new Error('Expected early thinking and writing status events were not both received.');
             console.log(JSON.stringify({
               passed: true,
@@ -206,7 +212,9 @@ jobs:
               providerRoute: completed.model || 'gateway fallback',
               firstByteMs,
               totalMs: Date.now() - startedAt,
-              characters: answer.length
+              characters: answer.length,
+              directAnswerVerified: true,
+              minimumDepthVerified: true
             }, null, 2));
           } finally {
             clearTimeout(hardTimeout);

@@ -2258,9 +2258,13 @@ export function BrowserView({
       const response = await fetch('/api/search-summary-brief', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: queryStr, results: resultsList, model: 'isaiahai_7_super' })
+        body: JSON.stringify({ query: queryStr, results: resultsList, model: 'isaiahai_7_super' }),
+        signal: AbortSignal.timeout(55000)
       });
-      if (!response.ok || response.headers.get('content-type')?.includes('text/html')) throw new Error('Brief summary request failed');
+      if (!response.ok || response.headers.get('content-type')?.includes('text/html')) {
+        const details = await response.json().catch(() => ({}));
+        throw new Error(String(details.error || 'Search Assist summary provider is temporarily unavailable.'));
+      }
       const data = await response.json();
       if (requestId !== briefRequestIdRef.current) return;
       const summary = String(data.summary || '').trim();
@@ -2268,13 +2272,18 @@ export function BrowserView({
       setBriefSummary(summary);
     } catch (err) {
       if (requestId !== briefRequestIdRef.current) return;
-      const sourceList = (Array.isArray(resultsList) ? resultsList : []).slice(0, 6)
-        .filter((item: any) => item && /^https?:\/\//i.test(String(item.url || '')))
-        .map((item: any, index: number) => `${index + 1}. [${String(item.title || 'Search result').replace(/[\[\]]/g, '')}](${item.url}) — ${String(item.snippet || '').slice(0, 260)}`)
-        .join('\n');
+      const usableSources = (Array.isArray(resultsList) ? resultsList : [])
+        .filter((item: any) => item && /^https?:\/\//i.test(String(item.url || '')));
+      const sourceList = usableSources.slice(0, 8)
+        .map((item: any, index: number) => {
+          const snippet = String(item.snippet || '').trim().slice(0, 420);
+          return `${index + 1}. [${String(item.title || 'Search result').replace(/[\[\]]/g, '')}](${item.url})${snippet ? `\n   ${snippet}` : ''}`;
+        })
+        .join('\n\n');
+      const sourceNotes = usableSources.map((item: any) => String(item.snippet || '').trim()).filter(Boolean).slice(0, 5);
       setBriefSummary(sourceList
-        ? `### Search Assist for ${queryStr}\n\nThe AI summary could not load, so here are the matching sources that were returned:\n\n${sourceList}`
-        : `### Search Assist for ${queryStr}\n\nThe search assistant could not retrieve a live summary or direct source pages. Try another query or use the search links below.`);
+        ? `### Search Assist for ${queryStr}\n\n**Source notes**\n\n${sourceNotes.map((note: string) => `- ${note.slice(0, 300)}`).join('\n')}\n\n*The AI summary service did not respond this time. These notes are taken directly from the search snippets; open the linked pages to verify details.*\n\n### Sources\n\n${sourceList}`
+        : `### Search Assist for ${queryStr}\n\nThe AI summary service is temporarily unavailable and no direct source pages were returned. Try another query or open the full chat to continue.`);
     } finally {
       if (requestId === briefRequestIdRef.current) setIsLoadingBrief(false);
     }
@@ -2334,11 +2343,12 @@ export function BrowserView({
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ query: activeSearch, engine: preferredSearchEngine, safeSearch: safeSearchFilter, offset }),
         });
-        moreLinksOffsetRef.current = offset + 10;
         if (requestId !== searchRequestIdRef.current) return false;
         if (!response.ok || response.headers.get('content-type')?.includes('text/html')) throw new Error('Could not load the next result page');
         const incoming = enrichSearchResults(await response.json());
         if (!incoming) continue;
+        // Advance only after a valid page has been parsed.
+        moreLinksOffsetRef.current = offset + 10;
         const freshResults = (incoming.results || []).filter((item: SearchResult) => {
           const key = normalizeSearchResultUrl(item.url);
           if (!key || existingUrls.has(key)) return false;

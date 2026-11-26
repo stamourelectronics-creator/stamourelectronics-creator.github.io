@@ -2390,7 +2390,8 @@ The CEO of St.Amour Electronics is Isaiah St.Amour.
 Your mission is to provide lightning-fast, crisp, accurate, direct answers without unnecessary fluff or excessive delays.
 Identify exclusively as IsaiahAI 5.3 Flash. NEVER mention "Gemini" or "Google".`
                 : selectedAiModel === 'isaiahai_7_super'
-                ? `You are IsaiahAI 7.0 SUPER, an advanced AI assistant made by St.Amour Electronics. The CEO of St.Amour Electronics is Isaiah John St.Amour. Be accurate, helpful, thoughtful, and clear. Identify exclusively as IsaiahAI 7.0 SUPER by St.Amour Electronics. Never identify as Gemini, Google, OpenAI, or another model/provider brand.`
+                ? `You are IsaiahAI 7.0 SUPER, an advanced AI assistant made by St.Amour Electronics. The CEO of St.Amour Electronics is Isaiah John St.Amour. Be accurate, helpful, thoughtful, and clear. Identify exclusively as IsaiahAI 7.0 SUPER by St.Amour Electronics. Never identify as Gemini, Google, OpenAI, or another model/provider brand.
+Answer the user's actual question directly before adding context. Do not be artificially brief or answer substantive questions with a one-line summary. For factual, explanatory, planning, or technical questions, provide enough detail to be genuinely useful: explain key points, include relevant examples or calculations, and organize longer answers with headings or lists. Match the response length to the task; simple questions can be concise, but complex questions need complete, well-developed answers. Avoid filler and never invent facts.`
                 : selectedAiModel === 'open_isaiah'
                 ? `You are Open-Isaiah, an open AI assistant in the IsaiahAI ecosystem. Be helpful, accurate, practical, transparent about uncertainty, and able to explain your work clearly. Identify as Open-Isaiah.`
                 : `You are Isaiah Max 6.0 by St.Amour Electronics, a state-of-the-art super-intelligent assistant. You possess high-precision cognitive abilities, multi-modal vision interfaces, and interactive software modules.
@@ -3509,50 +3510,72 @@ CRITICAL MANDATE FOR ISAIAH MAX 6.0:
                               if (parsedFiles.length === 0) return null;
 
                               return (
-                                <div className={`mt-3.5 p-3.5 rounded-xl border ${isLight ? 'bg-amber-50/50 border-amber-100' : 'bg-amber-950/10 border-amber-900/40'} text-left`}>
-                                  <div className="flex items-center gap-1.5 mb-2.5">
-                                    <FileText className="w-4 h-4 text-amber-500" />
-                                    <span className={`text-[11px] font-mono font-bold tracking-wider uppercase ${isLight ? 'text-amber-800 font-bold' : 'text-amber-400 font-bold'}`}>
-                                      ⚡ IsaiahAI Generated Code Files ({parsedFiles.length})
-                                    </span>
+                                <section className={`mt-4 w-full min-w-0 rounded-2xl border p-4 text-left shadow-sm ${isLight ? 'bg-amber-50/70 border-amber-200' : 'bg-amber-950/15 border-amber-900/50'}`} aria-label="Generated downloadable files">
+                                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                                    <div className="flex min-w-0 items-center gap-2">
+                                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/15">
+                                        <FileText className="h-5 w-5 text-amber-500" />
+                                      </div>
+                                      <div className="min-w-0">
+                                        <h4 className={`text-sm font-bold ${isLight ? 'text-amber-950' : 'text-amber-200'}`}>Generated files</h4>
+                                        <p className={`text-xs ${isLight ? 'text-amber-800/75' : 'text-amber-300/70'}`}>{parsedFiles.length} {parsedFiles.length === 1 ? 'file is' : 'files are'} ready to download</p>
+                                      </div>
+                                    </div>
+                                    <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${isLight ? 'bg-white text-amber-800 border-amber-200' : 'bg-amber-900/40 text-amber-200 border-amber-800'}`}>Ready</span>
                                   </div>
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                  <div className="grid grid-cols-1 gap-2">
                                     {parsedFiles.map((fileObj, fIdx) => (
-                                      <div 
-                                        key={fIdx}
-                                        className={`flex items-center justify-between p-2.5 rounded-lg border text-xs font-semibold ${isLight ? 'bg-white border-zinc-200 text-zinc-800 shadow-sm' : 'bg-zinc-900/60 border-zinc-800 text-zinc-300'}`}
-                                      >
-                                        <div className="flex items-center gap-2 min-w-0">
-                                          <div className="w-8 h-8 rounded bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0 font-mono text-[10px] font-bold">
-                                            {fileObj.filename.split('.').pop()?.toUpperCase() || 'TXT'}
+                                      <div key={fIdx} className={`flex min-w-0 flex-col gap-3 rounded-xl border p-3 sm:flex-row sm:items-center sm:justify-between ${isLight ? 'bg-white border-amber-100 text-zinc-800' : 'bg-zinc-950/60 border-zinc-800 text-zinc-200'}`}>
+                                        <div className="flex min-w-0 items-start gap-3">
+                                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 font-mono text-[10px] font-bold">
+                                            {fileObj.filename.split('.').pop()?.slice(0, 6).toUpperCase() || 'TXT'}
                                           </div>
-                                          <div className="min-w-0">
-                                            <div className="truncate text-xs font-bold font-mono" title={fileObj.filename}>{fileObj.filename}</div>
-                                            <div className="text-[10px] text-zinc-455 font-normal">{fileObj.sizeStr}</div>
+                                          <div className="min-w-0 flex-1">
+                                            <div className="break-all text-sm font-semibold leading-snug" title={fileObj.filename}>{fileObj.filename}</div>
+                                            <div className={`mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] ${isLight ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                                              <span>{fileObj.language || 'text'}</span>
+                                              <span aria-hidden="true">·</span>
+                                              <span>{fileObj.sizeStr}</span>
+                                            </div>
                                           </div>
                                         </div>
                                         <button
                                           type="button"
                                           onClick={() => {
                                             try {
-                                              const element = document.createElement("a");
-                                              const blob = new Blob([fileObj.content], { type: 'text/plain;charset=utf-8' });
-                                              element.href = URL.createObjectURL(blob);
+                                              const extension = fileObj.filename.split('.').pop()?.toLowerCase() || 'txt';
+                                              const mimeTypes: Record<string, string> = {
+                                                html: 'text/html;charset=utf-8', css: 'text/css;charset=utf-8',
+                                                js: 'text/javascript;charset=utf-8', ts: 'text/plain;charset=utf-8',
+                                                tsx: 'text/plain;charset=utf-8', json: 'application/json;charset=utf-8',
+                                                py: 'text/x-python;charset=utf-8', md: 'text/markdown;charset=utf-8',
+                                                xml: 'application/xml;charset=utf-8', svg: 'image/svg+xml;charset=utf-8'
+                                              };
+                                              const blob = new Blob([fileObj.content], { type: mimeTypes[extension] || 'text/plain;charset=utf-8' });
+                                              const objectUrl = URL.createObjectURL(blob);
+                                              const element = document.createElement('a');
+                                              element.href = objectUrl;
                                               element.download = fileObj.filename;
+                                              element.style.display = 'none';
                                               document.body.appendChild(element);
                                               element.click();
-                                              document.body.removeChild(element);
-                                            } catch (err) {}
+                                              element.remove();
+                                              window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+                                            } catch (err) {
+                                              console.error('[Generated files] Download failed:', err);
+                                            }
                                           }}
-                                          className={`p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-white transition-colors shrink-0 cursor-pointer border border-zinc-200 dark:border-zinc-800 bg-zinc-55 dark:bg-zinc-950/40`}
-                                          title="Download code file"
+                                          className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 sm:w-auto"
+                                          title={`Download ${fileObj.filename}`}
+                                          aria-label={`Download ${fileObj.filename}`}
                                         >
-                                          <Download className="w-3.5 h-3.5" />
+                                          <Download className="h-4 w-4" />
+                                          <span>Download file</span>
                                         </button>
                                       </div>
                                     ))}
                                   </div>
-                                </div>
+                                </section>
                               );
                             })()}
                             
