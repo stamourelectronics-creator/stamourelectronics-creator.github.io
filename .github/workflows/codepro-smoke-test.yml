@@ -21,6 +21,8 @@ permissions:
 jobs:
   test-vision-stream:
     name: Stream image attachments through every vision model route
+    needs: [test-models]
+    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
@@ -115,6 +117,7 @@ jobs:
             }
           }
           Write-Host ("Gateway online. Current CodePro provider: " + $health.codeproProvider + "; model: " + $health.codeproModel)
+          Write-Host ("Open-Isaiah provider: " + $health.openIsaiahProvider + "; model: " + $health.openIsaiahModel)
 
       - name: Test all hosted website models with graceful fallback
         shell: pwsh
@@ -157,7 +160,9 @@ jobs:
             }
           }
           if ($failures.Count -gt 0) {
-            throw ("Model smoke tests failed: " + ($failures -join ' | '))
+            $joinedFailures = $failures -join '; '
+            "ISAIAH_MODEL_FAILURES=$joinedFailures" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            Write-Warning ("Model checks found failures; remaining independent tests will continue: " + $joinedFailures)
           }
 
       - name: Test streamed Gemini response parsing
@@ -228,6 +233,14 @@ jobs:
             throw 'CodePro did not return a complete streamed, branded response.'
           }
           Write-Host 'Passed: IsaiahAI CodePro returned a complete streamed response.'
+
+      - name: Fail the model suite if any model or route check failed
+        shell: pwsh
+        run: |
+          if ($env:ISAIAH_MODEL_FAILURES) {
+            throw ("Model smoke tests failed: " + $env:ISAIAH_MODEL_FAILURES)
+          }
+          Write-Host 'All requested model routes returned complete, non-empty responses.'
 
       - name: Test Breakaway 1.0 with its configured fallback
         shell: pwsh
